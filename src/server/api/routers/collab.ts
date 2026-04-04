@@ -446,6 +446,7 @@ export const collabRouter = createTRPCRouter({
       const session = await getSession(ctx.db, input.sessionId);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const threadId =
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         input.threadId ?? (await getOrCreateDefaultPrivateThread(ctx.db, input.sessionId, ctx.session.address)).id;
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
