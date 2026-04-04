@@ -806,7 +806,11 @@ export const documentRouter = createTRPCRouter({
         accessToken: isCreator ? doc.accessToken : undefined,
         signers: sanitizedSigners,
         reminderConfig: isCreator ? doc.reminderConfig : null,
-        postSignReveal: doc.postSignReveal ? { enabled: doc.postSignReveal.enabled } : null,
+        postSignReveal: isCreator
+          ? (doc.postSignReveal ?? null)
+          : doc.postSignReveal
+            ? { enabled: doc.postSignReveal.enabled }
+            : null,
       };
     }),
 
