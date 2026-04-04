@@ -1354,10 +1354,6 @@ function AiLimitsSection() {
   const runtimeHealthMut = trpc.runtime.healthCheck.useMutation({
     onSuccess: () => runtimeQuery.refetch(),
   });
-  const _runtimeConfigMut = trpc.runtime.setConfig.useMutation({
-    onSuccess: () => runtimeQuery.refetch(),
-  });
-
   const [runtimeApiKeys, setRuntimeApiKeys] = useState<Record<string, string>>({});
 
   const [activeAiTab, setActiveAiTab] = useState<"tools" | "providers" | "limits" | "usage" | "runtime">("tools");

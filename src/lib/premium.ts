@@ -48,7 +48,7 @@ export function getPremiumFeatures() {
 export async function loadPremiumChains(): Promise<typeof import("~/premium/chains/index") | null> {
   if (!isPremiumAvailable()) return null;
   try {
-    return await import("../../premium/chains/index");
+    return await import(/* webpackIgnore: true */ "../../premium/chains/index");
   } catch (e) {
     console.warn("[premium] chains not available:", (e as Error).message);
     return null;
@@ -61,7 +61,7 @@ export async function loadPremiumChains(): Promise<typeof import("~/premium/chai
 export async function loadPremiumLib(): Promise<typeof import("~/premium/lib/index") | null> {
   if (!isPremiumAvailable()) return null;
   try {
-    return await import("../../premium/lib/index");
+    return await import(/* webpackIgnore: true */ "../../premium/lib/index");
   } catch (e) {
     console.warn("[premium] lib not available:", (e as Error).message);
     return null;
@@ -74,7 +74,7 @@ export async function loadPremiumLib(): Promise<typeof import("~/premium/lib/ind
 export async function loadPremiumAi(): Promise<typeof import("~/premium/ai/index") | null> {
   if (!isPremiumAvailable()) return null;
   try {
-    return await import("../../premium/ai/index");
+    return await import(/* webpackIgnore: true */ "../../premium/ai/index");
   } catch (e) {
     console.warn("[premium] ai not available:", (e as Error).message);
     return null;
@@ -87,7 +87,7 @@ export async function loadPremiumAi(): Promise<typeof import("~/premium/ai/index
 export async function loadPremiumCollab(): Promise<typeof import("~/premium/collaboration/index") | null> {
   if (!isPremiumAvailable()) return null;
   try {
-    return await import("../../premium/collaboration/index");
+    return await import(/* webpackIgnore: true */ "../../premium/collaboration/index");
   } catch (e) {
     console.warn("[premium] collaboration not available:", (e as Error).message);
     return null;
