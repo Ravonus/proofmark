@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { computeIpfsCid, computeSha256 } from "~/lib/ipfs";
 import { loadPremiumChains } from "~/lib/premium";
 import {

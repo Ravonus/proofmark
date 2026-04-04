@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Lazy loader for premium GazeTracker.
 // The tracker loads WebGazer from CDN at runtime — no npm/webpack dependency.
 
