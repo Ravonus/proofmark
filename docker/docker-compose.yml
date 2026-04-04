@@ -20,7 +20,7 @@ services:
       start_period: 10s
 
   rust-engine:
-    build: ./rust-service
+    build: ../rust-service
     restart: unless-stopped
     ports:
       - "9090:9090"
@@ -31,7 +31,9 @@ services:
       WORKERS: "4"
 
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     restart: unless-stopped
     ports:
       - "3100:3000"

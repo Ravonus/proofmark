@@ -51,7 +51,7 @@ The app runs at `http://localhost:3100`.
 docker compose up -d
 ```
 
-See `docker-compose.yml` and `Dockerfile` for configuration.
+See `docker/docker-compose.yml` and `docker/Dockerfile` for configuration.
 
 ## Environment Variables
 

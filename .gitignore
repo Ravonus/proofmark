@@ -31,7 +31,7 @@ Thumbs.db
 # Temp / test data
 tmp/
 data/
-pentest-*.mjs
+scripts/pentest/
 
 # Rust build artifacts
 **/target/

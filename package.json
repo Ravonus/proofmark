@@ -6,7 +6,7 @@
     "cleanup": "(lsof -ti:3100 -ti:9090 | xargs kill -9 2>/dev/null; pkill -9 -f proofmark-engine 2>/dev/null; pkill -9 -f 'ws-entry' 2>/dev/null; rm -f rust-service/data/index/LOCK 2>/dev/null; true)",
     "dev": "npm run cleanup && npm run db:up && concurrently --kill-others \"PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-10} npm run engine\" \"PROOFMARK_PREMIUM=0 PROOFMARK_DEPLOYMENT_MODE=${PROOFMARK_DEPLOYMENT_MODE:-oss} PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-10} next dev --port 3100\"",
     "paid": "npm run cleanup && npm run db:up && concurrently --kill-others \"PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-100} npm run engine\" \"PROOFMARK_DEPLOYMENT_MODE=${PROOFMARK_DEPLOYMENT_MODE:-premium} PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-100} next dev --port 3100\" \"tsx premium/collaboration/ws-entry.ts\"",
-    "db:up": "docker compose up db -d --wait 2>/dev/null || docker-compose up db -d 2>/dev/null || echo 'Docker not available — ensure Postgres is running on port 5436'",
+    "db:up": "docker compose -f docker/docker-compose.yml up db -d --wait 2>/dev/null || docker-compose -f docker/docker-compose.yml up db -d 2>/dev/null || echo 'Docker not available — ensure Postgres is running on port 5436'",
     "collab:ws": "tsx premium/collaboration/ws-entry.ts",
     "connector:local": "tsx --env-file=.env scripts/run-local-connector.ts",
     "engine": "cd rust-service && cargo run --release",
