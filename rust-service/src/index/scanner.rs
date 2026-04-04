@@ -18,6 +18,8 @@ use super::privacy;
 use super::store::{IndexStore, CF_ENTITIES, StoreResult};
 use super::tokenizer;
 
+use crate::util::patterns::{DATE_ISO_RE, DATE_WRITTEN_RE};
+
 /// Result of a smart document scan.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanResult {
@@ -113,14 +115,6 @@ static RE_MONEY_USD: Lazy<Regex> = Lazy::new(|| {
 
 static RE_MONEY_WRITTEN: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)(\d[\d,]*(?:\.\d{2})?)\s*(?:dollars|usd|eur|gbp|eth|btc|sol)").unwrap()
-});
-
-static RE_DATE_ISO: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b(\d{4}[-/]\d{2}[-/]\d{2})\b").unwrap()
-});
-
-static RE_DATE_WRITTEN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)((?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4})").unwrap()
 });
 
 static RE_ORGANIZATION: Lazy<Regex> = Lazy::new(|| {
@@ -391,7 +385,7 @@ fn extract_sections(text: &str) -> Vec<Section> {
 fn extract_key_dates(text: &str) -> Vec<KeyDate> {
     let mut dates = Vec::new();
 
-    let date_regexes: &[&Lazy<Regex>] = &[&RE_DATE_ISO, &RE_DATE_WRITTEN];
+    let date_regexes: &[&Lazy<Regex>] = &[&DATE_ISO_RE, &DATE_WRITTEN_RE];
     for re in date_regexes {
         for m in re.find_iter(text) {
             let context = get_surrounding_context(text, m.start(), 50);

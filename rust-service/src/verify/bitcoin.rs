@@ -11,50 +11,10 @@ use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 
 use super::VerifyResult;
 use crate::crypto::{double_sha256, sha256};
+use crate::util::encoding::{hash160, base58check_encode, bech32_encode, bech32m_encode};
+use crate::util::varint::{btc_encode_varint, btc_read_varint};
 
 const BITCOIN_MESSAGE_MAGIC: &str = "Bitcoin Signed Message:\n";
-
-// ── VarInt encoding (Bitcoin protocol) ───────────────────────────────────────
-
-fn encode_varint(length: usize) -> Vec<u8> {
-    if length < 0xfd {
-        vec![length as u8]
-    } else if length <= 0xffff {
-        let mut buf = vec![0xfd];
-        buf.extend_from_slice(&(length as u16).to_le_bytes());
-        buf
-    } else {
-        let mut buf = vec![0xfe];
-        buf.extend_from_slice(&(length as u32).to_le_bytes());
-        buf
-    }
-}
-
-fn read_varint(buf: &[u8], offset: usize) -> Option<(usize, usize)> {
-    let first = *buf.get(offset)?;
-    if first < 0xfd {
-        Some((first as usize, 1))
-    } else if first == 0xfd {
-        if offset + 3 > buf.len() {
-            return None;
-        }
-        let val = u16::from_le_bytes([buf[offset + 1], buf[offset + 2]]) as usize;
-        Some((val, 3))
-    } else if first == 0xfe {
-        if offset + 5 > buf.len() {
-            return None;
-        }
-        let val = u32::from_le_bytes([
-            buf[offset + 1],
-            buf[offset + 2],
-            buf[offset + 3],
-            buf[offset + 4],
-        ]) as usize;
-        Some((val, 5))
-    } else {
-        None // 64-bit varint not supported
-    }
-}
 
 // ── Bitcoin message hash ─────────────────────────────────────────────────────
 
@@ -63,9 +23,9 @@ fn bitcoin_message_hash(message: &str) -> [u8; 32] {
     let body = message.as_bytes();
 
     let mut data = Vec::new();
-    data.extend_from_slice(&encode_varint(prefix.len()));
+    data.extend_from_slice(&btc_encode_varint(prefix.len()));
     data.extend_from_slice(prefix);
-    data.extend_from_slice(&encode_varint(body.len()));
+    data.extend_from_slice(&btc_encode_varint(body.len()));
     data.extend_from_slice(body);
 
     double_sha256(&data)
@@ -126,138 +86,16 @@ fn addresses_from_pubkey(compressed: &[u8; 33]) -> Vec<String> {
     addrs.into_iter().map(|a| a.to_lowercase()).collect()
 }
 
-fn hash160(data: &[u8]) -> [u8; 20] {
-    use ripemd::{Digest as RipemdDigest, Ripemd160};
-    let sha = sha256(data);
-    let mut hasher = Ripemd160::new();
-    hasher.update(sha);
-    let result = hasher.finalize();
-    let mut out = [0u8; 20];
-    out.copy_from_slice(&result);
-    out
-}
-
-fn base58check_encode(version: u8, payload: &[u8]) -> String {
-    let mut data = Vec::with_capacity(1 + payload.len() + 4);
-    data.push(version);
-    data.extend_from_slice(payload);
-    let checksum = double_sha256(&data);
-    data.extend_from_slice(&checksum[..4]);
-    bs58::encode(data).into_string()
-}
-
-/// Bech32 encoding for witness v0 (P2WPKH/P2WSH).
-fn bech32_encode(hrp: &str, witness_version: u8, data: &[u8]) -> Option<String> {
-    // Convert data to 5-bit groups
-    let mut bits = Vec::new();
-    let mut acc = 0u32;
-    let mut acc_bits = 0u32;
-    for &byte in data {
-        acc = (acc << 8) | byte as u32;
-        acc_bits += 8;
-        while acc_bits >= 5 {
-            acc_bits -= 5;
-            bits.push(((acc >> acc_bits) & 0x1f) as u8);
-        }
-    }
-    if acc_bits > 0 {
-        bits.push(((acc << (5 - acc_bits)) & 0x1f) as u8);
-    }
-
-    let mut values = vec![witness_version];
-    values.extend_from_slice(&bits);
-
-    let checksum = bech32_create_checksum(hrp, &values, 1); // bech32 constant = 1
-    values.extend_from_slice(&checksum);
-
-    let charset = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-    let mut result = String::with_capacity(hrp.len() + 1 + values.len());
-    result.push_str(hrp);
-    result.push('1');
-    for v in values {
-        result.push(charset[v as usize] as char);
-    }
-    Some(result)
-}
-
-/// Bech32m encoding for witness v1+ (P2TR).
-fn bech32m_encode(hrp: &str, witness_version: u8, data: &[u8]) -> Option<String> {
-    let mut bits = Vec::new();
-    let mut acc = 0u32;
-    let mut acc_bits = 0u32;
-    for &byte in data {
-        acc = (acc << 8) | byte as u32;
-        acc_bits += 8;
-        while acc_bits >= 5 {
-            acc_bits -= 5;
-            bits.push(((acc >> acc_bits) & 0x1f) as u8);
-        }
-    }
-    if acc_bits > 0 {
-        bits.push(((acc << (5 - acc_bits)) & 0x1f) as u8);
-    }
-
-    let mut values = vec![witness_version];
-    values.extend_from_slice(&bits);
-
-    let checksum = bech32_create_checksum(hrp, &values, 0x2bc830a3); // bech32m constant
-    values.extend_from_slice(&checksum);
-
-    let charset = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-    let mut result = String::with_capacity(hrp.len() + 1 + values.len());
-    result.push_str(hrp);
-    result.push('1');
-    for v in values {
-        result.push(charset[v as usize] as char);
-    }
-    Some(result)
-}
-
-fn bech32_polymod(values: &[u8]) -> u32 {
-    let gen = [0x3b6a57b2u32, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
-    let mut chk = 1u32;
-    for &v in values {
-        let b = chk >> 25;
-        chk = ((chk & 0x1ffffff) << 5) ^ (v as u32);
-        for (i, &g) in gen.iter().enumerate() {
-            if (b >> i) & 1 == 1 {
-                chk ^= g;
-            }
-        }
-    }
-    chk
-}
-
-fn bech32_hrp_expand(hrp: &str) -> Vec<u8> {
-    let mut ret = Vec::with_capacity(hrp.len() * 2 + 1);
-    for c in hrp.chars() {
-        ret.push((c as u8) >> 5);
-    }
-    ret.push(0);
-    for c in hrp.chars() {
-        ret.push((c as u8) & 31);
-    }
-    ret
-}
-
-fn bech32_create_checksum(hrp: &str, data: &[u8], spec: u32) -> Vec<u8> {
-    let mut values = bech32_hrp_expand(hrp);
-    values.extend_from_slice(data);
-    values.extend_from_slice(&[0, 0, 0, 0, 0, 0]);
-    let polymod = bech32_polymod(&values) ^ spec;
-    (0..6).map(|i| ((polymod >> (5 * (5 - i))) & 31) as u8).collect()
-}
-
 // ── Witness stack parser ─────────────────────────────────────────────────────
 
 fn parse_witness_stack(buf: &[u8], debug: &mut Vec<String>) -> Option<Vec<Vec<u8>>> {
     let mut offset = 0;
-    let (num_items, bytes_read) = read_varint(buf, offset)?;
+    let (num_items, bytes_read) = btc_read_varint(buf, offset)?;
     offset += bytes_read;
 
     let mut items = Vec::with_capacity(num_items);
     for i in 0..num_items {
-        let (len, len_bytes) = read_varint(buf, offset)?;
+        let (len, len_bytes) = btc_read_varint(buf, offset)?;
         offset += len_bytes;
         if offset + len > buf.len() {
             debug.push(format!(
@@ -315,7 +153,7 @@ fn build_bip322_to_spend(message: &str, script_pubkey: &[u8]) -> Vec<u8> {
     // prevout index (0xffffffff)
     tx.extend_from_slice(&[0xff, 0xff, 0xff, 0xff]);
     // scriptSig
-    tx.extend_from_slice(&encode_varint(script_sig.len()));
+    tx.extend_from_slice(&btc_encode_varint(script_sig.len()));
     tx.extend_from_slice(&script_sig);
     // sequence
     tx.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
@@ -324,7 +162,7 @@ fn build_bip322_to_spend(message: &str, script_pubkey: &[u8]) -> Vec<u8> {
     // value (0)
     tx.extend_from_slice(&[0u8; 8]);
     // scriptPubKey
-    tx.extend_from_slice(&encode_varint(script_pubkey.len()));
+    tx.extend_from_slice(&btc_encode_varint(script_pubkey.len()));
     tx.extend_from_slice(script_pubkey);
     // locktime
     tx.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]);
@@ -341,7 +179,7 @@ fn build_bip322_sighash(to_spend_txid: &[u8; 32], script_pubkey: &[u8]) -> [u8; 
     let amounts = sha256(&[0u8; 8]);
 
     let mut spk_data = Vec::new();
-    spk_data.extend_from_slice(&encode_varint(script_pubkey.len()));
+    spk_data.extend_from_slice(&btc_encode_varint(script_pubkey.len()));
     spk_data.extend_from_slice(script_pubkey);
     let script_pubkeys = sha256(&spk_data);
 

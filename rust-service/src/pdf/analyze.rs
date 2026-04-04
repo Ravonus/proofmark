@@ -8,6 +8,9 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+#[allow(unused_imports)]
+use crate::util::patterns::{ETH_ADDR_RE, BTC_ADDR_RE, SOL_ADDR_RE};
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Types (mirror pdf-types.ts)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -113,18 +116,6 @@ static PARTY_ROLES_RE: Lazy<Regex> = Lazy::new(|| {
 static SIGNATURE_HEADING_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^\s*(?:IN\s+WITNESS\s+WHEREOF|SIGNATURES?\s*(?:PAGE|BLOCK|SECTION)?|EXECUTION\s+(?:PAGE|BLOCK)|AGREED\s+AND\s+ACCEPTED|ACKNOWLEDGED\s+AND\s+AGREED|SIGNED\s*,?\s*SEALED\s*,?\s*(?:AND\s*)?DELIVERED|BY\s+THEIR\s+(?:DULY\s+)?AUTHORIZED\s+REPRESENTATIVES?)\b").unwrap()
 });
-
-static EVM_ADDRESS_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b0x[0-9a-fA-F]{40}\b").unwrap());
-
-static BTC_ADDRESS_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b(?:bc1[a-zA-HJ-NP-Z0-9]{25,62}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b").unwrap()
-});
-
-// Solana address regex — available for future use
-#[allow(dead_code)]
-static SOL_ADDRESS_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b[1-9A-HJ-NP-Za-km-z]{32,44}\b").unwrap());
 
 static CHECKBOX_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"[\u2610\u2611\u2612\u25A1\u25A0\u25CB\u25CF]|(?:\[\s*[xX]?\s*\])").unwrap());
@@ -565,19 +556,19 @@ fn find_wallet_addresses(text: &str) -> Vec<DetectedAddress> {
             continue;
         };
         let address = address_match.as_str();
-        if EVM_ADDRESS_RE.is_match(address) {
+        if ETH_ADDR_RE.is_match(address) {
             add_address(address, "ETH", full_match.start());
-        } else if BTC_ADDRESS_RE.is_match(address) {
+        } else if BTC_ADDR_RE.is_match(address) {
             add_address(address, "BTC", full_match.start());
         }
     }
 
-    for m in EVM_ADDRESS_RE.find_iter(text) {
+    for m in ETH_ADDR_RE.find_iter(text) {
         let addr = m.as_str();
         add_address(addr, "ETH", m.start());
     }
 
-    for m in BTC_ADDRESS_RE.find_iter(text) {
+    for m in BTC_ADDR_RE.find_iter(text) {
         let addr = m.as_str();
         if addr.starts_with("bc1") || addr.starts_with('1') || addr.starts_with('3') {
             add_address(addr, "BTC", m.start());

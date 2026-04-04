@@ -7,6 +7,7 @@ pub mod index;
 mod pdf;
 pub mod pqcrypto;
 mod qr;
+pub mod util;
 mod verify;
 
 use std::sync::Arc;

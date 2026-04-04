@@ -8,6 +8,8 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+use crate::util::patterns::{ETH_ADDR_RE, BTC_ADDR_RE, SOL_ADDR_RE};
+
 /// Classification of detected private data.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum PiiType {
@@ -62,18 +64,6 @@ static RE_SSN: Lazy<Regex> = Lazy::new(|| {
 
 static RE_CREDIT_CARD: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\b(?:\d{4}[-\s]?){3}\d{4}\b").unwrap()
-});
-
-static RE_ETH_ADDR: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b0x[a-fA-F0-9]{40}\b").unwrap()
-});
-
-static RE_BTC_ADDR: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}\b").unwrap()
-});
-
-static RE_SOL_ADDR: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b[1-9A-HJ-NP-Za-km-z]{32,44}\b").unwrap()
 });
 
 static RE_IPV4: Lazy<Regex> = Lazy::new(|| {
@@ -131,8 +121,8 @@ pub fn scan_privacy(text: &str) -> PrivacyScanResult {
     detect_regex(&RE_PHONE, text, PiiType::Phone, 0.80, &mut detections);
     detect_regex(&RE_SSN, text, PiiType::Ssn, 0.70, &mut detections);
     detect_regex(&RE_CREDIT_CARD, text, PiiType::CreditCard, 0.85, &mut detections);
-    detect_regex(&RE_ETH_ADDR, text, PiiType::CryptoAddress, 0.95, &mut detections);
-    detect_regex(&RE_BTC_ADDR, text, PiiType::CryptoAddress, 0.90, &mut detections);
+    detect_regex(&ETH_ADDR_RE, text, PiiType::CryptoAddress, 0.95, &mut detections);
+    detect_regex(&BTC_ADDR_RE, text, PiiType::CryptoAddress, 0.90, &mut detections);
     detect_regex(&RE_IPV4, text, PiiType::IpAddress, 0.75, &mut detections);
     detect_regex(&RE_DOB, text, PiiType::DateOfBirth, 0.70, &mut detections);
     detect_regex(&RE_PASSPORT, text, PiiType::PassportNumber, 0.50, &mut detections);
@@ -174,9 +164,9 @@ pub fn contains_pii(text: &str) -> bool {
     RE_EMAIL.is_match(text)
         || RE_SSN.is_match(text)
         || RE_CREDIT_CARD.is_match(text)
-        || RE_ETH_ADDR.is_match(text)
-        || RE_BTC_ADDR.is_match(text)
-        || RE_SOL_ADDR.is_match(text)
+        || ETH_ADDR_RE.is_match(text)
+        || BTC_ADDR_RE.is_match(text)
+        || SOL_ADDR_RE.is_match(text)
 }
 
 /// Redact detected PII from text, replacing with type labels.

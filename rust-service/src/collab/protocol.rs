@@ -6,6 +6,8 @@
 //!   MSG_CUSTOM    (2) → JSON string (length-prefixed)
 
 
+use crate::util::varint::{read_var_uint, write_var_uint, read_var_string};
+
 pub const MSG_SYNC: u8 = 0;
 pub const MSG_AWARENESS: u8 = 1;
 pub const MSG_CUSTOM: u8 = 2;
@@ -19,61 +21,6 @@ pub enum CollabMessage {
     Awareness(Vec<u8>),
     /// Custom JSON message (annotations, AI, events).
     Custom(String),
-}
-
-// ── VarUint encoding (lib0 compatible) ───────────────────────────────────────
-
-/// Read a variable-length unsigned integer (lib0 format).
-fn read_var_uint(buf: &[u8], pos: &mut usize) -> Option<u64> {
-    let mut result: u64 = 0;
-    let mut shift = 0u32;
-    loop {
-        if *pos >= buf.len() {
-            return None;
-        }
-        let byte = buf[*pos];
-        *pos += 1;
-        result |= ((byte & 0x7F) as u64) << shift;
-        if byte & 0x80 == 0 {
-            return Some(result);
-        }
-        shift += 7;
-        if shift > 63 {
-            return None;
-        }
-    }
-}
-
-/// Write a variable-length unsigned integer (lib0 format).
-fn write_var_uint(buf: &mut Vec<u8>, mut value: u64) {
-    loop {
-        let mut byte = (value & 0x7F) as u8;
-        value >>= 7;
-        if value > 0 {
-            byte |= 0x80;
-        }
-        buf.push(byte);
-        if value == 0 {
-            break;
-        }
-    }
-}
-
-/// Read a variable-length byte array (lib0 format: varuint length + bytes).
-fn read_var_bytes(buf: &[u8], pos: &mut usize) -> Option<Vec<u8>> {
-    let len = read_var_uint(buf, pos)? as usize;
-    if *pos + len > buf.len() {
-        return None;
-    }
-    let data = buf[*pos..*pos + len].to_vec();
-    *pos += len;
-    Some(data)
-}
-
-/// Read a variable-length string (lib0 format: varuint length + UTF-8 bytes).
-fn read_var_string(buf: &[u8], pos: &mut usize) -> Option<String> {
-    let bytes = read_var_bytes(buf, pos)?;
-    String::from_utf8(bytes).ok()
 }
 
 // ── Encoding ─────────────────────────────────────────────────────────────────

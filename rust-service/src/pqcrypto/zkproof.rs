@@ -53,6 +53,60 @@ fn xor_bytes(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Generic sigma protocol (shared by all proof types)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Result of a sigma protocol commitment.
+struct SigmaCommit {
+    commitment: [u8; 32],
+    challenge: [u8; 32],
+    response: [u8; 32],
+}
+
+/// Generic Schnorr-like sigma protocol: create a proof.
+fn sigma_create(
+    commit_domain: &str,
+    challenge_domain: &str,
+    response_domain: &str,
+    commit_inputs: &[&[u8]],    // nonce prepended automatically
+    challenge_inputs: &[&[u8]], // commitment prepended automatically
+    response_inputs: &[&[u8]],  // challenge prepended automatically
+) -> SigmaCommit {
+    let nonce = random_nonce();
+    let mut commit_parts: Vec<&[u8]> = vec![&nonce];
+    commit_parts.extend_from_slice(commit_inputs);
+    let commitment = hash_concat(commit_domain, &commit_parts);
+
+    let mut challenge_parts: Vec<&[u8]> = vec![&commitment];
+    challenge_parts.extend_from_slice(challenge_inputs);
+    let challenge = hash_concat(challenge_domain, &challenge_parts);
+
+    let mut response_parts: Vec<&[u8]> = vec![&challenge];
+    response_parts.extend_from_slice(response_inputs);
+    let mask = hash_concat(response_domain, &response_parts);
+    let response = xor_bytes(&nonce, &mask);
+
+    SigmaCommit { commitment, challenge, response }
+}
+
+/// Generic Schnorr-like sigma protocol: verify a proof.
+fn sigma_verify(
+    challenge_domain: &str,
+    commitment_hex: &str,
+    challenge_inputs: &[&[u8]], // commitment prepended automatically
+    claimed_challenge_hex: &str,
+) -> bool {
+    let Ok(commitment) = hex::decode(commitment_hex) else { return false };
+    if commitment.len() != 32 {
+        return false;
+    }
+    let mut parts: Vec<&[u8]> = vec![&commitment];
+    parts.extend_from_slice(challenge_inputs);
+    let expected = hash_concat(challenge_domain, &parts);
+    claimed_challenge_hex == hex::encode(expected)
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // DocumentProof: prove knowledge of document content
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -79,28 +133,20 @@ pub fn create_document_proof(document_content: &str) -> DocumentProof {
     let content_bytes = document_content.as_bytes();
     let doc_hash = hex::encode(hash_concat("sha256", &[content_bytes]));
 
-    // Step 1: Commit — random nonce, commitment = H(nonce || content)
-    let nonce = random_nonce();
-    let commitment = hash_concat("zk-doc-commit", &[&nonce, content_bytes]);
-    let commitment_hex = hex::encode(commitment);
-
-    // Step 2: Challenge — Fiat-Shamir: H(commitment || doc_hash)
-    let challenge = hash_concat(
+    let sigma = sigma_create(
+        "zk-doc-commit",
         "zk-doc-challenge",
-        &[&commitment, doc_hash.as_bytes()],
+        "zk-doc-response",
+        &[content_bytes],
+        &[doc_hash.as_bytes()],
+        &[content_bytes],
     );
-    let challenge_hex = hex::encode(challenge);
-
-    // Step 3: Response — nonce XOR H(challenge || content)
-    let content_mask = hash_concat("zk-doc-response", &[&challenge, content_bytes]);
-    let response = xor_bytes(&nonce, &content_mask);
-    let response_hex = hex::encode(response);
 
     DocumentProof {
         document_hash: doc_hash,
-        commitment: commitment_hex,
-        challenge: challenge_hex,
-        response: response_hex,
+        commitment: hex::encode(sigma.commitment),
+        challenge: hex::encode(sigma.challenge),
+        response: hex::encode(sigma.response),
         created_at: chrono::Utc::now().to_rfc3339(),
         version: 1,
     }
@@ -113,36 +159,18 @@ pub fn verify_document_proof(proof: &DocumentProof) -> bool {
         return false;
     }
 
-    let commitment = match hex::decode(&proof.commitment) {
-        Ok(b) if b.len() == 32 => {
-            let mut arr = [0u8; 32];
-            arr.copy_from_slice(&b);
-            arr
-        }
-        _ => return false,
-    };
-    let challenge = match hex::decode(&proof.challenge) {
-        Ok(b) if b.len() == 32 => {
-            let mut arr = [0u8; 32];
-            arr.copy_from_slice(&b);
-            arr
-        }
+    // Validate challenge hex decodes to 32 bytes
+    match hex::decode(&proof.challenge) {
+        Ok(b) if b.len() == 32 => {}
         _ => return false,
     };
 
-    // Verify challenge was correctly derived (Fiat-Shamir)
-    let expected_challenge = hash_concat(
+    sigma_verify(
         "zk-doc-challenge",
-        &[&commitment, proof.document_hash.as_bytes()],
-    );
-    if challenge != expected_challenge {
-        return false;
-    }
-
-    // The proof is structurally valid — the prover demonstrated they could
-    // construct a valid commitment-challenge-response triple for this hash.
-    // Without knowing the content, the response would be random noise.
-    true
+        &proof.commitment,
+        &[proof.document_hash.as_bytes()],
+        &proof.challenge,
+    )
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -178,42 +206,26 @@ pub fn create_signature_proof(
     scheme: &str,
     signature_bytes: &[u8],
 ) -> SignatureProof {
-    let nonce = random_nonce();
-
     // Signature hash (binding commitment)
     let sig_hash = hash_concat("zk-sig-hash", &[signature_bytes]);
     let sig_hash_hex = hex::encode(sig_hash);
 
-    // Commitment
-    let commitment = hash_concat(
+    let sigma = sigma_create(
         "zk-sig-commit",
-        &[&nonce, signature_bytes, signer_address.as_bytes()],
-    );
-    let commitment_hex = hex::encode(commitment);
-
-    // Challenge (Fiat-Shamir)
-    let challenge = hash_concat(
         "zk-sig-challenge",
-        &[
-            &commitment,
-            document_hash.as_bytes(),
-            signer_address.as_bytes(),
-            &sig_hash,
-        ],
+        "zk-sig-response",
+        &[signature_bytes, signer_address.as_bytes()],
+        &[document_hash.as_bytes(), signer_address.as_bytes(), &sig_hash],
+        &[signature_bytes],
     );
-    let challenge_hex = hex::encode(challenge);
-
-    // Response
-    let sig_mask = hash_concat("zk-sig-response", &[&challenge, signature_bytes]);
-    let response = xor_bytes(&nonce, &sig_mask);
 
     SignatureProof {
         document_hash: document_hash.into(),
         signer_address: signer_address.into(),
         scheme: scheme.into(),
-        commitment: commitment_hex,
-        challenge: challenge_hex,
-        response: hex::encode(response),
+        commitment: hex::encode(sigma.commitment),
+        challenge: hex::encode(sigma.challenge),
+        response: hex::encode(sigma.response),
         signature_hash: sig_hash_hex,
         created_at: chrono::Utc::now().to_rfc3339(),
         version: 1,
@@ -226,26 +238,21 @@ pub fn verify_signature_proof(proof: &SignatureProof) -> bool {
         return false;
     }
 
-    let commitment = match hex::decode(&proof.commitment) {
-        Ok(b) if b.len() == 32 => { let mut a = [0u8; 32]; a.copy_from_slice(&b); a }
-        _ => return false,
-    };
     let sig_hash = match hex::decode(&proof.signature_hash) {
         Ok(b) if b.len() == 32 => { let mut a = [0u8; 32]; a.copy_from_slice(&b); a }
         _ => return false,
     };
 
-    let expected_challenge = hash_concat(
+    sigma_verify(
         "zk-sig-challenge",
+        &proof.commitment,
         &[
-            &commitment,
             proof.document_hash.as_bytes(),
             proof.signer_address.as_bytes(),
             &sig_hash,
         ],
-    );
-
-    proof.challenge == hex::encode(expected_challenge)
+        &proof.challenge,
+    )
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -282,45 +289,26 @@ pub fn create_field_proof(
     field_value: &str,
     reveal: bool,
 ) -> FieldProof {
-    let nonce = random_nonce();
-
     // Field value hash (binding)
     let fv_hash = hash_concat("zk-field-value", &[field_id.as_bytes(), field_value.as_bytes()]);
     let fv_hash_hex = hex::encode(fv_hash);
 
-    // Commitment
-    let commitment = hash_concat(
+    let sigma = sigma_create(
         "zk-field-commit",
-        &[&nonce, field_id.as_bytes(), field_value.as_bytes()],
-    );
-    let commitment_hex = hex::encode(commitment);
-
-    // Challenge
-    let challenge = hash_concat(
         "zk-field-challenge",
-        &[
-            &commitment,
-            document_hash.as_bytes(),
-            field_id.as_bytes(),
-            &fv_hash,
-        ],
-    );
-    let challenge_hex = hex::encode(challenge);
-
-    // Response
-    let mask = hash_concat(
         "zk-field-response",
-        &[&challenge, field_id.as_bytes(), field_value.as_bytes()],
+        &[field_id.as_bytes(), field_value.as_bytes()],
+        &[document_hash.as_bytes(), field_id.as_bytes(), &fv_hash],
+        &[field_id.as_bytes(), field_value.as_bytes()],
     );
-    let response = xor_bytes(&nonce, &mask);
 
     FieldProof {
         document_hash: document_hash.into(),
         field_id: field_id.into(),
         field_value_hash: fv_hash_hex,
-        commitment: commitment_hex,
-        challenge: challenge_hex,
-        response: hex::encode(response),
+        commitment: hex::encode(sigma.commitment),
+        challenge: hex::encode(sigma.challenge),
+        response: hex::encode(sigma.response),
         revealed_value: if reveal { Some(field_value.into()) } else { None },
         created_at: chrono::Utc::now().to_rfc3339(),
         version: 1,
@@ -333,26 +321,22 @@ pub fn verify_field_proof(proof: &FieldProof) -> bool {
         return false;
     }
 
-    let commitment = match hex::decode(&proof.commitment) {
-        Ok(b) if b.len() == 32 => { let mut a = [0u8; 32]; a.copy_from_slice(&b); a }
-        _ => return false,
-    };
     let fv_hash = match hex::decode(&proof.field_value_hash) {
         Ok(b) if b.len() == 32 => { let mut a = [0u8; 32]; a.copy_from_slice(&b); a }
         _ => return false,
     };
 
     // Verify Fiat-Shamir challenge
-    let expected_challenge = hash_concat(
+    if !sigma_verify(
         "zk-field-challenge",
+        &proof.commitment,
         &[
-            &commitment,
             proof.document_hash.as_bytes(),
             proof.field_id.as_bytes(),
             &fv_hash,
         ],
-    );
-    if proof.challenge != hex::encode(expected_challenge) {
+        &proof.challenge,
+    ) {
         return false;
     }
 

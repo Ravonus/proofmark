@@ -13,62 +13,11 @@ use yrs::{
     Update,
 };
 
+use crate::util::varint::{read_var_uint, write_var_uint, read_var_bytes, write_var_bytes};
+
 pub const SYNC_STEP1: u64 = 0;
 pub const SYNC_STEP2: u64 = 1;
 pub const SYNC_UPDATE: u64 = 2;
-
-/// Read a VarUint from a buffer at position.
-fn read_var_uint(buf: &[u8], pos: &mut usize) -> Option<u64> {
-    let mut result: u64 = 0;
-    let mut shift = 0u32;
-    loop {
-        if *pos >= buf.len() {
-            return None;
-        }
-        let byte = buf[*pos];
-        *pos += 1;
-        result |= ((byte & 0x7F) as u64) << shift;
-        if byte & 0x80 == 0 {
-            return Some(result);
-        }
-        shift += 7;
-        if shift > 63 {
-            return None;
-        }
-    }
-}
-
-/// Write a VarUint to a buffer.
-fn write_var_uint(buf: &mut Vec<u8>, mut value: u64) {
-    loop {
-        let mut byte = (value & 0x7F) as u8;
-        value >>= 7;
-        if value > 0 {
-            byte |= 0x80;
-        }
-        buf.push(byte);
-        if value == 0 {
-            break;
-        }
-    }
-}
-
-/// Read a VarUint8Array (length-prefixed bytes).
-fn read_var_bytes(buf: &[u8], pos: &mut usize) -> Option<Vec<u8>> {
-    let len = read_var_uint(buf, pos)? as usize;
-    if *pos + len > buf.len() {
-        return None;
-    }
-    let data = buf[*pos..*pos + len].to_vec();
-    *pos += len;
-    Some(data)
-}
-
-/// Write a VarUint8Array (length-prefixed bytes).
-fn write_var_bytes(buf: &mut Vec<u8>, data: &[u8]) {
-    write_var_uint(buf, data.len() as u64);
-    buf.extend_from_slice(data);
-}
 
 /// Encode a sync step 1 message (send our state vector so peer knows what to send us).
 pub fn encode_sync_step1(doc: &Doc) -> Vec<u8> {
