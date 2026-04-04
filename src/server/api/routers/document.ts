@@ -1449,7 +1449,7 @@ export const documentRouter = createTRPCRouter({
             .update(signers)
             .set({
               forensicEvidence: {
-                ...(mergedForensicEvidence!),
+                ...mergedForensicEvidence!,
                 mobileForensics,
               } as unknown as Record<string, unknown>,
             })
@@ -2362,7 +2362,7 @@ export const documentRouter = createTRPCRouter({
             .update(signers)
             .set({
               forensicEvidence: {
-                ...(mergedForensicEvidence!),
+                ...mergedForensicEvidence!,
                 mobileForensics,
               } as unknown as Record<string, unknown>,
             })

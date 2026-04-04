@@ -258,8 +258,7 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
   const isAgent = escrow.participants.some((p) => p.address === address && p.role === "ESCROW_AGENT");
   const myParticipant = escrow.participants.find((p) => p.address === address);
   const canSign = myParticipant && !myParticipant.accepted && escrow.status === "AWAITING_SIGNATURES";
-  const canDeposit =
-    myParticipant?.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
+  const canDeposit = myParticipant?.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
   const canResolve = isAgent && (escrow.status === "ACTIVE" || escrow.status === "DISPUTED");
 
   return (

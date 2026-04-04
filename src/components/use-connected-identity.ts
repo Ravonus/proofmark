@@ -18,8 +18,7 @@ export function useConnectedIdentity() {
   const session = sessionQuery.data;
   const sessionPending = "isPending" in sessionQuery ? Boolean(sessionQuery.isPending) : false;
 
-  const currentWallet =
-    wallet.address && wallet.chain ? { address: wallet.address, chain: wallet.chain } : null;
+  const currentWallet = wallet.address && wallet.chain ? { address: wallet.address, chain: wallet.chain } : null;
   const isSignedIn = wallet.authenticated || Boolean(session?.user);
   const isLoading = wallet.authenticating || sessionPending;
 

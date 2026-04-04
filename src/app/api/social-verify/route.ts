@@ -349,7 +349,7 @@ export async function GET(req: NextRequest) {
       verifiedAt: verification.verifiedAt,
     };
 
-    const currentFieldValues = (signer.fieldValues) ?? {};
+    const currentFieldValues = signer.fieldValues ?? {};
     const updatedFieldValues = {
       ...currentFieldValues,
       [pending.fieldId]: encodeStructuredFieldValue(fieldValue),
