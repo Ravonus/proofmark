@@ -1530,7 +1530,7 @@ function AiLimitsSection() {
               ) : (
                 <div className="space-y-3">
                   {(["claude-code", "codex", "openclaw"] as const).map((tool) => {
-                    const install = runtimeQuery.data?.tools?.find((t) => t.tool === tool);
+                    const install = runtimeQuery.data?.tools?.find((t: any) => t.tool === tool);
                     const status = install?.status ?? "not_installed";
                     const authStatus = install?.authStatus ?? "none";
                     const isReady = status === "ready";

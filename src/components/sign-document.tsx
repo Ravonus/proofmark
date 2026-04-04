@@ -49,7 +49,8 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   const [mobileDevice] = useState(() => {
     if (typeof window === "undefined") return null;
     try {
-      const { detectDevice } = require("~/premium/eye-tracking/mobile/device");
+      const modPath = "~/premium/eye-tracking/mobile/device";
+      const { detectDevice } = require(/* webpackIgnore: true */ modPath);
       return detectDevice();
     } catch { return null; }
   });

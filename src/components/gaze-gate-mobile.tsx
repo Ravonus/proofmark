@@ -234,7 +234,8 @@ export function GazeGateMobile({
     // Dynamic import of mobile calibration overlay
     let CalibrationOverlay: React.ComponentType<any>;
     try {
-      CalibrationOverlay = require("~/premium/eye-tracking/mobile/calibration-overlay").MobileCalibrationOverlay;
+      const modPath = "~/premium/eye-tracking/mobile/calibration-overlay";
+      CalibrationOverlay = require(/* webpackIgnore: true */ modPath).MobileCalibrationOverlay;
     } catch {
       return <div className="p-8 text-center text-sm text-muted">Eye tracking calibration requires premium features.</div>;
     }
