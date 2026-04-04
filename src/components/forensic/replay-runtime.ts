@@ -506,6 +506,7 @@ async function loadPlaybackModule() {
     playbackModulePromise = (async () => {
       if (typeof window === "undefined" || typeof WebAssembly === "undefined") return null;
       try {
+        // eslint-disable-next-line @next/next/no-assign-module-variable
         const module = (await import("~/lib/forensic/generated/forensic_core.js")) as ForensicPlaybackWasmModule;
         await module.default();
         return module;

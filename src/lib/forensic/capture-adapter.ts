@@ -1,6 +1,6 @@
 import type { ForensicReplayEncodedEvent } from "./replay-codec";
 import { quantizePressure, encodeReplayEventsSync } from "./replay-codec";
-import { REPLAY_FORMAT_LIMITS, REPLAY_CLIPBOARD_ACTION_CODES, REPLAY_NAV_DIRECTION_CODES } from "./replay-format";
+import { REPLAY_FORMAT_LIMITS, type REPLAY_CLIPBOARD_ACTION_CODES, type REPLAY_NAV_DIRECTION_CODES } from "./replay-format";
 import { resolveForensicReplayCore } from "./replay-core";
 
 const TIME_QUANTUM_MS = REPLAY_FORMAT_LIMITS.timeQuantumMs;
@@ -632,11 +632,11 @@ export class ForensicCaptureAdapter {
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", () => this.recordVisibility(document.hidden), opts);
-      document.addEventListener("copy", (e) => this.recordClipboard("copy", (e as ClipboardEvent).target, null), opts);
-      document.addEventListener("cut", (e) => this.recordClipboard("cut", (e as ClipboardEvent).target, null), opts);
+      document.addEventListener("copy", (e) => this.recordClipboard("copy", (e).target, null), opts);
+      document.addEventListener("cut", (e) => this.recordClipboard("cut", (e).target, null), opts);
       document.addEventListener(
         "paste",
-        (e) => this.recordClipboard("paste", (e as ClipboardEvent).target, null),
+        (e) => this.recordClipboard("paste", (e).target, null),
         opts,
       );
     }

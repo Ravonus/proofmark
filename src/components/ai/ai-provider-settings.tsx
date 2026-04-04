@@ -534,7 +534,7 @@ export function AiProviderSettings() {
                 className="rounded-xl border border-green-500/20 bg-green-500/5 p-4"
               >
                 <p className="mb-2 text-xs font-medium text-green-300">
-                  Token created — copy it now. You won't see it again.
+                  Token created — copy it now. You won&apos;t see it again.
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 break-all rounded-lg bg-black/30 px-3 py-2 font-mono text-xs text-green-200">

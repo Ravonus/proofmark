@@ -1740,7 +1740,7 @@ function AiLimitsSection() {
               {runtimeQuery.data?.prereqs && (
                 <div className="flex flex-wrap gap-3">
                   {(["npm", "node", "cargo"] as const).map((dep) => {
-                    const info = runtimeQuery.data!.prereqs[dep];
+                    const info = runtimeQuery.data.prereqs[dep];
                     return (
                       <div key={dep} className="bg-surface/20 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs">
                         <div className={`h-2 w-2 rounded-full ${info.available ? "bg-emerald-400" : "bg-red-400"}`} />

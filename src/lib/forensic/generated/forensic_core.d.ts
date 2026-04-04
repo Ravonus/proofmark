@@ -1,4 +1,3 @@
-/* tslint:disable */
 /* eslint-disable */
 
 export function analyze_replay_signature_activity(tape_base64: string): any;

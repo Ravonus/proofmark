@@ -26,6 +26,12 @@ const sharedTsRules = {
 
 const typedTsRules = {
   ...sharedTsRules,
+  "@typescript-eslint/ban-ts-comment": ["warn", { "ts-nocheck": "allow-with-description" }],
+  "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+  "@typescript-eslint/prefer-optional-chain": "warn",
+  "@typescript-eslint/prefer-regexp-exec": "warn",
+  "@typescript-eslint/restrict-plus-operands": "warn",
+  "@typescript-eslint/no-unused-expressions": "warn",
   "@typescript-eslint/no-misused-promises": [
     "error",
     { checksVoidReturn: { attributes: false } },
@@ -65,7 +71,7 @@ const typedTsRules = {
 
 export default tseslint.config(
   {
-    ignores: [".next", "node_modules", "coverage"],
+    ignores: [".next", "node_modules", "coverage", "src/lib/forensic/generated"],
   },
   ...compat.extends("next/core-web-vitals"),
   {

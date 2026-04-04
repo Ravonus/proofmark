@@ -129,7 +129,7 @@ function sleep(ms: number) {
 }
 
 function isRetryableAutomationReviewError(error: unknown, key: ResolvedKey | null): boolean {
-  if (!key || key.source !== "connector") return false;
+  if (key?.source !== "connector") return false;
   const message = error instanceof Error ? error.message : String(error);
   return /fetch failed|timed out|timeout|no online local ai connector|empty response|connector/i.test(message);
 }

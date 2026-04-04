@@ -139,7 +139,7 @@ function ParticipantCard({ participant }: { participant: EscrowParticipant }) {
         {participant.address && (
           <button
             className="mt-0.5 flex items-center gap-1 text-xs text-muted hover:text-[var(--accent)]"
-            onClick={() => copyToClipboard(participant.address!)}
+            onClick={() => copyToClipboard(participant.address)}
           >
             {shortenAddress(participant.address)} <Copy className="h-3 w-3" />
           </button>
@@ -259,7 +259,7 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
   const myParticipant = escrow.participants.find((p) => p.address === address);
   const canSign = myParticipant && !myParticipant.accepted && escrow.status === "AWAITING_SIGNATURES";
   const canDeposit =
-    myParticipant && myParticipant.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
+    myParticipant?.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
   const canResolve = isAgent && (escrow.status === "ACTIVE" || escrow.status === "DISPUTED");
 
   return (
@@ -418,7 +418,7 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
                 <dt className="text-muted">Contract</dt>
                 <dd className="flex items-center gap-1 font-mono text-xs">
                   {shortenAddress(escrow.onChainAddress)}
-                  <button onClick={() => copyToClipboard(escrow.onChainAddress!)}>
+                  <button onClick={() => copyToClipboard(escrow.onChainAddress)}>
                     <Copy className="h-3 w-3 text-muted" />
                   </button>
                 </dd>

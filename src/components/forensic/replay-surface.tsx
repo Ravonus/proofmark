@@ -189,7 +189,7 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
     }
 
     // Lane labels
-    let labelY = docH + docPadding + 20;
+    const labelY = docH + docPadding + 20;
     for (const signer of signers) {
       if (activeLane !== null && activeLane !== signer.lane) continue;
       const color = laneColor(signer.lane);
@@ -206,7 +206,7 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
     lastTickRef.current = now;
 
     const ctrl = controllerRef.current;
-    if (ctrl && ctrl.state === "playing") {
+    if (ctrl?.state === "playing") {
       ctrl.tick(Math.round(dt));
       const nextCursorMs = ctrl.cursorMs;
       setCursorMs(nextCursorMs);

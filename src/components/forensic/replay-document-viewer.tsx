@@ -69,7 +69,7 @@ function escapeSelectorValue(value: string) {
 function resolveFieldId(tape: ForensicReplayTape, targetId: number) {
   const target = tape.targets.find((entry) => entry.id === targetId);
   if (!target) return null;
-  const match = target.descriptor.match(/field:([^\s>|]+)/) ?? target.descriptor.match(/\bid:([^\s>|]+)/);
+  const match = (/field:([^\s>|]+)/.exec(target.descriptor)) ?? (/\bid:([^\s>|]+)/.exec(target.descriptor));
   return match?.[1] ?? null;
 }
 
@@ -273,7 +273,7 @@ function resolveGazeAnchorSample(tape: ForensicReplayTape, sampleIndex: number):
   const metadata = tape.gazeAnchors;
   if (!metadata) return null;
   const sample = metadata.samples[sampleIndex];
-  if (!sample || !sample.anchorId) return null;
+  if (!sample?.anchorId) return null;
   const anchor = metadata.anchors.find((entry) => entry.id === sample.anchorId);
   if (!anchor) return null;
   const scale = metadata.scale || GAZE_SCALE;
@@ -904,7 +904,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
   const signers: SignerData[] = useMemo(() => {
     if (!data?.signers) return [];
     return data.signers.map((signer, index) => {
-      const tape = (signer.replay as ForensicReplayTape | null) ?? null;
+      const tape = (signer.replay) ?? null;
       const events = tape?.tapeBase64 ? decodeReplayEventsSync(tape.tapeBase64) : [];
       const durationMs = events.reduce((total, event) => total + event.delta * TQ, 0);
       const { classification, interactions } = tape
@@ -926,8 +926,8 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
         serverReview,
         sessionProfile,
         forensicSessions,
-        fieldValues: (signer.fieldValues as Record<string, string> | null) ?? null,
-        handSignatureData: (signer.handSignatureData as string | null) ?? null,
+        fieldValues: (signer.fieldValues) ?? null,
+        handSignatureData: (signer.handSignatureData) ?? null,
         signedAt: signer.signedAt,
         address: signer.address ?? null,
         chain: signer.chain ?? null,

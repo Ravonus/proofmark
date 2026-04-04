@@ -80,7 +80,7 @@ export function ViewDocumentClient({ documentId }: Props) {
 
   const signedCount = doc?.signers.filter((s) => s.status === "SIGNED").length ?? 0;
   const allSigned = doc ? doc.signers.every((s) => s.status === "SIGNED") : false;
-  const isCreatorViewer = !!(doc && address && doc.createdBy.toLowerCase() === address.toLowerCase());
+  const isCreatorViewer = !!(doc && doc.createdBy.toLowerCase() === address?.toLowerCase());
 
   // Scroll spy
   useEffect(() => {

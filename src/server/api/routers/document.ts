@@ -1024,7 +1024,7 @@ export const documentRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const doc = await findDocumentById(ctx.db, input.documentId);
-      if (!doc || doc.status !== "PENDING") return { saved: false };
+      if (doc?.status !== "PENDING") return { saved: false };
 
       const docSigners = await findSignersByDocumentId(ctx.db, input.documentId);
       const signer = docSigners.find((s) => s.claimToken === input.claimToken);
@@ -1044,7 +1044,7 @@ export const documentRouter = createTRPCRouter({
         const existing = signer.fieldValues ?? {};
         const hasAnyVerification = verifyFields.some((f) => {
           const val = existing[f.id];
-          return val && val.includes('"status":"verified"');
+          return val?.includes('"status":"verified"');
         });
         // Also check socialVerifications on the signer record
         const socialVerifs = (signer.socialVerifications ?? []) as Array<{ verifiedAt?: string }>;
@@ -1449,7 +1449,7 @@ export const documentRouter = createTRPCRouter({
             .update(signers)
             .set({
               forensicEvidence: {
-                ...(mergedForensicEvidence as Record<string, unknown>),
+                ...(mergedForensicEvidence!),
                 mobileForensics,
               } as unknown as Record<string, unknown>,
             })
@@ -2362,7 +2362,7 @@ export const documentRouter = createTRPCRouter({
             .update(signers)
             .set({
               forensicEvidence: {
-                ...(mergedForensicEvidence as Record<string, unknown>),
+                ...(mergedForensicEvidence!),
                 mobileForensics,
               } as unknown as Record<string, unknown>,
             })
@@ -2849,7 +2849,7 @@ export const documentRouter = createTRPCRouter({
         const discloser = docSigners.find(
           (s) => s.claimToken === input.claimToken || s.groupRole === GROUP_ROLE.DISCLOSER,
         );
-        if (!discloser || discloser.status !== "SIGNED" || discloser.finalizationSignature) continue;
+        if (discloser?.status !== "SIGNED" || discloser.finalizationSignature) continue;
 
         // All non-discloser signers must be done
         const others = docSigners.filter((s) => s.id !== discloser.id && isActionableRecipientRole(s.role));
@@ -2911,7 +2911,7 @@ export const documentRouter = createTRPCRouter({
         const discloser = docSigners.find(
           (s) => s.claimToken === input.claimToken || s.groupRole === GROUP_ROLE.DISCLOSER,
         );
-        if (!discloser || discloser.status !== "SIGNED" || discloser.finalizationSignature) continue;
+        if (discloser?.status !== "SIGNED" || discloser.finalizationSignature) continue;
 
         const others = docSigners.filter((s) => s.id !== discloser.id && isActionableRecipientRole(s.role));
         if (!others.every((s) => s.status === "SIGNED")) continue;

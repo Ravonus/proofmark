@@ -510,7 +510,7 @@ function AiChatDrawer({ open, onClose }: { open: boolean; onClose: () => void })
             <Sparkles className="mx-auto mb-3 h-8 w-8 text-muted" />
             <p className="text-sm font-medium">Describe your bet or escrow</p>
             <p className="mt-1 text-xs text-muted">
-              I'll help you set everything up — mode, terms, assets, outcomes, the works.
+              I&apos;ll help you set everything up — mode, terms, assets, outcomes, the works.
             </p>
           </div>
         )}

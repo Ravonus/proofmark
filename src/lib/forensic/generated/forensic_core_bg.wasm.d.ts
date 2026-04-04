@@ -1,4 +1,3 @@
-/* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const analyze_replay_signature_activity: (a: number, b: number) => [number, number, number];

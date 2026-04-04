@@ -665,7 +665,7 @@ function buildCriticalIndicators(
   for (const lf of livenessFlags) {
     push({
       code: lf.code,
-      severity: lf.severity as "info" | "warn" | "critical",
+      severity: lf.severity,
       stage: "critical",
       score: lf.severity === "critical" ? 0.5 : 0.2,
       message: lf.message,
@@ -677,7 +677,7 @@ function buildCriticalIndicators(
   for (const cf of canvasFlags) {
     push({
       code: cf.code,
-      severity: cf.severity as "info" | "warn" | "critical",
+      severity: cf.severity,
       stage: "critical",
       score: cf.severity === "critical" ? 0.45 : 0.15,
       message: cf.message,

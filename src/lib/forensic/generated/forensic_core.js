@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-assign-module-variable */
 /* @ts-self-types="./forensic_core.d.ts" */
 
 /**

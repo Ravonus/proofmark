@@ -303,13 +303,13 @@ export const collabRouter = createTRPCRouter({
         userId: ctx.session.address,
         displayName: input.displayName,
         content: input.message,
-        pdfAnalysis: (session?.session as any)?.pdfAnalysis,
+        pdfAnalysis: (session?.session)?.pdfAnalysis,
         complete: async (messages) => {
           const response = await ai.complete(
             {
               provider: resolved.key.provider,
               model: input.model ?? resolved.model,
-              messages: messages as any,
+              messages: messages,
               maxTokens: 4096,
             },
             resolved.key,
@@ -367,13 +367,13 @@ export const collabRouter = createTRPCRouter({
         sessionId: input.sessionId,
         userId: ctx.session.address,
         content: input.message,
-        pdfAnalysis: (session?.session as any)?.pdfAnalysis,
+        pdfAnalysis: (session?.session)?.pdfAnalysis,
         complete: async (messages) => {
           const response = await ai.complete(
             {
               provider: resolved.key.provider,
               model: input.model ?? resolved.model,
-              messages: messages as any,
+              messages: messages,
               maxTokens: 4096,
             },
             resolved.key,

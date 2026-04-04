@@ -544,7 +544,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
           .filter((f) => VERIFY_FIELD_TYPES.has(f.type))
           .some((f) => {
             const val = mergedFieldValues[f.id];
-            return val && val.includes('"status":"verified"');
+            return val?.includes('"status":"verified"');
           });
 
       if (verificationDone) {
@@ -841,15 +841,15 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       store,
       async () => {
         const { message } = await getBulkFinalizationMessageMut.mutateAsync({
-          groupId: groupId!,
-          claimToken: claimToken!,
+          groupId: groupId,
+          claimToken: claimToken,
           signerAddress: wallet.address!,
           chain: wallet.chain!,
         });
         const signature = await getWalletActions().signMessage(message);
         await bulkFinalizeMut.mutateAsync({
-          groupId: groupId!,
-          claimToken: claimToken!,
+          groupId: groupId,
+          claimToken: claimToken,
           signerAddress: wallet.address!,
           chain: wallet.chain!,
           signature,
@@ -1156,7 +1156,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
               const autoFillTypes = providerFieldMap[parsed.provider ?? ""] ?? [];
               for (const f of inlineFields) {
                 if (autoFillTypes.includes(f.type) && f.signerIdx === field.signerIdx && !store.fieldValues[f.id]) {
-                  handleFieldChange(f.id, parsed.provider === "google" ? parsed.username! : `@${parsed.username}`);
+                  handleFieldChange(f.id, parsed.provider === "google" ? parsed.username : `@${parsed.username}`);
                 }
               }
             }

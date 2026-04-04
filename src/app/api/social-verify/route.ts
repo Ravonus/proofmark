@@ -9,7 +9,7 @@
  * 5. We exchange the code for user info, record the verification, and close the popup
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { randomBytes, createHash } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "~/server/db";
@@ -349,7 +349,7 @@ export async function GET(req: NextRequest) {
       verifiedAt: verification.verifiedAt,
     };
 
-    const currentFieldValues = (signer.fieldValues as Record<string, string> | null) ?? {};
+    const currentFieldValues = (signer.fieldValues) ?? {};
     const updatedFieldValues = {
       ...currentFieldValues,
       [pending.fieldId]: encodeStructuredFieldValue(fieldValue),

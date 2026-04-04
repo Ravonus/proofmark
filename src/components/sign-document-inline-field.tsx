@@ -276,7 +276,7 @@ export function InlineFieldInput({
           {canReuse && (
             <button
               type="button"
-              onClick={() => onChange(field.id, siblingValue!)}
+              onClick={() => onChange(field.id, siblingValue)}
               className="bg-accent/10 hover:bg-accent/20 shrink-0 rounded p-0.5 text-accent transition-colors"
               title="Reuse from matching field"
             >

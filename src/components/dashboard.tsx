@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useSession } from "~/lib/auth-client";
 import { trpc } from "~/lib/trpc";
@@ -201,12 +202,12 @@ function OnboardingChecklist() {
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted">{step.description}</p>
                 {step.cta && (
-                  <a
+                  <Link
                     href="/"
                     className="mt-2 inline-flex items-center gap-1 rounded-sm bg-[var(--accent)] px-2.5 py-1 text-[10px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
                   >
                     Create Document
-                  </a>
+                  </Link>
                 )}
                 {step.locked && (
                   <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-faint">
