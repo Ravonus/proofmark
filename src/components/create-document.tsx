@@ -10,7 +10,20 @@ import { SECURITY_MODE_DESCRIPTIONS, type SecurityMode } from "~/lib/document-se
 import type { SignerTokenGate } from "~/lib/token-gates";
 import { FadeIn, ScaleIn, GlassCard, W3SButton, W3SLink } from "./ui/motion";
 import { Select } from "./ui/select";
-import { FileUp, FilePlus, ChevronDown, Check, Copy, Lock, FileText, Palette, Shield, Eye, ListOrdered, Globe } from "lucide-react";
+import {
+  FileUp,
+  FilePlus,
+  ChevronDown,
+  Check,
+  Copy,
+  Lock,
+  FileText,
+  Palette,
+  Shield,
+  Eye,
+  ListOrdered,
+  Globe,
+} from "lucide-react";
 
 const PdfUpload = lazy(() => import("./pdf-upload").then((m) => ({ default: m.PdfUpload })));
 const DocumentEditor = lazy(() => import("./document-editor").then((m) => ({ default: m.DocumentEditor })));
@@ -69,7 +82,9 @@ export function CreateDocument() {
   const [signingOrder, setSigningOrder] = useState<"parallel" | "sequential">("parallel");
   const [gazeTracking, setGazeTracking] = useState<"off" | "full" | "signing_only">("off");
 
-  const pdfStyleTemplatesQuery = trpc.account.listPdfStyleTemplates.useQuery(undefined, { enabled: identity.isSignedIn });
+  const pdfStyleTemplatesQuery = trpc.account.listPdfStyleTemplates.useQuery(undefined, {
+    enabled: identity.isSignedIn,
+  });
 
   const lastGeneratedRef = useRef<string | null>(null);
   const initializedPdfStyleRef = useRef(false);
@@ -117,13 +132,13 @@ export function CreateDocument() {
     setSigners(
       template.signers.length > 0
         ? template.signers.map((signer) => ({
-          label: signer.label,
-          email: signer.email ?? "",
-          phone: signer.phone ?? "",
-          role: signer.role ?? "SIGNER",
-          tokenGates: signer.tokenGates ?? null,
-          fields: signer.fields?.map((f) => ({ ...f, type: f.type })),
-        }))
+            label: signer.label,
+            email: signer.email ?? "",
+            phone: signer.phone ?? "",
+            role: signer.role ?? "SIGNER",
+            tokenGates: signer.tokenGates ?? null,
+            fields: signer.fields?.map((f) => ({ ...f, type: f.type })),
+          }))
         : [emptySigner(), emptySigner()],
     );
     setExpiresInDays(template.defaults?.expiresInDays ? String(template.defaults.expiresInDays) : "30");
@@ -328,25 +343,25 @@ export function CreateDocument() {
                   reminderCadence === "NONE"
                     ? undefined
                     : {
-                      cadence: reminderCadence,
-                      channels: result.signers.some((signer) => signer.phone?.trim()) ? ["EMAIL", "SMS"] : ["EMAIL"],
-                    },
+                        cadence: reminderCadence,
+                        channels: result.signers.some((signer) => signer.phone?.trim()) ? ["EMAIL", "SMS"] : ["EMAIL"],
+                      },
                 automationPolicy:
                   automationReviewMode === "DISABLED"
                     ? {
-                      enabled: false,
-                      onPreparationAutomation: prepAutomationMode,
-                      onCriticalAutomation: "FLAG",
-                      notifyCreator: false,
-                      requireHumanSteps: ["signature", "consent", "final_submit", "wallet_auth"],
-                    }
+                        enabled: false,
+                        onPreparationAutomation: prepAutomationMode,
+                        onCriticalAutomation: "FLAG",
+                        notifyCreator: false,
+                        requireHumanSteps: ["signature", "consent", "final_submit", "wallet_auth"],
+                      }
                     : {
-                      enabled: true,
-                      onPreparationAutomation: prepAutomationMode,
-                      onCriticalAutomation: automationReviewMode,
-                      notifyCreator: true,
-                      requireHumanSteps: ["signature", "consent", "final_submit", "wallet_auth"],
-                    },
+                        enabled: true,
+                        onPreparationAutomation: prepAutomationMode,
+                        onCriticalAutomation: automationReviewMode,
+                        notifyCreator: true,
+                        requireHumanSteps: ["signature", "consent", "final_submit", "wallet_auth"],
+                      },
               });
             }}
             onSaveTemplate={(result) => {
@@ -372,11 +387,11 @@ export function CreateDocument() {
                     reminderCadence === "NONE"
                       ? undefined
                       : {
-                        cadence: reminderCadence,
-                        channels: result.signers.some((signer) => signer.phone?.trim())
-                          ? ["EMAIL", "SMS"]
-                          : ["EMAIL"],
-                      },
+                          cadence: reminderCadence,
+                          channels: result.signers.some((signer) => signer.phone?.trim())
+                            ? ["EMAIL", "SMS"]
+                            : ["EMAIL"],
+                        },
                 },
               });
             }}
@@ -575,9 +590,24 @@ export function CreateDocument() {
               value={proofMode}
               onChange={(value) => setProofMode(value as typeof proofMode)}
               options={[
-                { value: "HYBRID", label: "Hybrid (default)", description: "Email or wallet signing, on-chain hash.", icon: <Globe className="h-3 w-3 text-blue-400" /> },
-                { value: "PRIVATE", label: "Private (Web2)", description: "Email signing only, off-chain audit.", icon: <Globe className="h-3 w-3 text-slate-400" /> },
-                { value: "CRYPTO_NATIVE", label: "Crypto Native", description: "Wallet only, on-chain storage.", icon: <Globe className="h-3 w-3 text-emerald-400" /> },
+                {
+                  value: "HYBRID",
+                  label: "Hybrid (default)",
+                  description: "Email or wallet signing, on-chain hash.",
+                  icon: <Globe className="h-3 w-3 text-blue-400" />,
+                },
+                {
+                  value: "PRIVATE",
+                  label: "Private (Web2)",
+                  description: "Email signing only, off-chain audit.",
+                  icon: <Globe className="h-3 w-3 text-slate-400" />,
+                },
+                {
+                  value: "CRYPTO_NATIVE",
+                  label: "Crypto Native",
+                  description: "Wallet only, on-chain storage.",
+                  icon: <Globe className="h-3 w-3 text-emerald-400" />,
+                },
               ]}
             />
             <Select
@@ -585,8 +615,18 @@ export function CreateDocument() {
               value={signingOrder}
               onChange={(value) => setSigningOrder(value as typeof signingOrder)}
               options={[
-                { value: "parallel", label: "Parallel", description: "All signers can sign at the same time.", icon: <ListOrdered className="h-3 w-3 text-blue-400" /> },
-                { value: "sequential", label: "Sequential", description: "Signers must sign in order.", icon: <ListOrdered className="h-3 w-3 text-amber-400" /> },
+                {
+                  value: "parallel",
+                  label: "Parallel",
+                  description: "All signers can sign at the same time.",
+                  icon: <ListOrdered className="h-3 w-3 text-blue-400" />,
+                },
+                {
+                  value: "sequential",
+                  label: "Sequential",
+                  description: "Signers must sign in order.",
+                  icon: <ListOrdered className="h-3 w-3 text-amber-400" />,
+                },
               ]}
             />
             <Select
@@ -595,8 +635,18 @@ export function CreateDocument() {
               onChange={(value) => setGazeTracking(value as typeof gazeTracking)}
               options={[
                 { value: "off", label: "Off", description: "No eye tracking required." },
-                { value: "full", label: "Full document", description: "Track gaze while reading and signing.", icon: <Eye className="h-3 w-3 text-emerald-400" /> },
-                { value: "signing_only", label: "Signing only", description: "Track gaze during signature step only.", icon: <Eye className="h-3 w-3 text-amber-400" /> },
+                {
+                  value: "full",
+                  label: "Full document",
+                  description: "Track gaze while reading and signing.",
+                  icon: <Eye className="h-3 w-3 text-emerald-400" />,
+                },
+                {
+                  value: "signing_only",
+                  label: "Signing only",
+                  description: "Track gaze during signature step only.",
+                  icon: <Eye className="h-3 w-3 text-amber-400" />,
+                },
               ]}
             />
           </div>

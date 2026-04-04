@@ -97,7 +97,8 @@ export function InlineFieldInput({
   const [error, setError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"attachment" | "payment" | "idv" | "social" | null>(null);
   const runtimeSettings = getRuntimeFieldSettings(field);
-  const inputType = field.type === "signature" || field.type === "initials" ? "signature" : resolveFieldInputType(field);
+  const inputType =
+    field.type === "signature" || field.type === "initials" ? "signature" : resolveFieldInputType(field);
   const s = getFieldVisualStyle(field);
   const placeholder = resolveFieldPlaceholder(field);
   const autocomplete = resolveFieldAutocomplete(field);
@@ -122,8 +123,12 @@ export function InlineFieldInput({
         : null
     : null;
   // Show reuse icon when this field is empty but a sibling with the same type:label has a value
-  const canReuse = canEdit && !value && !!siblingValue && !filled
-    && !["checkbox", "file", "payment", "idv", "social-verify"].includes(inputType);
+  const canReuse =
+    canEdit &&
+    !value &&
+    !!siblingValue &&
+    !filled &&
+    !["checkbox", "file", "payment", "idv", "social-verify"].includes(inputType);
 
   const stateStyles = error
     ? "ring-2 ring-red-400/60 border-red-400/40"
@@ -197,7 +202,7 @@ export function InlineFieldInput({
         data-forensic-id={forensicId}
       >
         <span
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover/30 px-3 py-1.5"
+          className="bg-surface-hover/30 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5"
           style={{ minWidth: fieldMinWidth }}
         >
           <span className="shrink-0 text-[9px] font-medium uppercase tracking-wider text-muted">{field.label}</span>
@@ -227,7 +232,7 @@ export function InlineFieldInput({
         data-forensic-id={forensicId}
       >
         <span
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover/20 px-3 py-1.5 opacity-40"
+          className="bg-surface-hover/20 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 opacity-40"
           style={{ minWidth: fieldMinWidth }}
         >
           <span className="shrink-0 text-[9px] font-medium uppercase tracking-wider text-muted">{field.label}</span>
@@ -238,7 +243,7 @@ export function InlineFieldInput({
             <span className="rounded-full border border-border px-1.5 py-0.5 text-[9px] text-muted">{badge}</span>
           )}
           {prefix && <span className="text-xs text-muted">{prefix}</span>}
-          <span className="text-sm italic text-muted/40">{placeholder}</span>
+          <span className="text-muted/40 text-sm italic">{placeholder}</span>
           {suffix && <span className="text-xs text-muted">{suffix}</span>}
         </span>
       </span>
@@ -272,7 +277,7 @@ export function InlineFieldInput({
             <button
               type="button"
               onClick={() => onChange(field.id, siblingValue!)}
-              className="shrink-0 rounded bg-accent/10 p-0.5 text-accent transition-colors hover:bg-accent/20"
+              className="bg-accent/10 hover:bg-accent/20 shrink-0 rounded p-0.5 text-accent transition-colors"
               title="Reuse from matching field"
             >
               <Copy className="h-3 w-3" />
@@ -289,7 +294,7 @@ export function InlineFieldInput({
                   onBlur={handleBlur}
                   rows={runtimeSettings.rows ?? 2}
                   autoComplete={autocomplete}
-                  className="min-h-[3.25rem] w-full min-w-0 resize-y bg-transparent text-sm text-primary outline-none placeholder:text-muted/50"
+                  className="placeholder:text-muted/50 min-h-[3.25rem] w-full min-w-0 resize-y bg-transparent text-sm text-primary outline-none"
                   style={{ fontFamily: "'Georgia', serif" }}
                 />
               ) : inputType === "select" ? (
@@ -446,9 +451,7 @@ export function InlineFieldInput({
                     {field.type === "initials" ? (
                       <>
                         <span className="truncate">
-                          {value ? (
-                            <img src={value} alt="Initials" className="inline-block max-h-5" />
-                          ) : placeholder}
+                          {value ? <img src={value} alt="Initials" className="inline-block max-h-5" /> : placeholder}
                         </span>
                         <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted">
                           {value ? "done" : "draw"}
@@ -465,11 +468,25 @@ export function InlineFieldInput({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { onFocus(); onRequestPhoneDraw(); }}
+                    onClick={() => {
+                      onFocus();
+                      onRequestPhoneDraw();
+                    }}
                     className="shrink-0 rounded-full bg-surface-elevated p-1 text-muted transition-colors hover:text-primary"
                     title="Draw on phone"
                   >
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                    <svg
+                      className="h-3.5 w-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <line x1="12" y1="18" x2="12" y2="18" />
+                    </svg>
                   </button>
                 </div>
               ) : isAddressLikeField(field) ? (
@@ -502,7 +519,7 @@ export function InlineFieldInput({
                   min={runtimeSettings.validation?.min}
                   max={runtimeSettings.validation?.max}
                   step={runtimeSettings.validation?.step}
-                  className="w-full min-w-0 bg-transparent text-sm text-primary outline-none placeholder:text-muted/50"
+                  className="placeholder:text-muted/50 w-full min-w-0 bg-transparent text-sm text-primary outline-none"
                   style={{ fontFamily: "'Georgia', serif" }}
                 />
               )}
@@ -523,7 +540,7 @@ export function InlineFieldInput({
             </>
           ) : (
             <>
-              <span className={`text-sm ${value ? "text-primary" : "italic text-muted/50"}`}>{displayValue}</span>
+              <span className={`text-sm ${value ? "text-primary" : "text-muted/50 italic"}`}>{displayValue}</span>
               {suffix && <span className="text-xs text-muted">{suffix}</span>}
             </>
           )}

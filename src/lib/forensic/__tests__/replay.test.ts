@@ -32,9 +32,7 @@ describe("forensic replay", () => {
     const decoded = decodeTimedSignature(encodedA);
 
     expect(encodedA).toBe(encodedB);
-    expect(decoded[0]?.map(({ x, y, t }) => ({ x, y, t }))).toEqual(
-      strokes[0]?.map(({ x, y, t }) => ({ x, y, t })),
-    );
+    expect(decoded[0]?.map(({ x, y, t }) => ({ x, y, t }))).toEqual(strokes[0]?.map(({ x, y, t }) => ({ x, y, t })));
     expect(decoded[0]?.[0]?.force).toBeCloseTo(0.4, 2);
     expect(decoded[0]?.[1]?.force).toBeCloseTo(0.6, 2);
     expect(decoded[0]?.[2]?.force).toBeCloseTo(0.5, 2);

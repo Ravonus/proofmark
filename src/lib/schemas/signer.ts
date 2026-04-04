@@ -46,11 +46,7 @@ export const fieldValueSchema = z.object({
 });
 
 /** Validate a field value based on its type. Returns error message or null. */
-export function validateFieldValue(
-  value: string,
-  fieldType: string,
-  required: boolean,
-): string | null {
+export function validateFieldValue(value: string, fieldType: string, required: boolean): string | null {
   if (required && !value.trim()) return "This field is required";
 
   if (!value) return null;

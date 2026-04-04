@@ -28,7 +28,15 @@ export type ForensicReplayEncodedEvent =
   | { type: "navigation"; delta: number; direction: ReplayNavigationDirection; targetId: number; index: number }
   | { type: "page"; delta: number; page: number; totalPages: number }
   | { type: "modal"; delta: number; nameId: number; open: boolean }
-  | { type: "signatureStart"; delta: number; targetId: number; strokeId: number; x: number; y: number; pressure: number }
+  | {
+      type: "signatureStart";
+      delta: number;
+      targetId: number;
+      strokeId: number;
+      x: number;
+      y: number;
+      pressure: number;
+    }
   | { type: "signaturePoint"; delta: number; strokeId: number; x: number; y: number; pressure: number }
   | { type: "signatureEnd"; delta: number; strokeId: number }
   | { type: "signatureCommit"; delta: number; targetId: number; signatureId: number }
@@ -48,7 +56,15 @@ export type ForensicReplayEncodedEvent =
   // v3 opcodes — eye gaze tracking
   | { type: "gazePoint"; delta: number; x: number; y: number; confidence: number }
   | { type: "gazeFixation"; delta: number; x: number; y: number; durationMs: number; targetId: number }
-  | { type: "gazeSaccade"; delta: number; fromX: number; fromY: number; toX: number; toY: number; velocityDegPerS: number }
+  | {
+      type: "gazeSaccade";
+      delta: number;
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      velocityDegPerS: number;
+    }
   | { type: "gazeBlink"; delta: number; durationMs: number }
   | { type: "gazeCalibration"; delta: number; accuracy: number; pointCount: number }
   | { type: "gazeLost"; delta: number; reason: number };
@@ -76,7 +92,7 @@ function writeVarUint(bytes: number[], value: number) {
 }
 
 function writeVarInt(bytes: number[], value: number) {
-  const zigzag = value < 0 ? (-value * 2) - 1 : value * 2;
+  const zigzag = value < 0 ? -value * 2 - 1 : value * 2;
   writeVarUint(bytes, zigzag);
 }
 
@@ -124,15 +140,17 @@ export function dequantizePressure(bucket: number) {
 
 function decodeNavigationDirection(code: number): ReplayNavigationDirection {
   return (
-    (Object.entries(NAV_DIRECTION_CODES).find(([, value]) => value === code)?.[0] as ReplayNavigationDirection | undefined) ??
-    "jump"
+    (Object.entries(NAV_DIRECTION_CODES).find(([, value]) => value === code)?.[0] as
+      | ReplayNavigationDirection
+      | undefined) ?? "jump"
   );
 }
 
 function decodeClipboardAction(code: number): ReplayClipboardAction {
   return (
-    (Object.entries(CLIPBOARD_ACTION_CODES).find(([, value]) => value === code)?.[0] as ReplayClipboardAction | undefined) ??
-    "paste"
+    (Object.entries(CLIPBOARD_ACTION_CODES).find(([, value]) => value === code)?.[0] as
+      | ReplayClipboardAction
+      | undefined) ?? "paste"
   );
 }
 
@@ -587,18 +605,42 @@ export function decodeReplayEventsSync(tapeBase64: string): ForensicReplayEncode
         events.push({ type: "mouseMove", delta, dx: readVarInt(bytes, offset), dy: readVarInt(bytes, offset) });
         break;
       case ReplayOp.HoverDwell:
-        events.push({ type: "hoverDwell", delta, targetId: readVarUint(bytes, offset), durationMs: readVarUint(bytes, offset) });
+        events.push({
+          type: "hoverDwell",
+          delta,
+          targetId: readVarUint(bytes, offset),
+          durationMs: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.ViewportResize:
-        events.push({ type: "viewportResize", delta, width: readVarUint(bytes, offset), height: readVarUint(bytes, offset) });
+        events.push({
+          type: "viewportResize",
+          delta,
+          width: readVarUint(bytes, offset),
+          height: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.TouchStart: {
-        const ev = { type: "touchStart" as const, delta, x: readVarUint(bytes, offset), y: readVarUint(bytes, offset), radius: bytes[offset.value++] ?? 0, force: bytes[offset.value++] ?? 0 };
+        const ev = {
+          type: "touchStart" as const,
+          delta,
+          x: readVarUint(bytes, offset),
+          y: readVarUint(bytes, offset),
+          radius: bytes[offset.value++] ?? 0,
+          force: bytes[offset.value++] ?? 0,
+        };
         events.push(ev);
         break;
       }
       case ReplayOp.TouchMove: {
-        const ev = { type: "touchMove" as const, delta, dx: readVarInt(bytes, offset), dy: readVarInt(bytes, offset), radius: bytes[offset.value++] ?? 0, force: bytes[offset.value++] ?? 0 };
+        const ev = {
+          type: "touchMove" as const,
+          delta,
+          dx: readVarInt(bytes, offset),
+          dy: readVarInt(bytes, offset),
+          radius: bytes[offset.value++] ?? 0,
+          force: bytes[offset.value++] ?? 0,
+        };
         events.push(ev);
         break;
       }
@@ -612,22 +654,53 @@ export function decodeReplayEventsSync(tapeBase64: string): ForensicReplayEncode
         break;
       }
       case ReplayOp.ScrollMomentum:
-        events.push({ type: "scrollMomentum", delta, velocity: readVarInt(bytes, offset), deceleration: readVarUint(bytes, offset) });
+        events.push({
+          type: "scrollMomentum",
+          delta,
+          velocity: readVarInt(bytes, offset),
+          deceleration: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.GazePoint:
-        events.push({ type: "gazePoint", delta, x: readVarUint(bytes, offset), y: readVarUint(bytes, offset), confidence: bytes[offset.value++] ?? 0 });
+        events.push({
+          type: "gazePoint",
+          delta,
+          x: readVarUint(bytes, offset),
+          y: readVarUint(bytes, offset),
+          confidence: bytes[offset.value++] ?? 0,
+        });
         break;
       case ReplayOp.GazeFixation:
-        events.push({ type: "gazeFixation", delta, x: readVarUint(bytes, offset), y: readVarUint(bytes, offset), durationMs: readVarUint(bytes, offset), targetId: readVarUint(bytes, offset) });
+        events.push({
+          type: "gazeFixation",
+          delta,
+          x: readVarUint(bytes, offset),
+          y: readVarUint(bytes, offset),
+          durationMs: readVarUint(bytes, offset),
+          targetId: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.GazeSaccade:
-        events.push({ type: "gazeSaccade", delta, fromX: readVarUint(bytes, offset), fromY: readVarUint(bytes, offset), toX: readVarUint(bytes, offset), toY: readVarUint(bytes, offset), velocityDegPerS: readVarUint(bytes, offset) });
+        events.push({
+          type: "gazeSaccade",
+          delta,
+          fromX: readVarUint(bytes, offset),
+          fromY: readVarUint(bytes, offset),
+          toX: readVarUint(bytes, offset),
+          toY: readVarUint(bytes, offset),
+          velocityDegPerS: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.GazeBlink:
         events.push({ type: "gazeBlink", delta, durationMs: readVarUint(bytes, offset) });
         break;
       case ReplayOp.GazeCalibration:
-        events.push({ type: "gazeCalibration", delta, accuracy: bytes[offset.value++] ?? 0, pointCount: readVarUint(bytes, offset) });
+        events.push({
+          type: "gazeCalibration",
+          delta,
+          accuracy: bytes[offset.value++] ?? 0,
+          pointCount: readVarUint(bytes, offset),
+        });
         break;
       case ReplayOp.GazeLost: {
         const reason = bytes[offset.value++] ?? 0;

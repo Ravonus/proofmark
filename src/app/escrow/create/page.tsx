@@ -13,9 +13,7 @@ export default function EscrowCreatePage() {
         <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
           <FadeIn className="mb-8">
             <h2 className="text-2xl font-bold">Create Escrow</h2>
-            <p className="mt-1 text-sm text-muted">
-              Set up a new bet, escrow, or agreement between parties
-            </p>
+            <p className="mt-1 text-sm text-muted">Set up a new bet, escrow, or agreement between parties</p>
           </FadeIn>
 
           <FadeIn delay={0.12}>

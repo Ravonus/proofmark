@@ -131,12 +131,7 @@ export function SelectField({
   return (
     <label className="block">
       <span className="mb-1 block text-xs text-muted">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w3s-input w-full"
-      >
+      <select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} className="w3s-input w-full">
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
@@ -164,9 +159,7 @@ export function StatusPill({
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-        active
-          ? "bg-green-500/15 text-green-400"
-          : "bg-zinc-500/15 text-zinc-400"
+        active ? "bg-green-500/15 text-green-400" : "bg-zinc-500/15 text-zinc-400"
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-green-400" : "bg-zinc-500"}`} />

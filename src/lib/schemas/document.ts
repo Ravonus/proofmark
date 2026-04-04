@@ -22,13 +22,7 @@ export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 
 // ── Document status ──────────────────────────────────────────────────────────
 
-export const documentStatusSchema = z.enum([
-  "DRAFT",
-  "PENDING",
-  "COMPLETED",
-  "EXPIRED",
-  "VOIDED",
-]);
+export const documentStatusSchema = z.enum(["DRAFT", "PENDING", "COMPLETED", "EXPIRED", "VOIDED"]);
 
 export type DocumentStatus = z.infer<typeof documentStatusSchema>;
 

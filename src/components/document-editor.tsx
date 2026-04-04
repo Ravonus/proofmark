@@ -50,7 +50,10 @@ import type { SignerDef, EditorResult, PreviewValueMap } from "./document-editor
 import { SIGNER_BORDER_COLORS } from "./document-editor-types";
 import { EditorField, EditorSignatureBlock, type SignatureBlockToken } from "./document-editor-fields";
 import dynamic from "next/dynamic";
-const AiChatPanel = dynamic(() => import("./ai/ai-chat-panel").then((m) => m.AiChatPanel).catch(() => () => null), { ssr: false, loading: () => null });
+const AiChatPanel = dynamic(() => import("./ai/ai-chat-panel").then((m) => m.AiChatPanel).catch(() => () => null), {
+  ssr: false,
+  loading: () => null,
+});
 import { TokenGateEditor } from "./token-gate-editor";
 
 export type { EditorResult, SignerDef } from "./document-editor-types";

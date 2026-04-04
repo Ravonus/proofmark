@@ -185,7 +185,9 @@ export default function LoginPage() {
               >
                 {isSignUp && (
                   <div>
-                    <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Name</label>
+                    <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+                      Name
+                    </label>
                     <input
                       type="text"
                       value={name}
@@ -196,7 +198,9 @@ export default function LoginPage() {
                   </div>
                 )}
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Email</label>
+                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+                    Email
+                  </label>
                   <input
                     type="email"
                     value={email}
@@ -207,7 +211,9 @@ export default function LoginPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Password</label>
+                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+                    Password
+                  </label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -311,7 +317,9 @@ export default function LoginPage() {
                   Enter your email and we&apos;ll send you a sign-in link. No password needed.
                 </p>
                 <div>
-                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Email</label>
+                  <label className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+                    Email
+                  </label>
                   <input
                     type="email"
                     value={email}
@@ -371,7 +379,9 @@ export default function LoginPage() {
                 transition={{ duration: 0.15 }}
                 className="space-y-2"
               >
-                <p className="mb-3 text-[10px] text-secondary">Sign in with your organization&apos;s identity provider.</p>
+                <p className="mb-3 text-[10px] text-secondary">
+                  Sign in with your organization&apos;s identity provider.
+                </p>
                 {ssoProviders.map((providerId) => {
                   const meta = SSO_META[providerId] ?? { label: providerId, color: "#6366f1" };
                   return (
@@ -401,7 +411,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mt-3 rounded-sm border border-[var(--danger)]/15 bg-[var(--danger-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--danger)]"
+                className="border-[var(--danger)]/15 mt-3 rounded-sm border bg-[var(--danger-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--danger)]"
               >
                 {error}
               </motion.p>
@@ -411,7 +421,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="mt-3 rounded-sm border border-[var(--success)]/15 bg-[var(--success-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--success)]"
+                className="border-[var(--success)]/15 mt-3 rounded-sm border bg-[var(--success-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--success)]"
               >
                 {success}
               </motion.p>
@@ -471,19 +481,17 @@ function WalletConnectInline() {
         </div>
 
         <p className="text-[10px] text-secondary">
-          {authError
-            ? "Verification incomplete."
-            : "Finish the signature request to sign in."}
+          {authError ? "Verification incomplete." : "Finish the signature request to sign in."}
         </p>
 
         {authError && (
-          <p className="mt-2 rounded-sm border border-[var(--danger)]/15 bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
+          <p className="border-[var(--danger)]/15 mt-2 rounded-sm border bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
             {authError}
           </p>
         )}
 
         {walletError && (
-          <p className="mt-2 rounded-sm border border-[var(--danger)]/15 bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
+          <p className="border-[var(--danger)]/15 mt-2 rounded-sm border bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
             {walletError}
           </p>
         )}

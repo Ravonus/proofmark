@@ -156,7 +156,11 @@ export function TokenGateEditor({ value, onChange }: Props) {
                     size="sm"
                     variant="glass"
                     options={[
-                      { value: "INSCRIPTION_ID", label: "Inscription ID", description: "Verified via ord / ordinals.com" },
+                      {
+                        value: "INSCRIPTION_ID",
+                        label: "Inscription ID",
+                        description: "Verified via ord / ordinals.com",
+                      },
                       { value: "COLLECTION_ID", label: "Collection ID", description: "Not supported yet" },
                     ]}
                   />

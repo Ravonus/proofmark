@@ -8,10 +8,7 @@ import { PostSignRevealUploader } from "./post-sign-reveal-uploader";
 import { addressPreview } from "~/lib/chains";
 import { FadeIn, GlassCard, AnimatedButton, AnimatedLink, StaggerContainer, StaggerItem } from "./ui/motion";
 
-function formatUploadMeta(download: {
-  uploadedByLabel?: string;
-  uploadedAt?: string;
-}) {
+function formatUploadMeta(download: { uploadedByLabel?: string; uploadedAt?: string }) {
   const label = download.uploadedByLabel?.trim();
   const uploadedAt = download.uploadedAt ? new Date(download.uploadedAt) : null;
   const uploadedAtText = uploadedAt && !Number.isNaN(uploadedAt.getTime()) ? uploadedAt.toLocaleString() : null;

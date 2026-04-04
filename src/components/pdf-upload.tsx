@@ -5,7 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { PdfAnalysisResult, FieldType } from "~/lib/pdf-types";
 import { FadeIn, ScaleIn, GlassCard, AnimatedButton } from "./ui/motion";
 import dynamic from "next/dynamic";
-const AiScraperReview = dynamic(() => import("./ai/ai-scraper-review").then((m) => m.AiScraperReview).catch(() => () => null), { ssr: false, loading: () => null });
+const AiScraperReview = dynamic(
+  () => import("./ai/ai-scraper-review").then((m) => m.AiScraperReview).catch(() => () => null),
+  { ssr: false, loading: () => null },
+);
 
 // ─── Result type for the parent ───────────────────────────────────────────────
 
@@ -197,8 +200,9 @@ export function PdfUpload({ onComplete, onCancel }: Props) {
       <FadeIn>
         <div className="space-y-4">
           <motion.div
-            className={`glass-card relative cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition-colors ${dragging ? "bg-accent/5 border-accent" : "hover:border-accent/40 border-border"
-              }`}
+            className={`glass-card relative cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition-colors ${
+              dragging ? "bg-accent/5 border-accent" : "hover:border-accent/40 border-border"
+            }`}
             onDragOver={(e) => {
               e.preventDefault();
               setDragging(true);
@@ -634,8 +638,9 @@ const SignerCard = memo(function SignerCard({
 
   return (
     <div
-      className={`space-y-3 rounded-xl border border-l-[3px] p-4 transition-colors ${signer.enabled ? "bg-surface/50 border-border" : "bg-surface/20 border-border/50 opacity-50"
-        }`}
+      className={`space-y-3 rounded-xl border border-l-[3px] p-4 transition-colors ${
+        signer.enabled ? "bg-surface/50 border-border" : "bg-surface/20 border-border/50 opacity-50"
+      }`}
       style={{ borderLeftColor: signerColor(idx) }}
     >
       <div className="flex items-center justify-between">
@@ -781,8 +786,9 @@ const OwnedFieldChip = memo(function OwnedFieldChip({
               <button
                 key={s.id}
                 type="button"
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors ${i === ownerIdx ? "bg-white/5 font-medium" : "hover:bg-white/5"
-                  }`}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] transition-colors ${
+                  i === ownerIdx ? "bg-white/5 font-medium" : "hover:bg-white/5"
+                }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (i !== ownerIdx) onReassignField(ownerIdx, fieldIdx, i);

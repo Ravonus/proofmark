@@ -195,12 +195,13 @@ export function PostSignDownloadManager({
   };
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)]/80 p-4">
+    <div className="bg-[var(--bg-card)]/80 rounded-lg border border-[var(--border)] p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Contract documents</p>
           <p className="mt-1 text-[12px] leading-relaxed text-muted">
-            These documents show up on the reveal page for the creator and any signer who has completed {documentTitle}. Signed users can upload more from the reveal page.
+            These documents show up on the reveal page for the creator and any signer who has completed {documentTitle}.
+            Signed users can upload more from the reveal page.
           </p>
         </div>
         <span className="inline-flex items-center gap-1 rounded-xs border border-[var(--border)] bg-[var(--bg-inset)] px-2 py-1 text-[10px] font-medium text-muted">
@@ -210,20 +211,20 @@ export function PostSignDownloadManager({
       </div>
 
       {message && (
-        <div className="mt-3 rounded-sm border border-[var(--success)]/20 bg-[var(--success-subtle)] px-3 py-2 text-[11px] text-[var(--success)]">
+        <div className="border-[var(--success)]/20 mt-3 rounded-sm border bg-[var(--success-subtle)] px-3 py-2 text-[11px] text-[var(--success)]">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="mt-3 rounded-sm border border-[var(--danger)]/20 bg-[var(--danger-subtle)] px-3 py-2 text-[11px] text-[var(--danger)]">
+        <div className="border-[var(--danger)]/20 mt-3 rounded-sm border bg-[var(--danger-subtle)] px-3 py-2 text-[11px] text-[var(--danger)]">
           {error}
         </div>
       )}
 
       <div className="mt-4 space-y-3">
         {items.length === 0 ? (
-          <div className="rounded-md border border-dashed border-[var(--border)] bg-[var(--bg-inset)]/40 px-4 py-5 text-[12px] text-muted">
+          <div className="bg-[var(--bg-inset)]/40 rounded-md border border-dashed border-[var(--border)] px-4 py-5 text-[12px] text-muted">
             No shared files yet. Add one below to make it available immediately after signing.
           </div>
         ) : (
@@ -232,7 +233,7 @@ export function PostSignDownloadManager({
             const removeKey = `remove:${item.filename}`;
 
             return (
-              <div key={item.filename} className="rounded-md border border-[var(--border)] bg-[var(--bg-inset)]/30 p-3">
+              <div key={item.filename} className="bg-[var(--bg-inset)]/30 rounded-md border border-[var(--border)] p-3">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                   <div className="space-y-2">
                     <label className="block">
@@ -247,7 +248,9 @@ export function PostSignDownloadManager({
                     </label>
 
                     <label className="block">
-                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">Description</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">
+                        Description
+                      </span>
                       <textarea
                         value={item.description ?? ""}
                         onChange={(e) => updateItem(item.filename, { description: e.target.value })}
@@ -260,15 +263,21 @@ export function PostSignDownloadManager({
 
                   <div className="space-y-2">
                     <div>
-                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">Stored file</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">
+                        Stored file
+                      </span>
                       <p className="mt-1 truncate rounded-sm border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 font-mono text-[11px] text-secondary">
                         {item.filename}
                       </p>
-                      {formatUploadMeta(item) && <p className="mt-1 text-[10px] text-muted">{formatUploadMeta(item)}</p>}
+                      {formatUploadMeta(item) && (
+                        <p className="mt-1 text-[10px] text-muted">{formatUploadMeta(item)}</p>
+                      )}
                     </div>
 
                     <label className="block">
-                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">Replace file</span>
+                      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">
+                        Replace file
+                      </span>
                       <input
                         type="file"
                         onChange={(e) => updateItem(item.filename, { replacementFile: e.target.files?.[0] ?? null })}
@@ -297,7 +306,11 @@ export function PostSignDownloadManager({
                     disabled={busyKey !== null}
                     className="inline-flex items-center gap-1 rounded-xs bg-[var(--danger-subtle)] px-2.5 py-1.5 text-[10px] font-medium text-[var(--danger)] transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {busyKey === removeKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    {busyKey === removeKey ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
                     {busyKey === removeKey ? "Removing..." : "Remove"}
                   </button>
                 </div>
@@ -307,7 +320,7 @@ export function PostSignDownloadManager({
         )}
       </div>
 
-      <div className="mt-4 rounded-md border border-dashed border-[var(--border)] bg-[var(--bg-inset)]/40 p-4">
+      <div className="bg-[var(--bg-inset)]/40 mt-4 rounded-md border border-dashed border-[var(--border)] p-4">
         <p className="text-[12px] font-medium text-primary">Add a new contract document</p>
         <div className="mt-3 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
           <label className="block">
@@ -360,7 +373,9 @@ export function PostSignDownloadManager({
             {busyKey === "add" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
             {busyKey === "add" ? "Uploading..." : "Upload file"}
           </button>
-          <p className="text-[10px] text-muted">New documents become visible on the reveal page immediately after this saves.</p>
+          <p className="text-[10px] text-muted">
+            New documents become visible on the reveal page immediately after this saves.
+          </p>
         </div>
       </div>
     </div>

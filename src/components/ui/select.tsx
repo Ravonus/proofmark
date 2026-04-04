@@ -71,11 +71,7 @@ export function Select({
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (
-        triggerRef.current?.contains(e.target as Node) ||
-        dropdownRef.current?.contains(e.target as Node)
-      )
-        return;
+      if (triggerRef.current?.contains(e.target as Node) || dropdownRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
@@ -85,7 +81,10 @@ export function Select({
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setOpen(false); return; }
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
       const enabledOpts = options.filter((o) => !o.disabled);
       const idx = enabledOpts.findIndex((o) => o.value === value);
       if (e.key === "ArrowDown") {
@@ -105,20 +104,17 @@ export function Select({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, value, options, onChange]);
 
-  const sizeClasses = size === "sm"
-    ? "px-2 py-1 text-[10px]"
-    : "px-2.5 py-1.5 text-[12px]";
+  const sizeClasses = size === "sm" ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[12px]";
 
-  const variantClasses = variant === "glass"
-    ? "bg-white/5 border-white/8 hover:border-white/15"
-    : "bg-[var(--bg-inset)] border-[var(--border)] hover:border-[var(--border-accent)]";
+  const variantClasses =
+    variant === "glass"
+      ? "bg-white/5 border-white/8 hover:border-white/15"
+      : "bg-[var(--bg-inset)] border-[var(--border)] hover:border-[var(--border-accent)]";
 
   return (
     <div className={className}>
       {label && (
-        <span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
-          {label}
-        </span>
+        <span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">{label}</span>
       )}
       <button
         ref={triggerRef}
@@ -135,11 +131,7 @@ export function Select({
           {selected?.icon && <span className="mr-1.5 inline-flex">{selected.icon}</span>}
           {selected?.label ?? placeholder}
         </span>
-        <motion.span
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.12 }}
-          className="ml-1.5 text-muted"
-        >
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.12 }} className="ml-1.5 text-muted">
           <ChevronDown className="h-3 w-3" />
         </motion.span>
       </button>
@@ -185,9 +177,7 @@ export function Select({
                     {opt.icon && <span className="shrink-0">{opt.icon}</span>}
                     <div className="min-w-0 flex-1">
                       <div className="truncate">{opt.label}</div>
-                      {opt.description && (
-                        <div className="truncate text-[9px] text-muted">{opt.description}</div>
-                      )}
+                      {opt.description && <div className="truncate text-[9px] text-muted">{opt.description}</div>}
                     </div>
                     {opt.value === value && <Check className="h-3 w-3 shrink-0 text-accent" />}
                   </button>

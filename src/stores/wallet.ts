@@ -37,10 +37,8 @@ export function getWalletAuthErrorMessage(error: unknown): string {
   const msg = error.message.trim();
   if (/user rejected|user denied|rejected the request|cancelled|canceled/i.test(msg))
     return "Wallet signature was cancelled.";
-  if (/challenge expired or invalid/i.test(msg))
-    return "The wallet challenge expired. Try again.";
-  if (/signature verification failed/i.test(msg))
-    return "The wallet signature could not be verified.";
+  if (/challenge expired or invalid/i.test(msg)) return "The wallet challenge expired. Try again.";
+  if (/signature verification failed/i.test(msg)) return "The wallet signature could not be verified.";
   return msg || "Wallet verification failed.";
 }
 
@@ -106,8 +104,7 @@ export const useWalletStore = create<WalletState & WalletActions>()((set) => ({
       authError: null,
     }),
 
-  startAuth: () =>
-    set({ authenticated: false, authenticating: true, authError: null }),
+  startAuth: () => set({ authenticated: false, authenticating: true, authError: null }),
 
   authSuccess: (address, chain) =>
     set({
@@ -119,8 +116,7 @@ export const useWalletStore = create<WalletState & WalletActions>()((set) => ({
       authError: null,
     }),
 
-  authFail: (error) =>
-    set({ authenticated: false, authenticating: false, authError: error }),
+  authFail: (error) => set({ authenticated: false, authenticating: false, authError: error }),
 
   setAvailableWallets: (wallets) => set({ availableWallets: wallets }),
 }));

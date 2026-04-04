@@ -67,7 +67,14 @@ function maybeWrapReveal(key: string | number, enabled: boolean, delay: number, 
   );
 }
 
-export function DocumentPaper({ tokens, renderField, renderSignatureBlock, reveal = false, paperRef, overlay }: DocumentPaperProps) {
+export function DocumentPaper({
+  tokens,
+  renderField,
+  renderSignatureBlock,
+  reveal = false,
+  paperRef,
+  overlay,
+}: DocumentPaperProps) {
   return (
     <div ref={paperRef} className="relative">
       <div

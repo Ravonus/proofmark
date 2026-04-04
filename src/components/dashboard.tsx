@@ -115,10 +115,11 @@ function Pagination({
         <button
           key={p}
           onClick={() => onPageChange(p)}
-          className={`rounded-sm px-2.5 py-1 text-[10px] font-medium transition-all ${p === page
-            ? "bg-[var(--accent-subtle)] text-accent border border-[var(--border-accent)]"
-            : "text-muted hover:bg-[var(--bg-hover)] hover:text-secondary"
-            }`}
+          className={`rounded-sm px-2.5 py-1 text-[10px] font-medium transition-all ${
+            p === page
+              ? "border border-[var(--border-accent)] bg-[var(--accent-subtle)] text-accent"
+              : "text-muted hover:bg-[var(--bg-hover)] hover:text-secondary"
+          }`}
         >
           {p}
         </button>
@@ -171,12 +172,13 @@ function OnboardingChecklist() {
             <div key={step.label} className="flex gap-3">
               <div className="flex flex-col items-center">
                 <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border ${step.done
-                    ? "border-[var(--success)] bg-[var(--success-subtle)] text-[var(--success)]"
-                    : step.locked
-                      ? "border-[var(--border)] bg-[var(--bg-inset)] text-faint"
-                      : "border-[var(--border-accent)] bg-[var(--accent-subtle)] text-accent"
-                    }`}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border ${
+                    step.done
+                      ? "border-[var(--success)] bg-[var(--success-subtle)] text-[var(--success)]"
+                      : step.locked
+                        ? "border-[var(--border)] bg-[var(--bg-inset)] text-faint"
+                        : "border-[var(--border-accent)] bg-[var(--accent-subtle)] text-accent"
+                  }`}
                 >
                   {step.done ? <CheckCircle className="h-3.5 w-3.5" /> : step.icon}
                 </div>
@@ -187,12 +189,13 @@ function OnboardingChecklist() {
 
               <div className="pb-3 pt-0.5">
                 <p
-                  className={`text-[13px] font-medium ${step.done
-                    ? "text-[var(--success)] line-through decoration-[var(--success)]/30"
-                    : step.locked
-                      ? "text-faint"
-                      : "text-primary"
-                    }`}
+                  className={`text-[13px] font-medium ${
+                    step.done
+                      ? "decoration-[var(--success)]/30 text-[var(--success)] line-through"
+                      : step.locked
+                        ? "text-faint"
+                        : "text-primary"
+                  }`}
                 >
                   {step.label}
                 </p>
@@ -238,8 +241,9 @@ function FilterTab({
   return (
     <button
       onClick={onClick}
-      className={`relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-colors ${active ? "text-primary" : "text-muted hover:text-secondary"
-        }`}
+      className={`relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+        active ? "text-primary" : "text-muted hover:text-secondary"
+      }`}
     >
       {icon}
       {label}
@@ -327,7 +331,7 @@ export function Dashboard() {
           </p>
           {showAuthenticating && (
             <motion.div
-              className="mt-3 inline-block h-4 w-4 rounded-full border border-[var(--accent)]/30 border-t-accent"
+              className="border-[var(--accent)]/30 mt-3 inline-block h-4 w-4 rounded-full border border-t-accent"
               animate={{ rotate: 360 }}
               transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
             />
@@ -366,28 +370,40 @@ export function Dashboard() {
               type="text"
               placeholder="Search by title, signer, or hash..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full rounded-sm border border-[var(--border)] bg-[var(--bg-inset)] py-1.5 pl-8 pr-3 text-[12px] outline-none transition-all placeholder:text-muted focus:border-[var(--accent)] focus:shadow-[0_0_0_2px_var(--accent-subtle)]"
             />
           </div>
           <div className="flex items-center border-b border-[var(--border)]">
             <FilterTab
               active={statusFilter === "ALL"}
-              onClick={() => { setStatusFilter("ALL"); setPage(1); }}
+              onClick={() => {
+                setStatusFilter("ALL");
+                setPage(1);
+              }}
               icon={<Inbox className="h-3 w-3" />}
               label="All"
               count={counts.ALL}
             />
             <FilterTab
               active={statusFilter === "PENDING"}
-              onClick={() => { setStatusFilter("PENDING"); setPage(1); }}
+              onClick={() => {
+                setStatusFilter("PENDING");
+                setPage(1);
+              }}
               icon={<Clock className="h-3 w-3" />}
               label="Pending"
               count={counts.PENDING}
             />
             <FilterTab
               active={statusFilter === "COMPLETED"}
-              onClick={() => { setStatusFilter("COMPLETED"); setPage(1); }}
+              onClick={() => {
+                setStatusFilter("COMPLETED");
+                setPage(1);
+              }}
               icon={<CheckCircle className="h-3 w-3" />}
               label="Completed"
               count={counts.COMPLETED}
@@ -500,10 +516,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
   const hasFooter = (doc.status === "PENDING" && isCreator) || doc.status === "COMPLETED" || isCreator;
 
   return (
-    <div
-      className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""
-        }`}
-    >
+    <div className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""}`}>
       <a href={`/sign/${doc.id}`} className="group block px-4 py-3 transition-colors hover:bg-[var(--bg-hover)]">
         {/* Header row */}
         <div className="flex items-center gap-3">
@@ -524,7 +537,10 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
               {new Date(doc.createdAt).toLocaleDateString()} &bull;{" "}
               {isCreator ? "Created by you" : `By ${addressPreview(doc.createdBy)}`}
               {doc.expiresAt && doc.status === "PENDING" && (
-                <> &bull; <ExpirationBadge expiresAt={new Date(doc.expiresAt)} /></>
+                <>
+                  {" "}
+                  &bull; <ExpirationBadge expiresAt={new Date(doc.expiresAt)} />
+                </>
               )}
             </p>
           </div>
@@ -554,10 +570,11 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
             return (
               <span
                 key={s.id}
-                className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${s.status === "SIGNED"
-                  ? "bg-[var(--success-subtle)] text-[var(--success)] border border-[var(--success)]/10"
-                  : "bg-[var(--bg-inset)] border border-[var(--border)] text-muted"
-                  }`}
+                className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${
+                  s.status === "SIGNED"
+                    ? "border-[var(--success)]/10 border bg-[var(--success-subtle)] text-[var(--success)]"
+                    : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
+                }`}
               >
                 <span style={{ color: meta?.color }}>{meta?.icon}</span>
                 {s.label}
@@ -582,7 +599,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
                       resendMut.mutate({ documentId: doc.id, signerId: s.id });
                     }}
                     disabled={resendMut.isPending}
-                    className="inline-flex items-center gap-1 rounded-xs bg-blue-500/8 px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/15 disabled:opacity-40"
+                    className="bg-blue-500/8 inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/15 disabled:opacity-40"
                   >
                     <Send className="h-2.5 w-2.5" />
                     Resend {s.label}
@@ -591,10 +608,29 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
 
             {doc.status === "COMPLETED" && (
               <>
-                <ActionLink href={`/api/pdf/${doc.id}`} icon={<Download className="h-2.5 w-2.5" />} label="PDF" accent />
-                <ActionLink href={`/view/${doc.id}`} icon={<ExternalLink className="h-2.5 w-2.5" />} label="View" accent />
-                <ActionLink href={`/verify/${doc.contentHash}`} icon={<ExternalLink className="h-2.5 w-2.5" />} label="Verify" />
-                <ActionLink href={`/api/proof-packet/${doc.id}`} icon={<Download className="h-2.5 w-2.5" />} label="Evidence" external />
+                <ActionLink
+                  href={`/api/pdf/${doc.id}`}
+                  icon={<Download className="h-2.5 w-2.5" />}
+                  label="PDF"
+                  accent
+                />
+                <ActionLink
+                  href={`/view/${doc.id}`}
+                  icon={<ExternalLink className="h-2.5 w-2.5" />}
+                  label="View"
+                  accent
+                />
+                <ActionLink
+                  href={`/verify/${doc.contentHash}`}
+                  icon={<ExternalLink className="h-2.5 w-2.5" />}
+                  label="Verify"
+                />
+                <ActionLink
+                  href={`/api/proof-packet/${doc.id}`}
+                  icon={<Download className="h-2.5 w-2.5" />}
+                  label="Evidence"
+                  external
+                />
                 <ActionLink href={`/sign/${doc.id}`} icon={<Eye className="h-2.5 w-2.5" />} label="Document" />
               </>
             )}
@@ -659,10 +695,11 @@ function ActionLink({
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
       onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium transition-colors ${accent
-        ? "bg-[var(--accent-subtle)] text-accent hover:bg-[var(--accent-muted)]"
-        : "bg-[var(--bg-inset)] text-secondary hover:bg-[var(--bg-hover)]"
-        }`}
+      className={`inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium transition-colors ${
+        accent
+          ? "bg-[var(--accent-subtle)] text-accent hover:bg-[var(--accent-muted)]"
+          : "bg-[var(--bg-inset)] text-secondary hover:bg-[var(--bg-hover)]"
+      }`}
     >
       {icon}
       {label}

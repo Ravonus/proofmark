@@ -28,13 +28,27 @@ async function requireEscrow() {
 
 // Lazy accessors — these are only called inside procedures which call requireEscrow() first.
 const esc = {
-  get escrowContracts() { return _escrowSchema!.escrowContracts; },
-  get escrowParticipants() { return _escrowSchema!.escrowParticipants; },
-  get escrowSignatures() { return _escrowSchema!.escrowSignatures; },
-  get escrowEvents() { return _escrowSchema!.escrowEvents; },
-  get escrowRwaVerifications() { return _escrowSchema!.escrowRwaVerifications; },
-  get escrowOracleDecisions() { return _escrowSchema!.escrowOracleDecisions; },
-  get computeTermsHash() { return _escrowEngine!.computeTermsHash; },
+  get escrowContracts() {
+    return _escrowSchema!.escrowContracts;
+  },
+  get escrowParticipants() {
+    return _escrowSchema!.escrowParticipants;
+  },
+  get escrowSignatures() {
+    return _escrowSchema!.escrowSignatures;
+  },
+  get escrowEvents() {
+    return _escrowSchema!.escrowEvents;
+  },
+  get escrowRwaVerifications() {
+    return _escrowSchema!.escrowRwaVerifications;
+  },
+  get escrowOracleDecisions() {
+    return _escrowSchema!.escrowOracleDecisions;
+  },
+  get computeTermsHash() {
+    return _escrowEngine!.computeTermsHash;
+  },
 };
 
 // Re-export as module-level aliases for minimal code changes below
@@ -44,7 +58,9 @@ const escrowSignatures = new Proxy({} as any, { get: (_, p) => esc.escrowSignatu
 const escrowEvents = new Proxy({} as any, { get: (_, p) => esc.escrowEvents[p] });
 const escrowRwaVerifications = new Proxy({} as any, { get: (_, p) => esc.escrowRwaVerifications[p] });
 const escrowOracleDecisions = new Proxy({} as any, { get: (_, p) => esc.escrowOracleDecisions[p] });
-async function computeTermsHash(args: any) { return esc.computeTermsHash(args); }
+async function computeTermsHash(args: any) {
+  return esc.computeTermsHash(args);
+}
 
 const escrowAssetChainSchema = z.enum(["ETH", "SOL", "BTC", "FIAT", "REAL_WORLD"]);
 const escrowAssetKindSchema = z.enum([

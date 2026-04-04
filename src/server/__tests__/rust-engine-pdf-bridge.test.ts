@@ -18,12 +18,7 @@ describe("rust-engine pdf bridge", () => {
       doc: {
         id: "doc-1",
         title: "Test NDA",
-        content: [
-          "NON-DISCLOSURE AGREEMENT",
-          "",
-          "Disclosing Party: ________",
-          "Date: ________",
-        ].join("\n"),
+        content: ["NON-DISCLOSURE AGREEMENT", "", "Disclosing Party: ________", "Date: ________"].join("\n"),
         contentHash: "abcdef1234567890abcdef1234567890",
         createdAt: new Date("2026-03-28T00:00:00Z"),
         status: "PENDING",

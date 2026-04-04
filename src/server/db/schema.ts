@@ -1062,7 +1062,12 @@ export const connectorTasks = pgTable(
 
 export const runtimeToolEnum = pgEnum("runtime_tool", ["claude-code", "codex", "openclaw"]);
 export const runtimeInstallStatusEnum = pgEnum("runtime_install_status", [
-  "not_installed", "installing", "installed", "auth_pending", "ready", "error",
+  "not_installed",
+  "installing",
+  "installed",
+  "auth_pending",
+  "ready",
+  "error",
 ]);
 export const runtimeAuthStatusEnum = pgEnum("runtime_auth_status", ["none", "pending", "authorized", "expired"]);
 export const runtimeSessionStatusEnum = pgEnum("runtime_session_status", ["starting", "active", "idle", "dead"]);
@@ -1082,24 +1087,21 @@ export type RuntimeAuthCredentials = {
 };
 
 /** Server-side AI CLI installs — tracks Claude Code, Codex, OpenClaw on the host. */
-export const aiRuntimeInstalls = pgTable(
-  "ai_runtime_installs",
-  {
-    id: text("id").primaryKey().$defaultFn(createId),
-    tool: runtimeToolEnum("tool").notNull().unique(),
-    status: runtimeInstallStatusEnum("status").default("not_installed").notNull(),
-    binaryPath: text("binary_path"),
-    version: text("version"),
-    authStatus: runtimeAuthStatusEnum("auth_status").default("none").notNull(),
-    authCredentials: jsonb("auth_credentials").$type<RuntimeAuthCredentials>(),
-    installMethod: text("install_method"), // "npm" | "cargo" | "manual"
-    lastHealthCheckAt: timestamp("last_health_check_at"),
-    errorMessage: text("error_message"),
-    config: jsonb("config").$type<RuntimeConfig>(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  },
-);
+export const aiRuntimeInstalls = pgTable("ai_runtime_installs", {
+  id: text("id").primaryKey().$defaultFn(createId),
+  tool: runtimeToolEnum("tool").notNull().unique(),
+  status: runtimeInstallStatusEnum("status").default("not_installed").notNull(),
+  binaryPath: text("binary_path"),
+  version: text("version"),
+  authStatus: runtimeAuthStatusEnum("auth_status").default("none").notNull(),
+  authCredentials: jsonb("auth_credentials").$type<RuntimeAuthCredentials>(),
+  installMethod: text("install_method"), // "npm" | "cargo" | "manual"
+  lastHealthCheckAt: timestamp("last_health_check_at"),
+  errorMessage: text("error_message"),
+  config: jsonb("config").$type<RuntimeConfig>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 /** Persistent CLI pipe sessions — tracks running Claude/Codex processes on the server. */
 export const aiRuntimeSessions = pgTable(
@@ -1116,9 +1118,7 @@ export const aiRuntimeSessions = pgTable(
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [
-    index("ai_runtime_sessions_tool_status_idx").on(t.tool, t.status),
-  ],
+  (t) => [index("ai_runtime_sessions_tool_status_idx").on(t.tool, t.status)],
 );
 
 export type AiRuntimeInstall = typeof aiRuntimeInstalls.$inferSelect;

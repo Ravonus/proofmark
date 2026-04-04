@@ -49,8 +49,7 @@ export function SetupGate({ children }: { children: ReactNode }) {
 }
 
 function SetupScreen({ onComplete }: { onComplete: () => void }) {
-  const { connected, authenticated, authenticating, address, chain } =
-    useWallet();
+  const { connected, authenticated, authenticating, address, chain } = useWallet();
   const claimMut = trpc.account.claimOwnership.useMutation({
     onSuccess: () => onComplete(),
   });
@@ -87,7 +86,7 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
       <div className="w-full max-w-lg space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+          <div className="bg-accent/10 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-accent">
             <Shield className="h-8 w-8" />
           </div>
           <h1 className="mt-4 text-2xl font-bold">Proofmark Setup</h1>
@@ -100,16 +99,10 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
         <GlassCard className="space-y-6 p-6">
           {/* Step 1: Connect */}
           <div className="flex items-start gap-4">
-            <StepIndicator
-              number={1}
-              active={!connected}
-              done={connected}
-            />
+            <StepIndicator number={1} active={!connected} done={connected} />
             <div className="flex-1">
               <p className="text-sm font-semibold">Connect Wallet</p>
-              <p className="mt-0.5 text-xs text-muted">
-                Connect the wallet that will be the platform owner.
-              </p>
+              <p className="mt-0.5 text-xs text-muted">Connect the wallet that will be the platform owner.</p>
               {!connected && (
                 <div className="mt-3">
                   <WalletButton />
@@ -117,7 +110,7 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
               )}
               {connected && address && chain && (
                 <div className="mt-2 flex items-center gap-2 text-sm">
-	                  <span className="text-lg">{CHAIN_META[chain]?.icon ?? "?"}</span>
+                  <span className="text-lg">{CHAIN_META[chain]?.icon ?? "?"}</span>
                   <span className="font-mono text-xs text-secondary">
                     {address.slice(0, 10)}...{address.slice(-6)}
                   </span>
@@ -129,16 +122,10 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
 
           {/* Step 2: Authenticate */}
           <div className="flex items-start gap-4">
-            <StepIndicator
-              number={2}
-              active={connected && !authenticated}
-              done={authenticated}
-            />
+            <StepIndicator number={2} active={connected && !authenticated} done={authenticated} />
             <div className="flex-1">
               <p className="text-sm font-semibold">Authenticate</p>
-              <p className="mt-0.5 text-xs text-muted">
-                Sign a message to prove wallet ownership.
-              </p>
+              <p className="mt-0.5 text-xs text-muted">Sign a message to prove wallet ownership.</p>
               {connected && !authenticated && authenticating && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-muted">
                   <Loader2 className="h-3 w-3 animate-spin" /> Waiting for signature...
@@ -154,23 +141,13 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
 
           {/* Step 3: Claim */}
           <div className="flex items-start gap-4">
-            <StepIndicator
-              number={3}
-              active={authenticated && step !== "done"}
-              done={step === "done"}
-            />
+            <StepIndicator number={3} active={authenticated && step !== "done"} done={step === "done"} />
             <div className="flex-1">
               <p className="text-sm font-semibold">Claim Ownership</p>
-              <p className="mt-0.5 text-xs text-muted">
-                This wallet will become the platform administrator.
-              </p>
+              <p className="mt-0.5 text-xs text-muted">This wallet will become the platform administrator.</p>
               {authenticated && step !== "done" && (
                 <div className="mt-3">
-                  <AnimatedButton
-                    className="px-4 py-2 text-sm"
-                    onClick={handleClaim}
-                    disabled={claimMut.isPending}
-                  >
+                  <AnimatedButton className="px-4 py-2 text-sm" onClick={handleClaim} disabled={claimMut.isPending}>
                     {claimMut.isPending ? (
                       <>
                         <Loader2 className="mr-2 inline h-3 w-3 animate-spin" />
@@ -202,26 +179,18 @@ function SetupScreen({ onComplete }: { onComplete: () => void }) {
         {/* Info */}
         <div className="text-center text-xs text-muted">
           <p>
-            Ownership can also be set via the <code className="rounded bg-surface/50 px-1 py-0.5 font-mono text-[10px]">OWNER_ADDRESS</code> environment variable.
+            Ownership can also be set via the{" "}
+            <code className="bg-surface/50 rounded px-1 py-0.5 font-mono text-[10px]">OWNER_ADDRESS</code> environment
+            variable.
           </p>
-          <p className="mt-1">
-            The env var takes priority over DB claims if both are set.
-          </p>
+          <p className="mt-1">The env var takes priority over DB claims if both are set.</p>
         </div>
       </div>
     </div>
   );
 }
 
-function StepIndicator({
-  number,
-  active,
-  done,
-}: {
-  number: number;
-  active: boolean;
-  done: boolean;
-}) {
+function StepIndicator({ number, active, done }: { number: number; active: boolean; done: boolean }) {
   return (
     <div
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${
@@ -229,7 +198,7 @@ function StepIndicator({
           ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
           : active
             ? "border-accent/30 bg-accent/10 text-accent"
-            : "border-border bg-surface/30 text-muted"
+            : "bg-surface/30 border-border text-muted"
       }`}
     >
       {done ? <Check className="h-4 w-4" /> : number}

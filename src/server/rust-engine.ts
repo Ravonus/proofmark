@@ -30,7 +30,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as T;
 }
 
-async function postBytes<T>(path: string, body: Uint8Array | Buffer, contentType = "application/octet-stream"): Promise<T> {
+async function postBytes<T>(
+  path: string,
+  body: Uint8Array | Buffer,
+  contentType = "application/octet-stream",
+): Promise<T> {
   const res = await fetch(`${ENGINE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": contentType },
@@ -76,12 +80,14 @@ function readBoolean(value: unknown, fallback = false): boolean {
 
 function readRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : null;
 }
 
 function readRecordArray(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value) ? value.map((entry) => readRecord(entry)).filter((entry): entry is Record<string, unknown> => !!entry) : [];
+  return Array.isArray(value)
+    ? value.map((entry) => readRecord(entry)).filter((entry): entry is Record<string, unknown> => !!entry)
+    : [];
 }
 
 function normalizePdfAnalysisResult(input: unknown): PdfAnalysisResult {
@@ -184,17 +190,14 @@ export async function encryptDocument(
 ): Promise<{ encryptedContent: string; wrappedKey: string } | null> {
   const masterSecret = process.env.ENCRYPTION_MASTER_KEY;
   if (!masterSecret) return null;
-  const result = await post<{ encrypted_content: string; wrapped_key: string }>(
-    "/api/v1/crypto/encrypt",
-    { content, master_secret: masterSecret },
-  );
+  const result = await post<{ encrypted_content: string; wrapped_key: string }>("/api/v1/crypto/encrypt", {
+    content,
+    master_secret: masterSecret,
+  });
   return { encryptedContent: result.encrypted_content, wrappedKey: result.wrapped_key };
 }
 
-export async function decryptDocument(
-  encryptedContent: string,
-  wrappedKey: string,
-): Promise<string> {
+export async function decryptDocument(encryptedContent: string, wrappedKey: string): Promise<string> {
   const masterSecret = process.env.ENCRYPTION_MASTER_KEY;
   if (!masterSecret) throw new Error("ENCRYPTION_MASTER_KEY not set");
   const { content } = await post<{ content: string }>("/api/v1/crypto/decrypt", {
@@ -256,7 +259,9 @@ type RustPdfGenerateRequest = {
   }>;
 };
 
-function resolveFieldSummaryStyle(styleSettings?: PdfStyleSettings | null): RustPdfGenerateRequest["field_summary_style"] {
+function resolveFieldSummaryStyle(
+  styleSettings?: PdfStyleSettings | null,
+): RustPdfGenerateRequest["field_summary_style"] {
   const style = styleSettings?.fieldSummaryStyle;
   return style === "cards" || style === "table" ? style : "hybrid";
 }
@@ -293,7 +298,9 @@ function buildRustPdfGenerateRequest(params: {
       address: signer.address ?? null,
       scheme: signer.scheme ?? null,
       signature: signer.signature ?? null,
-      signed_at: signer.signedAt ? new Date(signer.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : null,
+      signed_at: signer.signedAt
+        ? new Date(signer.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+        : null,
       hand_signature_hash: signer.handSignatureHash ?? null,
       hand_signature_data: signer.handSignatureData ?? null,
       field_values: signer.fieldValues ?? null,
@@ -484,7 +491,8 @@ export async function pqEncrypt(plaintext: Buffer, recipientPublicKey: string): 
 /** Decrypt ML-KEM-768 + AES-256-GCM ciphertext. */
 export async function pqDecrypt(ciphertext: HybridCiphertext, recipientPrivateKey: string): Promise<Buffer> {
   const { plaintext } = await post<{ plaintext: string }>("/api/v1/pq/decrypt", {
-    ciphertext, recipient_private_key: recipientPrivateKey,
+    ciphertext,
+    recipient_private_key: recipientPrivateKey,
   });
   return Buffer.from(plaintext, "base64");
 }
@@ -494,18 +502,34 @@ export async function pqDecrypt(ciphertext: HybridCiphertext, recipientPrivateKe
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export type DocumentProof = {
-  document_hash: string; commitment: string; challenge: string;
-  response: string; created_at: string; version: number;
+  document_hash: string;
+  commitment: string;
+  challenge: string;
+  response: string;
+  created_at: string;
+  version: number;
 };
 export type SignatureProof = {
-  document_hash: string; signer_address: string; scheme: string;
-  commitment: string; challenge: string; response: string;
-  signature_hash: string; created_at: string; version: number;
+  document_hash: string;
+  signer_address: string;
+  scheme: string;
+  commitment: string;
+  challenge: string;
+  response: string;
+  signature_hash: string;
+  created_at: string;
+  version: number;
 };
 export type FieldProof = {
-  document_hash: string; field_id: string; field_value_hash: string;
-  commitment: string; challenge: string; response: string;
-  revealed_value: string | null; created_at: string; version: number;
+  document_hash: string;
+  field_id: string;
+  field_value_hash: string;
+  commitment: string;
+  challenge: string;
+  response: string;
+  revealed_value: string | null;
+  created_at: string;
+  version: number;
 };
 
 /** Create ZK proof of document knowledge (without revealing content). */
@@ -521,11 +545,16 @@ export async function verifyDocumentProof(proof: DocumentProof): Promise<boolean
 
 /** Create ZK proof that a signature exists (without revealing it). */
 export async function createSignatureProof(
-  documentHash: string, signerAddress: string, scheme: string, signature: string,
+  documentHash: string,
+  signerAddress: string,
+  scheme: string,
+  signature: string,
 ): Promise<SignatureProof> {
   return post("/api/v1/zk/signature-proof", {
-    document_hash: documentHash, signer_address: signerAddress,
-    scheme, signature,
+    document_hash: documentHash,
+    signer_address: signerAddress,
+    scheme,
+    signature,
   });
 }
 
@@ -537,11 +566,16 @@ export async function verifySignatureProof(proof: SignatureProof): Promise<boole
 
 /** Create ZK proof for a field value (optionally revealing it). */
 export async function createFieldProof(
-  documentHash: string, fieldId: string, fieldValue: string, reveal = false,
+  documentHash: string,
+  fieldId: string,
+  fieldValue: string,
+  reveal = false,
 ): Promise<FieldProof> {
   return post("/api/v1/zk/field-proof", {
-    document_hash: documentHash, field_id: fieldId,
-    field_value: fieldValue, reveal,
+    document_hash: documentHash,
+    field_id: fieldId,
+    field_value: fieldValue,
+    reveal,
   });
 }
 

@@ -279,7 +279,12 @@ function drawReplayOverview(
     ctx.fillText(lane.label, cardX + 18, cardY + 28);
 
     ctx.font = "600 12px ui-sans-serif, system-ui, sans-serif";
-    ctx.fillStyle = lane.automationReview?.verdict === "agent" ? "#fca5a5" : lane.automationReview?.verdict === "human" ? "#86efac" : "#fcd34d";
+    ctx.fillStyle =
+      lane.automationReview?.verdict === "agent"
+        ? "#fca5a5"
+        : lane.automationReview?.verdict === "human"
+          ? "#86efac"
+          : "#fcd34d";
     ctx.fillText((lane.automationReview?.verdict ?? "uncertain").toUpperCase(), cardX + cardWidth - 110, cardY + 28);
 
     ctx.font = "500 12px ui-sans-serif, system-ui, sans-serif";
@@ -294,7 +299,14 @@ function drawReplayOverview(
     ctx.fillStyle = rs.getPropertyValue("--replay-canvas-track").trim() || "rgba(255,255,255,0.08)";
     ctx.fill();
     const scrollHeight = (cardHeight - 130) * Math.max(0.12, snapshot.scrollRatio || 0.12);
-    drawRoundedRect(ctx, cardX + 18, cardY + 94 + (cardHeight - 130 - scrollHeight) * snapshot.scrollRatio, 18, scrollHeight, 8);
+    drawRoundedRect(
+      ctx,
+      cardX + 18,
+      cardY + 94 + (cardHeight - 130 - scrollHeight) * snapshot.scrollRatio,
+      18,
+      scrollHeight,
+      8,
+    );
     ctx.fillStyle = "#93c5fd";
     ctx.fill();
 
@@ -308,7 +320,12 @@ function drawReplayOverview(
     ctx.fillText(`Page ${snapshot.page}/${Math.max(1, snapshot.totalPages)}`, cardX + 18, cardY + 262);
     ctx.fillText(`Target: ${trim(snapshot.currentTarget, 32) ?? "None"}`, cardX + 18, cardY + 284, cardWidth - 36);
     ctx.fillText(`Focus: ${trim(snapshot.focusedTarget, 32) ?? "None"}`, cardX + 18, cardY + 306, cardWidth - 36);
-    ctx.fillText(`Highlight: ${trim(snapshot.highlightedLabel, 32) ?? "None"}`, cardX + 18, cardY + 328, cardWidth - 36);
+    ctx.fillText(
+      `Highlight: ${trim(snapshot.highlightedLabel, 32) ?? "None"}`,
+      cardX + 18,
+      cardY + 328,
+      cardWidth - 36,
+    );
 
     const metrics = lane.signatureMotion;
     ctx.fillStyle = rs.getPropertyValue("--replay-canvas-text-muted").trim() || "rgba(255,255,255,0.52)";
@@ -334,10 +351,7 @@ function downloadBlob(blob: Blob, name: string) {
 }
 
 export function ForensicReplayPanel({ documentId }: Props) {
-  const replayQuery = trpc.document.getForensicReplay.useQuery(
-    { id: documentId },
-    { refetchOnWindowFocus: false },
-  );
+  const replayQuery = trpc.document.getForensicReplay.useQuery({ id: documentId }, { refetchOnWindowFocus: false });
 
   const participants = useMemo(() => {
     return (replayQuery.data?.signers ?? []).filter((signer) => signer.replay) as unknown as ReplayParticipantSummary[];
@@ -389,9 +403,8 @@ export function ForensicReplayPanel({ documentId }: Props) {
     return selectedLane ? [selectedLane] : [];
   }, [mode, prepared, selectedLane]);
 
-  const activeDuration = mode === "sync"
-    ? (prepared?.durationMs ?? 0)
-    : (selectedLane?.durationMs ?? prepared?.durationMs ?? 0);
+  const activeDuration =
+    mode === "sync" ? (prepared?.durationMs ?? 0) : (selectedLane?.durationMs ?? prepared?.durationMs ?? 0);
 
   useEffect(() => {
     setCurrentMs((value) => Math.min(value, activeDuration));
@@ -464,9 +477,7 @@ export function ForensicReplayPanel({ documentId }: Props) {
       canvas.style.width = "1280px";
       canvas.style.height = "720px";
 
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-        ? "video/webm;codecs=vp9"
-        : "video/webm";
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm";
       const stream = canvas.captureStream(30);
       const chunks: BlobPart[] = [];
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -513,7 +524,7 @@ export function ForensicReplayPanel({ documentId }: Props) {
     return (
       <div className="rounded-2xl border border-border bg-surface-card p-6">
         <div className="h-7 w-40 animate-pulse rounded bg-surface-elevated" />
-        <div className="mt-4 h-64 animate-pulse rounded-xl bg-surface-hover/30" />
+        <div className="bg-surface-hover/30 mt-4 h-64 animate-pulse rounded-xl" />
       </div>
     );
   }
@@ -544,7 +555,9 @@ export function ForensicReplayPanel({ documentId }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${prepared.source === "wasm" ? "border-sky-400/25 bg-sky-500/10 text-sky-200" : "border-amber-400/25 bg-amber-500/10 text-amber-200"}`}>
+          <span
+            className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${prepared.source === "wasm" ? "border-sky-400/25 bg-sky-500/10 text-sky-200" : "border-amber-400/25 bg-amber-500/10 text-amber-200"}`}
+          >
             {prepared.source === "wasm" ? "Rust/WASM active" : "TS fallback active"}
           </span>
           <button
@@ -588,7 +601,7 @@ export function ForensicReplayPanel({ documentId }: Props) {
         )}
         <button
           onClick={() => setPlaying((value) => !value)}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent/15 px-3 py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
+          className="bg-accent/15 hover:bg-accent/25 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-accent transition-colors"
         >
           {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           {playing ? "Pause" : "Play"}
@@ -649,7 +662,9 @@ export function ForensicReplayPanel({ documentId }: Props) {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold text-primary">{lane.label}</h3>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${verdictTone(lane.automationReview?.verdict)}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${verdictTone(lane.automationReview?.verdict)}`}
+                    >
                       {(lane.automationReview?.verdict ?? "uncertain").toUpperCase()}
                     </span>
                     {lane.policyOutcome?.blocked && (
@@ -661,7 +676,9 @@ export function ForensicReplayPanel({ documentId }: Props) {
                   <p className="mt-2 text-sm text-muted">{describeReplayEvent(snapshot.currentEvent)}</p>
                 </div>
                 <div className="text-right text-xs text-muted">
-                  <div>{snapshot.elapsedEventCount}/{lane.eventCount} events</div>
+                  <div>
+                    {snapshot.elapsedEventCount}/{lane.eventCount} events
+                  </div>
                   <div>{formatDuration(snapshot.durationMs)} total</div>
                 </div>
               </div>
@@ -673,7 +690,9 @@ export function ForensicReplayPanel({ documentId }: Props) {
                 </div>
                 <div className="rounded-xl border border-border bg-surface-card p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Scroll / Page</p>
-                  <p className="mt-2 text-sm text-primary">{Math.round(snapshot.scrollRatio * 100)}% · {snapshot.page}/{Math.max(1, snapshot.totalPages)}</p>
+                  <p className="mt-2 text-sm text-primary">
+                    {Math.round(snapshot.scrollRatio * 100)}% · {snapshot.page}/{Math.max(1, snapshot.totalPages)}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-border bg-surface-card p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Signature Motion</p>
@@ -694,7 +713,8 @@ export function ForensicReplayPanel({ documentId }: Props) {
                 <div className="rounded-xl border border-border bg-surface-card p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Storage / Policy</p>
                   <p className="mt-2 text-sm text-primary">
-                    {(lane.storage?.mode ?? "embedded_pdf").replace(/_/g, " ")} · {lane.policyOutcome?.action ?? "ALLOW"}
+                    {(lane.storage?.mode ?? "embedded_pdf").replace(/_/g, " ")} ·{" "}
+                    {lane.policyOutcome?.action ?? "ALLOW"}
                   </p>
                 </div>
               </div>
@@ -705,7 +725,10 @@ export function ForensicReplayPanel({ documentId }: Props) {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {snapshot.recentKeys.length > 0 ? (
                       snapshot.recentKeys.map((value, index) => (
-                        <span key={`${lane.signerId}-key-${index}`} className="rounded-md bg-surface-hover px-2 py-1 text-xs text-secondary">
+                        <span
+                          key={`${lane.signerId}-key-${index}`}
+                          className="rounded-md bg-surface-hover px-2 py-1 text-xs text-secondary"
+                        >
                           {value}
                         </span>
                       ))
@@ -738,7 +761,11 @@ export function ForensicReplayPanel({ documentId }: Props) {
 
                 <div className="rounded-xl border border-border bg-surface-card p-4">
                   <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
-                    {lane.automationReview?.verdict === "agent" ? <Bot className="h-3.5 w-3.5 text-red-300" /> : <Sparkles className="h-3.5 w-3.5 text-sky-300" />}
+                    {lane.automationReview?.verdict === "agent" ? (
+                      <Bot className="h-3.5 w-3.5 text-red-300" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-sky-300" />
+                    )}
                     AI + Signature Summary
                   </p>
                   <div className="mt-3 space-y-2 text-xs text-secondary">
@@ -756,11 +783,19 @@ export function ForensicReplayPanel({ documentId }: Props) {
                     </div>
                     <div className="flex justify-between gap-3">
                       <span>Motion uniformity</span>
-                      <span>{lane.signatureMotion ? `${Math.round(lane.signatureMotion.motionUniformityScore * 100)}%` : "n/a"}</span>
+                      <span>
+                        {lane.signatureMotion
+                          ? `${Math.round(lane.signatureMotion.motionUniformityScore * 100)}%`
+                          : "n/a"}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span>Motion complexity</span>
-                      <span>{lane.signatureMotion ? `${Math.round(lane.signatureMotion.motionComplexityScore * 100)}%` : "n/a"}</span>
+                      <span>
+                        {lane.signatureMotion
+                          ? `${Math.round(lane.signatureMotion.motionComplexityScore * 100)}%`
+                          : "n/a"}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span>Max pause</span>
@@ -791,7 +826,10 @@ export function ForensicReplayPanel({ documentId }: Props) {
           <p className="mt-1 text-xs text-muted">Merged forensic timeline at the current playhead.</p>
           <div className="mt-4 space-y-3">
             {recentActivity.map((event, index) => (
-              <div key={`${event.lane}-${event.atMs}-${index}`} className="rounded-xl border border-border bg-surface-card p-3">
+              <div
+                key={`${event.lane}-${event.atMs}-${index}`}
+                className="rounded-xl border border-border bg-surface-card p-3"
+              >
                 <div className="flex items-center justify-between gap-3 text-[10px] uppercase tracking-wider text-muted">
                   <span>Lane {event.lane}</span>
                   <span>{formatDuration(event.atMs)}</span>

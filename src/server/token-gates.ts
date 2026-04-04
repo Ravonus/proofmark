@@ -123,9 +123,7 @@ function getSolConnection(): Connection | null {
 
 function getOrdConfig(): OrdConfig | null {
   const baseUrl =
-    process.env.ORD_RPC_URL?.trim() ||
-    process.env.ORD_SERVER_URL?.trim() ||
-    process.env.BTC_ORD_RPC_URL?.trim();
+    process.env.ORD_RPC_URL?.trim() || process.env.ORD_SERVER_URL?.trim() || process.env.BTC_ORD_RPC_URL?.trim();
   return baseUrl ? { baseUrl } : null;
 }
 
@@ -623,14 +621,17 @@ async function evaluateRuneRule(rule: Extract<TokenGateRule, { type: "RUNE" }>, 
     const identifier = normalizeLooseIdentifier(rule.identifier);
     const match = balances.find((item) => {
       const normalizedName = normalizeLooseIdentifier(item.name);
-      return normalizedName === identifier || (metadata ? normalizedName === normalizeLooseIdentifier(metadata.name) : false);
+      return (
+        normalizedName === identifier || (metadata ? normalizedName === normalizeLooseIdentifier(metadata.name) : false)
+      );
     });
 
     if (!metadata && !match) {
       return createResult("failed", rule, `Rune ${rule.identifier} could not be found.`);
     }
 
-    const divisibility = metadata?.divisibility ?? Math.max(getFractionDigits(rule.minAmount), getFractionDigits(match?.amount ?? "0"));
+    const divisibility =
+      metadata?.divisibility ?? Math.max(getFractionDigits(rule.minAmount), getFractionDigits(match?.amount ?? "0"));
     const actualUnits = match
       ? match.amountKind === "raw"
         ? BigInt(match.amount)
@@ -775,10 +776,7 @@ async function verifyTokenGateWalletProof(params: {
   };
 }
 
-function createBypassedRuleResult(
-  rule: TokenGateRule,
-  actual: TokenGateRuleEvaluation,
-): TokenGateRuleEvaluation {
+function createBypassedRuleResult(rule: TokenGateRule, actual: TokenGateRuleEvaluation): TokenGateRuleEvaluation {
   return {
     ...actual,
     ruleId: actual.ruleId ?? rule.id,

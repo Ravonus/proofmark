@@ -106,12 +106,8 @@ export function SignaturePad({
     const stroke: TimedSignatureStroke = [pos];
     strokesRef.current.push(stroke);
     activeStrokeRef.current = stroke;
-    activeReplayStrokeRef.current = forensicTracker?.startSignatureStroke(
-      forensicSurfaceId,
-      pos.x,
-      pos.y,
-      pos.force,
-    ) ?? null;
+    activeReplayStrokeRef.current =
+      forensicTracker?.startSignatureStroke(forensicSurfaceId, pos.x, pos.y, pos.force) ?? null;
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
   };
@@ -149,7 +145,9 @@ export function SignaturePad({
     const bg = styles.getPropertyValue("--sig-bg").trim();
     const dark = !bg || bg.startsWith("#0") || bg.startsWith("#1") || bg.startsWith("#2");
     const sigStroke = stroke || (dark ? "#e4e4e7" : "#161616");
-    const dataUrl = signatureStrokesToDataUrl(strokesRef.current as SignatureStroke[], rect.width, rect.height, { strokeColor: sigStroke });
+    const dataUrl = signatureStrokesToDataUrl(strokesRef.current as SignatureStroke[], rect.width, rect.height, {
+      strokeColor: sigStroke,
+    });
     forensicTracker?.commitSignature(forensicSurfaceId, strokesRef.current);
     // Save for reuse across contracts
     if (signerIdentity) saveSignature(signerIdentity, mode, dataUrl, documentId);

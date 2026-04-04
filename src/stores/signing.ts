@@ -61,7 +61,13 @@ type SigningActions = {
   setHandSignature: (data: string | null) => void;
 
   // QR
-  setQrData: (token: string, url: string, image: string, mode?: "signature" | "initials", fieldId?: string | null) => void;
+  setQrData: (
+    token: string,
+    url: string,
+    image: string,
+    mode?: "signature" | "initials",
+    fieldId?: string | null,
+  ) => void;
   clearQr: () => void;
 
   // Modals
@@ -140,7 +146,8 @@ export const useSigningStore = create<SigningState & SigningActions>()((set, get
 
   // ── QR ─────────────────────────────────────────────────────────────────────
 
-  setQrData: (token, url, image, mode = "signature", fieldId = null) => set({ qrToken: token, qrUrl: url, qrImage: image, qrMode: mode, qrFieldId: fieldId }),
+  setQrData: (token, url, image, mode = "signature", fieldId = null) =>
+    set({ qrToken: token, qrUrl: url, qrImage: image, qrMode: mode, qrFieldId: fieldId }),
   clearQr: () => set({ qrToken: null, qrUrl: null, qrImage: null, qrMode: "signature", qrFieldId: null }),
 
   // ── Modals ─────────────────────────────────────────────────────────────────
@@ -157,10 +164,7 @@ export const useSigningStore = create<SigningState & SigningActions>()((set, get
     const { draftStorageKey, fieldValues, email } = get();
     if (!draftStorageKey) return;
     try {
-      sessionStorage.setItem(
-        draftStorageKey,
-        JSON.stringify({ fieldValues, email, savedAt: Date.now() }),
-      );
+      sessionStorage.setItem(draftStorageKey, JSON.stringify({ fieldValues, email, savedAt: Date.now() }));
     } catch {}
   },
 

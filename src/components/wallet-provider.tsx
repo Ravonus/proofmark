@@ -15,7 +15,13 @@ import { Wallet, ChevronLeft, LogOut, AlertCircle, Loader2, ExternalLink } from 
 import {
   LaserEyesProvider,
   useLaserEyes,
-  UNISAT, XVERSE, OKX, MAGIC_EDEN, LEATHER, PHANTOM, WIZZ,
+  UNISAT,
+  XVERSE,
+  OKX,
+  MAGIC_EDEN,
+  LEATHER,
+  PHANTOM,
+  WIZZ,
   type ProviderType,
 } from "@omnisat/lasereyes";
 import { useAccount, useConnect, useDisconnect, useSignMessage as useWagmiSignMessage, WagmiProvider } from "wagmi";
@@ -33,7 +39,9 @@ import { wagmiConfig } from "~/lib/wagmi-config";
 import { trpc } from "~/lib/trpc";
 import {
   useWalletStore,
-  getSessionCookie, setSessionCookie, clearSessionCookie,
+  getSessionCookie,
+  setSessionCookie,
+  clearSessionCookie,
   getWalletAuthErrorMessage,
   type WalletOption,
 } from "~/stores/wallet";
@@ -97,10 +105,7 @@ function WalletRuntime({ children }: { children: ReactNode }) {
   const verifyMut = trpc.auth.verify.useMutation();
   const logoutMut = trpc.auth.logout.useMutation();
   const claimDocsMutation = trpc.document.claimDocuments.useMutation();
-  const sessionQuery = trpc.auth.me.useQuery(
-    { token: getSessionCookie() ?? "" },
-    { enabled: false, retry: false },
-  );
+  const sessionQuery = trpc.auth.me.useQuery({ token: getSessionCookie() ?? "" }, { enabled: false, retry: false });
 
   const authTriggeredRef = useRef<string | null>(null);
   const sessionRestoredRef = useRef(false);
@@ -128,9 +133,13 @@ function WalletRuntime({ children }: { children: ReactNode }) {
   laserEyesRef.current = laserEyes;
 
   // ── Build available wallets ──
-  const hasUnisat = laserEyes.hasUnisat, hasXverse = laserEyes.hasXverse, hasOkx = laserEyes.hasOkx;
-  const hasMagicEden = laserEyes.hasMagicEden, hasLeather = laserEyes.hasLeather;
-  const hasPhantom = laserEyes.hasPhantom, hasWizz = laserEyes.hasWizz;
+  const hasUnisat = laserEyes.hasUnisat,
+    hasXverse = laserEyes.hasXverse,
+    hasOkx = laserEyes.hasOkx;
+  const hasMagicEden = laserEyes.hasMagicEden,
+    hasLeather = laserEyes.hasLeather;
+  const hasPhantom = laserEyes.hasPhantom,
+    hasWizz = laserEyes.hasWizz;
   const solWallets = solWallet.wallets;
 
   useEffect(() => {
@@ -160,8 +169,10 @@ function WalletRuntime({ children }: { children: ReactNode }) {
 
     for (const connector of evmConnectors) {
       wallets.push({
-        id: `ETH:${connector.id}`, chain: "ETH",
-        label: connector.name || "EVM Wallet", available: true,
+        id: `ETH:${connector.id}`,
+        chain: "ETH",
+        label: connector.name || "EVM Wallet",
+        available: true,
         iconUrl: (connector as { icon?: string }).icon ?? null,
       });
     }
@@ -169,7 +180,8 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     for (const w of solWallets) {
       const ready = String(w.readyState);
       wallets.push({
-        id: `SOL:${String(w.adapter.name)}`, chain: "SOL",
+        id: `SOL:${String(w.adapter.name)}`,
+        chain: "SOL",
         label: String(w.adapter.name),
         available: ready === "Installed" || ready === "Loadable",
         iconUrl: (w.adapter as { icon?: string }).icon ?? null,
@@ -177,11 +189,25 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     }
 
     storeSetAvailableWallets(wallets);
-  }, [hasUnisat, hasXverse, hasOkx, hasMagicEden, hasLeather, hasPhantom, hasWizz, devEthAccount, evmConnectors, solWallets, storeSetAvailableWallets]);
+  }, [
+    hasUnisat,
+    hasXverse,
+    hasOkx,
+    hasMagicEden,
+    hasLeather,
+    hasPhantom,
+    hasWizz,
+    devEthAccount,
+    evmConnectors,
+    solWallets,
+    storeSetAvailableWallets,
+  ]);
 
   // ── Sync wallet connection state → store ──
-  const leConnected = laserEyes.connected, leAddress = laserEyes.address;
-  const solConnected = solWallet.connected, solPubkey = solWallet.publicKey;
+  const leConnected = laserEyes.connected,
+    leAddress = laserEyes.address;
+  const solConnected = solWallet.connected,
+    solPubkey = solWallet.publicKey;
 
   useEffect(() => {
     if (leConnected && leAddress) {
@@ -193,7 +219,18 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     } else if (store.connected && !store.authenticated && !getSessionCookie()) {
       storeReset();
     }
-  }, [leConnected, leAddress, evmConnected, evmAddress, solConnected, solPubkey, storeSetState, storeReset, store.connected, store.authenticated]);
+  }, [
+    leConnected,
+    leAddress,
+    evmConnected,
+    evmAddress,
+    solConnected,
+    solPubkey,
+    storeSetState,
+    storeReset,
+    store.connected,
+    store.authenticated,
+  ]);
 
   // ── Restore session from cookie (runs once) ──
   useEffect(() => {
@@ -203,18 +240,21 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     const token = getSessionCookie();
     if (!token) return;
 
-    sessionQuery.refetch().then(({ data }) => {
-      if (data) {
-        authTriggeredRef.current = data.address;
-        storeAuthSuccess(data.address, data.chain as WalletChain);
-      } else {
+    sessionQuery
+      .refetch()
+      .then(({ data }) => {
+        if (data) {
+          authTriggeredRef.current = data.address;
+          storeAuthSuccess(data.address, data.chain as WalletChain);
+        } else {
+          clearSessionCookie();
+          storeSetState({ authenticating: false, authError: null });
+        }
+      })
+      .catch(() => {
         clearSessionCookie();
         storeSetState({ authenticating: false, authError: null });
-      }
-    }).catch(() => {
-      clearSessionCookie();
-      storeSetState({ authenticating: false, authError: null });
-    });
+      });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sign-in flow ──
@@ -248,7 +288,7 @@ function WalletRuntime({ children }: { children: ReactNode }) {
       store.authSuccess(address, chain);
 
       // Claim any documents signed as a guest with this wallet/email/social
-      void claimDocsMut.current.mutateAsync().catch(() => { });
+      void claimDocsMut.current.mutateAsync().catch(() => {});
     } catch (err) {
       authTriggeredRef.current = address;
       store.authFail(getWalletAuthErrorMessage(err));
@@ -256,8 +296,10 @@ function WalletRuntime({ children }: { children: ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto sign-in after wallet connects ──
-  const storeConnected = store.connected, storeAddress = store.address;
-  const storeChain = store.chain, storeAuthenticated = store.authenticated;
+  const storeConnected = store.connected,
+    storeAddress = store.address;
+  const storeChain = store.chain,
+    storeAuthenticated = store.authenticated;
   const storeAuthenticating = store.authenticating;
 
   useEffect(() => {
@@ -269,33 +311,36 @@ function WalletRuntime({ children }: { children: ReactNode }) {
   }, [storeConnected, storeAddress, storeChain, storeAuthenticated, storeAuthenticating, doSignIn]);
 
   // ── Connect ──
-  const connect = useCallback(async (chain: WalletChain, connectorId?: string) => {
-    authTriggeredRef.current = null;
-    store.setState({ authenticated: false, authenticating: false, authError: null });
+  const connect = useCallback(
+    async (chain: WalletChain, connectorId?: string) => {
+      authTriggeredRef.current = null;
+      store.setState({ authenticated: false, authenticating: false, authError: null });
 
-    if (chain === "BTC") {
-      await laserEyes.connect((connectorId as ProviderType) || UNISAT);
-    } else if (chain === "ETH") {
-      if (connectorId === "dev") {
-        if (!devEthAccount) throw new Error("Dev wallet not configured");
-        store.setState({
-          address: devEthAccount.address,
-          chain: "ETH",
-          connected: true,
-        });
-        return;
+      if (chain === "BTC") {
+        await laserEyes.connect((connectorId as ProviderType) || UNISAT);
+      } else if (chain === "ETH") {
+        if (connectorId === "dev") {
+          if (!devEthAccount) throw new Error("Dev wallet not configured");
+          store.setState({
+            address: devEthAccount.address,
+            chain: "ETH",
+            connected: true,
+          });
+          return;
+        }
+        const connector = connectorId ? evmConnectors.find((c) => c.id === connectorId) : evmConnectors[0];
+        if (!connector) throw new Error("No EVM wallet available");
+        await evmConnectAsync({ connector });
+      } else if (chain === "SOL") {
+        if (connectorId) {
+          const match = solWallet.wallets.find((w) => String(w.adapter.name) === connectorId);
+          if (match) solWallet.select(match.adapter.name);
+        }
+        await solWallet.connect();
       }
-      const connector = connectorId ? evmConnectors.find((c) => c.id === connectorId) : evmConnectors[0];
-      if (!connector) throw new Error("No EVM wallet available");
-      await evmConnectAsync({ connector });
-    } else if (chain === "SOL") {
-      if (connectorId) {
-        const match = solWallet.wallets.find((w) => String(w.adapter.name) === connectorId);
-        if (match) solWallet.select(match.adapter.name);
-      }
-      await solWallet.connect();
-    }
-  }, [devEthAccount, laserEyes, evmConnectors, evmConnectAsync, solWallet, store]);
+    },
+    [devEthAccount, laserEyes, evmConnectors, evmConnectAsync, solWallet, store],
+  );
 
   // ── Authenticate (manual retry) ──
   const authenticate = useCallback(async () => {
@@ -326,29 +371,43 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     else if (store.chain === "SOL") await solWallet.disconnect();
 
     store.reset();
-  }, [store, store.chain, store.address, laserEyes, evmDisconnectAsync, solWallet, logoutMut, devEthAccount, evmConnected]);
+  }, [
+    store,
+    store.chain,
+    store.address,
+    laserEyes,
+    evmDisconnectAsync,
+    solWallet,
+    logoutMut,
+    devEthAccount,
+    evmConnected,
+  ]);
 
   // ── Sign message ──
-  const signMessage = useCallback(async (message: string): Promise<string> => {
-    if (!store.address || !store.chain) throw new Error("Wallet not connected");
+  const signMessage = useCallback(
+    async (message: string): Promise<string> => {
+      if (!store.address || !store.chain) throw new Error("Wallet not connected");
 
-    if (store.chain === "ETH") {
-      if (devEthAccount?.address.toLowerCase() === store.address.toLowerCase() && !evmConnected) {
-        return devEthAccount.signMessage({ message });
+      if (store.chain === "ETH") {
+        if (devEthAccount?.address.toLowerCase() === store.address.toLowerCase() && !evmConnected) {
+          return devEthAccount.signMessage({ message });
+        }
+        return evmSignMessageAsync({ message });
       }
-      return evmSignMessageAsync({ message });
-    }
-    if (store.chain === "SOL") {
-      if (!solWallet.signMessage) throw new Error("Solana wallet does not support signMessage.");
-      return Buffer.from(await solWallet.signMessage(new TextEncoder().encode(message))).toString("base64");
-    }
+      if (store.chain === "SOL") {
+        if (!solWallet.signMessage) throw new Error("Solana wallet does not support signMessage.");
+        return Buffer.from(await solWallet.signMessage(new TextEncoder().encode(message))).toString("base64");
+      }
 
-    const isTaproot = store.address.toLowerCase().startsWith("bc1p") || store.address.toLowerCase().startsWith("tb1p");
-    return laserEyes.signMessage(message, {
-      toSignAddress: store.address,
-      protocol: isTaproot ? "bip322" : "ecdsa",
-    });
-  }, [store.address, store.chain, evmSignMessageAsync, solWallet, laserEyes, devEthAccount, evmConnected]);
+      const isTaproot =
+        store.address.toLowerCase().startsWith("bc1p") || store.address.toLowerCase().startsWith("tb1p");
+      return laserEyes.signMessage(message, {
+        toSignAddress: store.address,
+        protocol: isTaproot ? "bip322" : "ecdsa",
+      });
+    },
+    [store.address, store.chain, evmSignMessageAsync, solWallet, laserEyes, devEthAccount, evmConnected],
+  );
 
   // ── Expose actions on the store for WalletButton to consume ──
   // We use a ref-stable object since these callbacks depend on wallet hooks
@@ -487,10 +546,17 @@ export function WalletButton() {
         transition={{ duration: 0.25 }}
       >
         <div className="glass-card flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
-          <span className="font-semibold" style={{ color: meta.color }}>{meta.icon}</span>
+          <span className="font-semibold" style={{ color: meta.color }}>
+            {meta.icon}
+          </span>
           <span className="text-secondary">{addressPreview(address)}</span>
           {authenticating && (
-            <motion.div className="h-2 w-2 rounded-full bg-amber-400" animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }} title="Verifying wallet..." />
+            <motion.div
+              className="h-2 w-2 rounded-full bg-amber-400"
+              animate={{ opacity: [1, 0.3, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              title="Verifying wallet..."
+            />
           )}
           {authenticated && !authenticating && <div className="h-2 w-2 rounded-full bg-green-400" title="Verified" />}
         </div>
@@ -534,7 +600,14 @@ export function WalletButton() {
           >
             <AnimatePresence mode="wait">
               {noWalletsAnywhere ? (
-                <motion.div key="no-wallets" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }} className="px-3 py-3">
+                <motion.div
+                  key="no-wallets"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15 }}
+                  className="px-3 py-3"
+                >
                   <div className="mb-2 flex items-center gap-2 text-amber-400">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <p className="text-sm font-medium">No wallets detected</p>
@@ -545,12 +618,20 @@ export function WalletButton() {
                     return (
                       <div key={c} className="mb-2 last:mb-0">
                         <p className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted">
-                          <span className="font-semibold" style={{ color: meta.color }}>{meta.icon}</span>
+                          <span className="font-semibold" style={{ color: meta.color }}>
+                            {meta.icon}
+                          </span>
                           {meta.label}
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {INSTALL_LINKS[c].map((link) => (
-                            <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="bg-surface-hover/40 hover:bg-surface-hover/70 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-secondary transition-colors hover:text-primary">
+                            <a
+                              key={link.url}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-surface-hover/40 hover:bg-surface-hover/70 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-secondary transition-colors hover:text-primary"
+                            >
                               {link.name}
                               <ExternalLink className="h-2.5 w-2.5" />
                             </a>
@@ -561,19 +642,40 @@ export function WalletButton() {
                   })}
                 </motion.div>
               ) : !effectiveChain ? (
-                <motion.div key="chains" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.15 }}>
+                <motion.div
+                  key="chains"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.15 }}
+                >
                   <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted">Select Chain</p>
                   {(["BTC", "ETH", "SOL"] as const).map((c, i) => {
                     const meta = CHAIN_META[c];
                     const count = availableWallets.filter((w) => w.chain === c && w.available).length;
                     return (
-                      <motion.button key={c} onClick={() => setSelectedChain(c)} className="hover:bg-surface-hover/60 flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: 3 }}>
+                      <motion.button
+                        key={c}
+                        onClick={() => setSelectedChain(c)}
+                        className="hover:bg-surface-hover/60 flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-colors"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ x: 3 }}
+                      >
                         <div className="flex items-center gap-3">
-                          <span className="text-lg font-semibold" style={{ color: meta.color }}>{meta.icon}</span>
+                          <span className="text-lg font-semibold" style={{ color: meta.color }}>
+                            {meta.icon}
+                          </span>
                           <span>{meta.label}</span>
                         </div>
                         {count > 0 ? (
-                          <span className="rounded-full px-1.5 py-0.5 text-[10px] font-medium" style={{ background: meta.color + "20", color: meta.color }}>{count}</span>
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                            style={{ background: meta.color + "20", color: meta.color }}
+                          >
+                            {count}
+                          </span>
                         ) : (
                           <span className="text-[10px] text-muted">none</span>
                         )}
@@ -582,15 +684,28 @@ export function WalletButton() {
                   })}
                 </motion.div>
               ) : (
-                <motion.div key="wallets" initial={{ opacity: 0, x: autoSkipped ? 0 : 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: autoSkipped ? 0 : 10 }} transition={{ duration: 0.15 }}>
+                <motion.div
+                  key="wallets"
+                  initial={{ opacity: 0, x: autoSkipped ? 0 : 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: autoSkipped ? 0 : 10 }}
+                  transition={{ duration: 0.15 }}
+                >
                   {!autoSkipped && (
-                    <motion.button onClick={() => setSelectedChain(null)} className="flex items-center gap-1 px-3 py-1.5 text-[10px] text-muted transition-colors hover:text-secondary" whileHover={{ x: -3 }}>
-                      <ChevronLeft className="h-3 w-3" /><span>Back</span>
+                    <motion.button
+                      onClick={() => setSelectedChain(null)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-[10px] text-muted transition-colors hover:text-secondary"
+                      whileHover={{ x: -3 }}
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      <span>Back</span>
                     </motion.button>
                   )}
                   {autoSkipped && (
                     <p className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted">
-                      <span className="font-semibold" style={{ color: CHAIN_META[effectiveChain].color }}>{CHAIN_META[effectiveChain].icon}</span>
+                      <span className="font-semibold" style={{ color: CHAIN_META[effectiveChain].color }}>
+                        {CHAIN_META[effectiveChain].icon}
+                      </span>
                       {CHAIN_META[effectiveChain].label} Wallets
                     </p>
                   )}
@@ -601,11 +716,25 @@ export function WalletButton() {
                     </div>
                   ) : (
                     chainWallets.map((w, i) => (
-                      <motion.button key={w.id} onClick={() => handleConnect(w)} disabled={connecting} className="hover:bg-surface-hover/60 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors disabled:opacity-50" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ x: 3 }}>
+                      <motion.button
+                        key={w.id}
+                        onClick={() => handleConnect(w)}
+                        disabled={connecting}
+                        className="hover:bg-surface-hover/60 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors disabled:opacity-50"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ x: 3 }}
+                      >
                         {w.iconUrl ? (
                           <img src={w.iconUrl} alt="" className="h-6 w-6 rounded-md" />
                         ) : (
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-semibold" style={{ background: CHAIN_META[w.chain].color + "22", color: CHAIN_META[w.chain].color }}>{CHAIN_META[w.chain].icon}</span>
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-semibold"
+                            style={{ background: CHAIN_META[w.chain].color + "22", color: CHAIN_META[w.chain].color }}
+                          >
+                            {CHAIN_META[w.chain].icon}
+                          </span>
                         )}
                         <span>{w.label}</span>
                         {connecting && <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-muted" />}
@@ -617,8 +746,14 @@ export function WalletButton() {
             </AnimatePresence>
             <AnimatePresence>
               {error && (
-                <motion.p initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-500/15 bg-red-500/10 px-3 py-2 text-xs text-red-400">
-                  <AlertCircle className="h-3 w-3 shrink-0" /><span>{error}</span>
+                <motion.p
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mt-2 flex items-center gap-1.5 rounded-lg border border-red-500/15 bg-red-500/10 px-3 py-2 text-xs text-red-400"
+                >
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{error}</span>
                 </motion.p>
               )}
             </AnimatePresence>

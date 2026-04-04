@@ -26,10 +26,7 @@ import { useSigningStore } from "~/stores/signing";
 import { encodeStructuredFieldValue } from "~/lib/field-values";
 import { formatEditableFieldValue, getFieldLogicState, isFieldVisible, isFieldRequired } from "~/lib/field-runtime";
 import { VERIFY_FIELD_TYPES } from "~/lib/signing-constants";
-import {
-  tokenizeDocument,
-  validateField,
-} from "~/components/sign-document-helpers";
+import { tokenizeDocument, validateField } from "~/components/sign-document-helpers";
 import type { InlineField, DocToken } from "~/components/sign-document-helpers";
 import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/recipient-roles";
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
@@ -64,17 +61,34 @@ type GazeTrackerInstance = {
 
 /** Fallback behavioral signals when the tracker fails or is absent. */
 const EMPTY_BEHAVIORAL: BehavioralSignals = Object.freeze({
-  timeOnPage: 0, scrolledToBottom: false, maxScrollDepth: 0,
-  mouseMoveCount: 0, clickCount: 0, keyPressCount: 0,
-  pageWasHidden: false, hiddenDuration: 0,
-  interactionTimeline: [], typingCadence: [],
-  mouseVelocityAvg: 0, mouseAccelerationPattern: "",
-  touchPressureAvg: null, scrollPattern: [],
-  focusChanges: 0, pasteEvents: 0, copyEvents: 0, cutEvents: 0, rightClicks: 0,
-  gazeTrackingActive: false, gazePointCount: 0,
-  gazeFixationCount: 0, gazeFixationAvgMs: 0,
-  gazeBlinkCount: 0, gazeBlinkRate: 0, gazeTrackingCoverage: 0,
-  gazeLiveness: null, replay: null,
+  timeOnPage: 0,
+  scrolledToBottom: false,
+  maxScrollDepth: 0,
+  mouseMoveCount: 0,
+  clickCount: 0,
+  keyPressCount: 0,
+  pageWasHidden: false,
+  hiddenDuration: 0,
+  interactionTimeline: [],
+  typingCadence: [],
+  mouseVelocityAvg: 0,
+  mouseAccelerationPattern: "",
+  touchPressureAvg: null,
+  scrollPattern: [],
+  focusChanges: 0,
+  pasteEvents: 0,
+  copyEvents: 0,
+  cutEvents: 0,
+  rightClicks: 0,
+  gazeTrackingActive: false,
+  gazePointCount: 0,
+  gazeFixationCount: 0,
+  gazeFixationAvgMs: 0,
+  gazeBlinkCount: 0,
+  gazeBlinkRate: 0,
+  gazeTrackingCoverage: 0,
+  gazeLiveness: null,
+  replay: null,
 });
 
 /** Whether the user intentionally cancelled (don't show as error). */
@@ -110,7 +124,11 @@ async function runSigningAction(
 
 /** Stop gaze tracker, kill stray video streams, remove WebGazer DOM nodes. */
 function cleanupGazeTracker(gazeRef: React.MutableRefObject<GazeTrackerInstance | null>): void {
-  try { gazeRef.current?.stop(); } catch { /* best-effort */ }
+  try {
+    gazeRef.current?.stop();
+  } catch {
+    /* best-effort */
+  }
   gazeRef.current = null;
 
   // Kill all active video streams (WebGazer leaves stray <video> elements)
@@ -121,12 +139,18 @@ function cleanupGazeTracker(gazeRef: React.MutableRefObject<GazeTrackerInstance 
         v.srcObject = null;
       }
     });
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // Remove WebGazer DOM artifacts
   for (const id of [
-    "webgazerVideoFeed", "webgazerVideoCanvas", "webgazerFaceOverlay",
-    "webgazerFaceFeedbackBox", "webgazerGazeDot", "pm-gaze-indicator",
+    "webgazerVideoFeed",
+    "webgazerVideoCanvas",
+    "webgazerFaceOverlay",
+    "webgazerFaceFeedbackBox",
+    "webgazerGazeDot",
+    "pm-gaze-indicator",
   ]) {
     document.getElementById(id)?.remove();
   }
@@ -252,7 +276,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
   });
   const addressSuggestionsMutation = trpc.document.addressSuggestions.useMutation();
   const evaluateTokenGateWallets = trpc.document.evaluateTokenGateWallets.useMutation();
-  const [tokenGateProofs, setTokenGateProofs] = useState<Record<WalletChain, TokenGateWalletProof>>({} as Record<WalletChain, TokenGateWalletProof>);
+  const [tokenGateProofs, setTokenGateProofs] = useState<Record<WalletChain, TokenGateWalletProof>>(
+    {} as Record<WalletChain, TokenGateWalletProof>,
+  );
   const [proofAwareEvaluation, setProofAwareEvaluation] = useState<ProofAwareTokenGateEvaluation | null>(null);
   const [verifyingTokenGateChain, setVerifyingTokenGateChain] = useState<WalletChain | null>(null);
 
@@ -336,9 +362,18 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     );
 
     return {
-      mySigner, mySignerByAddress, currentSigner, isCreator,
-      currentRole, isActionable, needsDrawnSig, mySignerIdx,
-      alreadySigned, needsFinalization, signedCount, totalRecipients,
+      mySigner,
+      mySignerByAddress,
+      currentSigner,
+      isCreator,
+      currentRole,
+      isActionable,
+      needsDrawnSig,
+      mySignerIdx,
+      alreadySigned,
+      needsFinalization,
+      signedCount,
+      totalRecipients,
     };
   }, [docSigners, wallet.connected, wallet.address, wallet.chain, doc]);
 
@@ -503,12 +538,14 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       // Server save is blocked if this signer has verify fields that haven't
       // been completed yet — we need to know who they are first.
       const hasVerifyFields = myFieldsList.some((f) => VERIFY_FIELD_TYPES.has(f.type));
-      const verificationDone = !hasVerifyFields || myFieldsList
-        .filter((f) => VERIFY_FIELD_TYPES.has(f.type))
-        .some((f) => {
-          const val = mergedFieldValues[f.id];
-          return val && val.includes('"status":"verified"');
-        });
+      const verificationDone =
+        !hasVerifyFields ||
+        myFieldsList
+          .filter((f) => VERIFY_FIELD_TYPES.has(f.type))
+          .some((f) => {
+            const val = mergedFieldValues[f.id];
+            return val && val.includes('"status":"verified"');
+          });
 
       if (verificationDone) {
         if (serverSaveTimer.current) clearTimeout(serverSaveTimer.current);
@@ -621,7 +658,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
   const connectTokenGateChain = useCallback(
     async (targetChain: WalletChain) => {
       const actions = getWalletActions();
-      const preferredWallet = wallet.availableWallets.find((candidate) => candidate.chain === targetChain && candidate.available);
+      const preferredWallet = wallet.availableWallets.find(
+        (candidate) => candidate.chain === targetChain && candidate.available,
+      );
       await actions.connect(targetChain, preferredWallet?.id.split(":")[1]);
     },
     [wallet.availableWallets],
@@ -672,7 +711,16 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
         setVerifyingTokenGateChain(null);
       }
     },
-    [claimToken, derivedState.currentSigner?.tokenGates, wallet.connected, wallet.address, wallet.chain, documentId, tokenGateProofs, evaluateTokenGateWallets],
+    [
+      claimToken,
+      derivedState.currentSigner?.tokenGates,
+      wallet.connected,
+      wallet.address,
+      wallet.chain,
+      documentId,
+      tokenGateProofs,
+      evaluateTokenGateWallets,
+    ],
   );
 
   const handleSign = useCallback(async () => {
@@ -691,67 +739,97 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     const proofsList = Object.values(tokenGateProofs);
     const fieldVals = Object.keys(store.fieldValues).length > 0 ? store.fieldValues : undefined;
 
-    await runSigningAction(store, async () => {
-      // Server message includes documentStateHash covering template + all field values
-      const { message } = await getSigningMessageMut.mutateAsync({
-        documentId, claimToken,
-        signerAddress: wallet.address!, chain: wallet.chain!,
-        handSignatureData: store.handSignature || undefined,
-        tokenGateProofs: proofsList.length > 0 ? proofsList : undefined,
-        fieldValues: fieldVals,
-      });
+    await runSigningAction(
+      store,
+      async () => {
+        // Server message includes documentStateHash covering template + all field values
+        const { message } = await getSigningMessageMut.mutateAsync({
+          documentId,
+          claimToken,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+          handSignatureData: store.handSignature || undefined,
+          tokenGateProofs: proofsList.length > 0 ? proofsList : undefined,
+          fieldValues: fieldVals,
+        });
 
-      const actions = getWalletActions();
-      const signature = await actions.signMessage(message);
+        const actions = getWalletActions();
+        const signature = await actions.signMessage(message);
 
-      // Collect forensic evidence (fingerprint + behavioral signals)
-      const fingerprint = await collectFingerprintBestEffort();
-      behavioralTracker.current?.logAction("sign_submitted");
-      let behavioral: BehavioralSignals;
-      try {
-        behavioral = (await behavioralTracker.current?.collect()) ?? { ...EMPTY_BEHAVIORAL };
-      } catch {
-        behavioral = { ...EMPTY_BEHAVIORAL };
-      }
+        // Collect forensic evidence (fingerprint + behavioral signals)
+        const fingerprint = await collectFingerprintBestEffort();
+        behavioralTracker.current?.logAction("sign_submitted");
+        let behavioral: BehavioralSignals;
+        try {
+          behavioral = (await behavioralTracker.current?.collect()) ?? { ...EMPTY_BEHAVIORAL };
+        } catch {
+          behavioral = { ...EMPTY_BEHAVIORAL };
+        }
 
-      await signMutation.mutateAsync({
-        documentId, claimToken,
-        signerAddress: wallet.address!, chain: wallet.chain!, signature,
-        tokenGateProofs: proofsList.length > 0 ? proofsList : undefined,
-        email: store.email || undefined,
-        handSignatureData: store.handSignature || undefined,
-        fieldValues: fieldVals,
-        forensic: {
-          fingerprint: fingerprint as unknown as Record<string, unknown>,
-          behavioral: behavioral as unknown as Record<string, unknown>,
-          session: behavioralTracker.current
-            ? {
-                sessionId: behavioralTracker.current.sessionId,
-                visitIndex: behavioralTracker.current.visitIndex,
-                startedAt: behavioralTracker.current.startedAt,
-                endedAt: new Date().toISOString(),
-                durationMs: behavioral.timeOnPage,
-              }
-            : undefined,
-        },
-      });
-    }, "Signing");
-  }, [wallet, claimToken, derivedState, store, myFieldsList, validationState, signMutation, documentId, tokenGateEligible, tokenGateProofs, getSigningMessageMut]);
+        await signMutation.mutateAsync({
+          documentId,
+          claimToken,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+          signature,
+          tokenGateProofs: proofsList.length > 0 ? proofsList : undefined,
+          email: store.email || undefined,
+          handSignatureData: store.handSignature || undefined,
+          fieldValues: fieldVals,
+          forensic: {
+            fingerprint: fingerprint as unknown as Record<string, unknown>,
+            behavioral: behavioral as unknown as Record<string, unknown>,
+            session: behavioralTracker.current
+              ? {
+                  sessionId: behavioralTracker.current.sessionId,
+                  visitIndex: behavioralTracker.current.visitIndex,
+                  startedAt: behavioralTracker.current.startedAt,
+                  endedAt: new Date().toISOString(),
+                  durationMs: behavioral.timeOnPage,
+                }
+              : undefined,
+          },
+        });
+      },
+      "Signing",
+    );
+  }, [
+    wallet,
+    claimToken,
+    derivedState,
+    store,
+    myFieldsList,
+    validationState,
+    signMutation,
+    documentId,
+    tokenGateEligible,
+    tokenGateProofs,
+    getSigningMessageMut,
+  ]);
 
   const handleFinalize = useCallback(async () => {
     if (!wallet.address || !wallet.chain || !claimToken || !derivedState.needsFinalization) return;
 
-    await runSigningAction(store, async () => {
-      const { message } = await getFinalizationMessageMut.mutateAsync({
-        documentId, claimToken,
-        signerAddress: wallet.address!, chain: wallet.chain!,
-      });
-      const signature = await getWalletActions().signMessage(message);
-      await finalizeMut.mutateAsync({
-        documentId, claimToken,
-        signerAddress: wallet.address!, chain: wallet.chain!, signature,
-      });
-    }, "Finalization");
+    await runSigningAction(
+      store,
+      async () => {
+        const { message } = await getFinalizationMessageMut.mutateAsync({
+          documentId,
+          claimToken,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+        });
+        const signature = await getWalletActions().signMessage(message);
+        await finalizeMut.mutateAsync({
+          documentId,
+          claimToken,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+          signature,
+        });
+      },
+      "Finalization",
+    );
   }, [wallet, claimToken, derivedState.needsFinalization, documentId, store, getFinalizationMessageMut, finalizeMut]);
 
   const handleBulkFinalize = useCallback(async () => {
@@ -759,18 +837,36 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     const groupId = (doc as { groupId?: string | null })?.groupId;
     if (!groupId) return handleFinalize();
 
-    await runSigningAction(store, async () => {
-      const { message } = await getBulkFinalizationMessageMut.mutateAsync({
-        groupId: groupId!, claimToken: claimToken!,
-        signerAddress: wallet.address!, chain: wallet.chain!,
-      });
-      const signature = await getWalletActions().signMessage(message);
-      await bulkFinalizeMut.mutateAsync({
-        groupId: groupId!, claimToken: claimToken!,
-        signerAddress: wallet.address!, chain: wallet.chain!, signature,
-      });
-    }, "Bulk finalization");
-  }, [wallet, claimToken, derivedState.needsFinalization, doc, store, handleFinalize, getBulkFinalizationMessageMut, bulkFinalizeMut]);
+    await runSigningAction(
+      store,
+      async () => {
+        const { message } = await getBulkFinalizationMessageMut.mutateAsync({
+          groupId: groupId!,
+          claimToken: claimToken!,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+        });
+        const signature = await getWalletActions().signMessage(message);
+        await bulkFinalizeMut.mutateAsync({
+          groupId: groupId!,
+          claimToken: claimToken!,
+          signerAddress: wallet.address!,
+          chain: wallet.chain!,
+          signature,
+        });
+      },
+      "Bulk finalization",
+    );
+  }, [
+    wallet,
+    claimToken,
+    derivedState.needsFinalization,
+    doc,
+    store,
+    handleFinalize,
+    getBulkFinalizationMessageMut,
+    bulkFinalizeMut,
+  ]);
 
   const loadAddressSuggestions = useCallback(
     async (query: string, field: InlineField) => {
@@ -1039,7 +1135,12 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
           if (!serverVal) return;
 
           try {
-            const parsed = JSON.parse(serverVal) as { kind?: string; status?: string; provider?: string; username?: string };
+            const parsed = JSON.parse(serverVal) as {
+              kind?: string;
+              status?: string;
+              provider?: string;
+              username?: string;
+            };
             if (parsed.kind !== "social-verification" || parsed.status !== "verified") return;
 
             handleFieldChange(field.id, serverVal);
@@ -1062,7 +1163,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
 
             stopPolling();
             if (popup && !popup.closed) popup.close();
-          } catch { /* not valid JSON yet */ }
+          } catch {
+            /* not valid JSON yet */
+          }
         });
       }, 2000);
     },

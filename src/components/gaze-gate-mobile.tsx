@@ -62,7 +62,7 @@ function createMobileSections(): ScreenSection[] {
   return sections.sort(() => Math.random() - 0.5).slice(0, 2);
 }
 
-const DWELL_REQUIRED_MS = 800;  // vs 500ms desktop
+const DWELL_REQUIRED_MS = 800; // vs 500ms desktop
 const SECTION_TIMEOUT_MS = 12_000; // vs 8s desktop
 
 export function GazeGateMobile({
@@ -131,8 +131,7 @@ export function GazeGateMobile({
     lastTick.current = now;
 
     const inSection =
-      gazePoint.x >= section.x1 && gazePoint.x <= section.x2 &&
-      gazePoint.y >= section.y1 && gazePoint.y <= section.y2;
+      gazePoint.x >= section.x1 && gazePoint.x <= section.x2 && gazePoint.y >= section.y1 && gazePoint.y <= section.y2;
 
     if (inSection) {
       dwellAccum.current += dt;
@@ -212,7 +211,11 @@ export function GazeGateMobile({
       <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-sm">
         <div className="mx-4 max-w-sm space-y-5 rounded-2xl border border-white/10 bg-[#0c121d] p-6 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sky-500/15">
-            {starting ? <Loader2 className="h-7 w-7 animate-spin text-sky-400" /> : <Camera className="h-7 w-7 text-sky-400" />}
+            {starting ? (
+              <Loader2 className="h-7 w-7 animate-spin text-sky-400" />
+            ) : (
+              <Camera className="h-7 w-7 text-sky-400" />
+            )}
           </div>
           <h2 className="text-lg font-bold text-white">Eye Tracking Required</h2>
           <p className="text-sm leading-relaxed text-white/60">
@@ -238,7 +241,9 @@ export function GazeGateMobile({
       const modPath = "~/premium/eye-tracking/mobile/calibration-overlay";
       CalibrationOverlay = require(/* webpackIgnore: true */ modPath).MobileCalibrationOverlay;
     } catch {
-      return <div className="p-8 text-center text-sm text-muted">Eye tracking calibration requires premium features.</div>;
+      return (
+        <div className="p-8 text-center text-sm text-muted">Eye tracking calibration requires premium features.</div>
+      );
     }
     return (
       <CalibrationOverlay
@@ -267,21 +272,21 @@ export function GazeGateMobile({
         <Eye className="h-6 w-6 text-sky-400" />
       </div>
 
-      <p className="mt-4 text-lg font-semibold text-white">
-        {sectionFailed ? "Missed — moving on" : section?.prompt}
-      </p>
+      <p className="mt-4 text-lg font-semibold text-white">{sectionFailed ? "Missed — moving on" : section?.prompt}</p>
 
-      <p className="mt-2 text-sm text-white/40">
-        Hold your gaze for {(DWELL_REQUIRED_MS / 1000).toFixed(1)}s
-      </p>
+      <p className="mt-2 text-sm text-white/40">Hold your gaze for {(DWELL_REQUIRED_MS / 1000).toFixed(1)}s</p>
 
       {/* Dwell progress ring */}
       <div className="mt-6">
         <svg width={80} height={80}>
           <circle cx={40} cy={40} r={36} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={4} />
           <circle
-            cx={40} cy={40} r={36}
-            fill="none" stroke="rgba(56, 189, 248, 0.8)" strokeWidth={4}
+            cx={40}
+            cy={40}
+            r={36}
+            fill="none"
+            stroke="rgba(56, 189, 248, 0.8)"
+            strokeWidth={4}
             strokeDasharray={Math.PI * 72}
             strokeDashoffset={Math.PI * 72 * (1 - progress)}
             transform="rotate(-90 40 40)"
@@ -305,7 +310,7 @@ export function GazeGateMobile({
       {/* Section highlight */}
       {section && (
         <div
-          className="fixed border-2 border-sky-400/20 bg-sky-400/5 rounded-lg"
+          className="fixed rounded-lg border-2 border-sky-400/20 bg-sky-400/5"
           style={{
             left: `${section.x1 * 100}%`,
             top: `${section.y1 * 100}%`,

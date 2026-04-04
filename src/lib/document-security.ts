@@ -12,17 +12,11 @@ export const SECURITY_MODE_DESCRIPTIONS: Record<SecurityMode, string> = {
   ENCRYPTED_IPFS: "Encrypts the stored document and computes an IPFS CID for the encrypted payload.",
 };
 
-export function deriveSecurityMode(input: {
-  encryptedAtRest?: boolean | null;
-  ipfsCid?: string | null;
-}): SecurityMode {
+export function deriveSecurityMode(input: { encryptedAtRest?: boolean | null; ipfsCid?: string | null }): SecurityMode {
   if (!input.encryptedAtRest) return "HASH_ONLY";
   return input.ipfsCid ? "ENCRYPTED_IPFS" : "ENCRYPTED_PRIVATE";
 }
 
-export function usesEncryptedIpfs(input: {
-  encryptedAtRest?: boolean | null;
-  ipfsCid?: string | null;
-}): boolean {
+export function usesEncryptedIpfs(input: { encryptedAtRest?: boolean | null; ipfsCid?: string | null }): boolean {
   return deriveSecurityMode(input) === "ENCRYPTED_IPFS";
 }

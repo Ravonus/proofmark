@@ -20,23 +20,23 @@ export function merge_replay_timelines(timelines: any): any;
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
-    readonly memory: WebAssembly.Memory;
-    readonly analyze_replay_signature_activity: (a: number, b: number) => [number, number, number];
-    readonly analyze_signature_strokes: (a: any) => [number, number, number];
-    readonly build_replay_timeline: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
-    readonly decode_replay_events: (a: number, b: number) => [number, number, number];
-    readonly decode_signature: (a: number, b: number) => [number, number, number];
-    readonly encode_replay_events: (a: any) => [number, number, number];
-    readonly encode_signature: (a: any) => [number, number, number, number];
-    readonly merge_replay_timelines: (a: any) => [number, number, number];
-    readonly __wbindgen_malloc: (a: number, b: number) => number;
-    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_exn_store: (a: number) => void;
-    readonly __externref_table_alloc: () => number;
-    readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __externref_table_dealloc: (a: number) => void;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-    readonly __wbindgen_start: () => void;
+  readonly memory: WebAssembly.Memory;
+  readonly analyze_replay_signature_activity: (a: number, b: number) => [number, number, number];
+  readonly analyze_signature_strokes: (a: any) => [number, number, number];
+  readonly build_replay_timeline: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+  readonly decode_replay_events: (a: number, b: number) => [number, number, number];
+  readonly decode_signature: (a: number, b: number) => [number, number, number];
+  readonly encode_replay_events: (a: any) => [number, number, number];
+  readonly encode_signature: (a: any) => [number, number, number, number];
+  readonly merge_replay_timelines: (a: any) => [number, number, number];
+  readonly __wbindgen_malloc: (a: number, b: number) => number;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __externref_table_alloc: () => number;
+  readonly __wbindgen_externrefs: WebAssembly.Table;
+  readonly __externref_table_dealloc: (a: number) => void;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_start: () => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
@@ -59,4 +59,6 @@ export function initSync(module: { module: SyncInitInput } | SyncInitInput): Ini
  *
  * @returns {Promise<InitOutput>}
  */
-export default function __wbg_init (module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>): Promise<InitOutput>;
+export default function __wbg_init(
+  module_or_path?: { module_or_path: InitInput | Promise<InitInput> } | InitInput | Promise<InitInput>,
+): Promise<InitOutput>;

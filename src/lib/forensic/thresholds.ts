@@ -37,7 +37,7 @@ export const FORENSIC_PROFILE_THRESHOLDS = {
     minHumanPassRatio: 0.25,
     suspiciousAverageReactionMs: 5000,
     suspiciousFailedSteps: 4,
-    targetRadius: 0.30,
+    targetRadius: 0.3,
     targetHoldMs: 150,
     stepTimeoutMs: 10000,
   },

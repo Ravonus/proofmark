@@ -139,10 +139,13 @@ export function AccountMergeModal() {
                     Account Merge Suggested
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold tracking-tight text-white">These logins look like the same person</h2>
+                    <h2 className="text-2xl font-semibold tracking-tight text-white">
+                      These logins look like the same person
+                    </h2>
                     <p className="max-w-xl text-sm leading-6 text-slate-300">
-                      Your signed-in email account and wallet are currently attached to different records. Combine them once and the dashboard,
-                      reveal access, uploads, and signed document history will resolve through one identity.
+                      Your signed-in email account and wallet are currently attached to different records. Combine them
+                      once and the dashboard, reveal access, uploads, and signed document history will resolve through
+                      one identity.
                     </p>
                   </div>
                 </div>
@@ -159,14 +162,19 @@ export function AccountMergeModal() {
               </div>
 
               <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-                <div className="rounded-2xl border border-sky-400/15 bg-sky-400/8 p-4">
+                <div className="bg-sky-400/8 rounded-2xl border border-sky-400/15 p-4">
                   <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-100/80">
                     <Mail className="h-3.5 w-3.5" />
                     Current Account
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-white">{identity?.authUser?.email ?? session?.user?.email ?? "Signed-in email"}</p>
-                    <p className="text-xs text-slate-300">{identity?.authUser?.walletCount ?? 0} linked wallet{identity?.authUser?.walletCount === 1 ? "" : "s"}</p>
+                    <p className="text-sm font-medium text-white">
+                      {identity?.authUser?.email ?? session?.user?.email ?? "Signed-in email"}
+                    </p>
+                    <p className="text-xs text-slate-300">
+                      {identity?.authUser?.walletCount ?? 0} linked wallet
+                      {identity?.authUser?.walletCount === 1 ? "" : "s"}
+                    </p>
                   </div>
                 </div>
 
@@ -176,7 +184,7 @@ export function AccountMergeModal() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-amber-300/15 bg-amber-300/8 p-4">
+                <div className="bg-amber-300/8 rounded-2xl border border-amber-300/15 p-4">
                   <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-100/85">
                     <Wallet className="h-3.5 w-3.5" />
                     Wallet Account
@@ -190,9 +198,10 @@ export function AccountMergeModal() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/8 bg-white/5 p-4 text-sm leading-6 text-slate-300">
-                If you merge these accounts, your email login will keep its profile and the wallet-linked history will be folded into it. Nothing is
-                shared publicly; this only changes how Proofmark resolves your private access.
+              <div className="border-white/8 rounded-2xl border bg-white/5 p-4 text-sm leading-6 text-slate-300">
+                If you merge these accounts, your email login will keep its profile and the wallet-linked history will
+                be folded into it. Nothing is shared publicly; this only changes how Proofmark resolves your private
+                access.
               </div>
 
               {mergeMutation.error ? (

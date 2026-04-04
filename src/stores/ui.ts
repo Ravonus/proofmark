@@ -7,13 +7,7 @@
 
 import { create } from "zustand";
 
-type ModalId =
-  | "signature-pad"
-  | "qr-mobile"
-  | "confirm-sign"
-  | "add-section"
-  | "create-document"
-  | null;
+type ModalId = "signature-pad" | "qr-mobile" | "confirm-sign" | "add-section" | "create-document" | null;
 
 type ToastType = "success" | "error" | "info" | "warning";
 

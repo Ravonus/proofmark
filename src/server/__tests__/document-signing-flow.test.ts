@@ -96,10 +96,7 @@ describe("computeDocumentStateHash", () => {
     // Signer 0 already has values, signer 1 is about to submit
     const hash = await computeDocumentStateHash({
       contentHash: "abc123",
-      docSigners: [
-        { fieldValues: { name: "Alice" } },
-        { fieldValues: null },
-      ],
+      docSigners: [{ fieldValues: { name: "Alice" } }, { fieldValues: null }],
       currentSignerFieldValues: { name: "Bob" },
       currentSignerIndex: 1,
     });
@@ -107,10 +104,7 @@ describe("computeDocumentStateHash", () => {
     // Should be different from when signer 1 has no values
     const hashWithout = await computeDocumentStateHash({
       contentHash: "abc123",
-      docSigners: [
-        { fieldValues: { name: "Alice" } },
-        { fieldValues: null },
-      ],
+      docSigners: [{ fieldValues: { name: "Alice" } }, { fieldValues: null }],
     });
 
     expect(hash).not.toBe(hashWithout);
@@ -134,17 +128,11 @@ describe("computeDocumentStateHash", () => {
     const { computeDocumentStateHash } = await import("~/server/api/routers/document-helpers");
     const hash1 = await computeDocumentStateHash({
       contentHash: "abc123",
-      docSigners: [
-        { fieldValues: { name: "Alice" } },
-        { fieldValues: { name: "Bob" } },
-      ],
+      docSigners: [{ fieldValues: { name: "Alice" } }, { fieldValues: { name: "Bob" } }],
     });
     const hash2 = await computeDocumentStateHash({
       contentHash: "abc123",
-      docSigners: [
-        { fieldValues: { name: "Bob" } },
-        { fieldValues: { name: "Alice" } },
-      ],
+      docSigners: [{ fieldValues: { name: "Bob" } }, { fieldValues: { name: "Alice" } }],
     });
     expect(hash1).not.toBe(hash2);
   });
@@ -228,7 +216,13 @@ describe("handlePostSignCompletion — sequential notification", () => {
 
     const doc = buildDocument({ signingOrder: "parallel" });
     const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
-    const signer1 = buildSigner({ documentId: doc.id, signerOrder: 1, status: "PENDING", role: "SIGNER", email: "test@test.com" });
+    const signer1 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 1,
+      status: "PENDING",
+      role: "SIGNER",
+      email: "test@test.com",
+    });
 
     const mockDb = createMockDb();
 
@@ -249,7 +243,13 @@ describe("handlePostSignCompletion — sequential notification", () => {
 
     const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 1 });
     const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
-    const signer1 = buildSigner({ documentId: doc.id, signerOrder: 1, status: "SIGNED", role: "SIGNER", email: "test@test.com" });
+    const signer1 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 1,
+      status: "SIGNED",
+      role: "SIGNER",
+      email: "test@test.com",
+    });
 
     const mockDb = createMockDb();
 
@@ -271,7 +271,14 @@ describe("handlePostSignCompletion — sequential notification", () => {
 
     const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 0 });
     const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
-    const signer1 = buildSigner({ documentId: doc.id, signerOrder: 1, status: "PENDING", role: "SIGNER", email: null, phone: null });
+    const signer1 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 1,
+      status: "PENDING",
+      role: "SIGNER",
+      email: null,
+      phone: null,
+    });
 
     const mockDb = createMockDb();
 

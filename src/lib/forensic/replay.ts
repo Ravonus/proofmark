@@ -52,16 +52,36 @@ type RecordedReplayEvent =
   | { type: "blur"; at: number; target: string | null }
   | { type: "visibility"; at: number; hidden: boolean }
   | { type: "highlight"; at: number; target: string | null; label: string | null }
-  | { type: "navigation"; at: number; direction: keyof typeof NAV_DIRECTION_CODES; target: string | null; index: number }
+  | {
+      type: "navigation";
+      at: number;
+      direction: keyof typeof NAV_DIRECTION_CODES;
+      target: string | null;
+      index: number;
+    }
   | { type: "page"; at: number; page: number; totalPages: number }
   | { type: "modal"; at: number; name: string; open: boolean }
-  | { type: "signatureStart"; at: number; target: string | null; strokeId: number; x: number; y: number; pressure: number }
+  | {
+      type: "signatureStart";
+      at: number;
+      target: string | null;
+      strokeId: number;
+      x: number;
+      y: number;
+      pressure: number;
+    }
   | { type: "signaturePoint"; at: number; strokeId: number; x: number; y: number; pressure: number }
   | { type: "signatureEnd"; at: number; strokeId: number }
   | { type: "signatureCommit"; at: number; target: string | null; strokes: TimedSignatureStroke[] }
   | { type: "signatureClear"; at: number; target: string | null }
   | { type: "fieldCommit"; at: number; target: string | null; value: string }
-  | { type: "clipboard"; at: number; target: string | null; action: keyof typeof CLIPBOARD_ACTION_CODES; summary: string }
+  | {
+      type: "clipboard";
+      at: number;
+      target: string | null;
+      action: keyof typeof CLIPBOARD_ACTION_CODES;
+      summary: string;
+    }
   | { type: "contextMenu"; at: number; target: string | null; x: number; y: number }
   // Gaze tracking events (premium)
   | { type: "gazePoint"; at: number; x: number; y: number; confidence: number; anchor: RecordedGazeAnchor | null }
@@ -189,10 +209,7 @@ function fnv1a64(input: string) {
 }
 
 function normalizeText(value: string) {
-  return value
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, MAX_STORED_STRING_LENGTH);
+  return value.trim().replace(/\s+/g, " ").slice(0, MAX_STORED_STRING_LENGTH);
 }
 
 function normalizeStoredString(kind: ReplayStringKind, value: string) {
@@ -612,7 +629,8 @@ export class DeterministicReplayRecorder {
 
   recordGazePoint(x: number, y: number, confidence: number) {
     const at = this.elapsed();
-    const qx = gazeQ(x), qy = gazeQ(y);
+    const qx = gazeQ(x),
+      qy = gazeQ(y);
     if (this.lastGazeRecord.x === qx && this.lastGazeRecord.y === qy && at - this.lastGazeRecord.at < 16) return;
     this.lastGazeRecord = { at, x: qx, y: qy };
     this.metrics.gazePointCount++;
@@ -629,11 +647,26 @@ export class DeterministicReplayRecorder {
 
   recordGazeFixation(x: number, y: number, durationMs: number, target?: TargetSource) {
     this.metrics.gazeFixationCount++;
-    this.pushEvent({ type: "gazeFixation", at: this.elapsed(), x: gazeQ(x), y: gazeQ(y), durationMs: round(durationMs), target: canonicalizeTarget(target) });
+    this.pushEvent({
+      type: "gazeFixation",
+      at: this.elapsed(),
+      x: gazeQ(x),
+      y: gazeQ(y),
+      durationMs: round(durationMs),
+      target: canonicalizeTarget(target),
+    });
   }
 
   recordGazeSaccade(fromX: number, fromY: number, toX: number, toY: number, velocityDegPerS: number) {
-    this.pushEvent({ type: "gazeSaccade", at: this.elapsed(), fromX: gazeQ(fromX), fromY: gazeQ(fromY), toX: gazeQ(toX), toY: gazeQ(toY), velocityDegPerS: round(velocityDegPerS) });
+    this.pushEvent({
+      type: "gazeSaccade",
+      at: this.elapsed(),
+      fromX: gazeQ(fromX),
+      fromY: gazeQ(fromY),
+      toX: gazeQ(toX),
+      toY: gazeQ(toY),
+      velocityDegPerS: round(velocityDegPerS),
+    });
   }
 
   recordGazeBlink(durationMs: number) {
@@ -642,7 +675,12 @@ export class DeterministicReplayRecorder {
   }
 
   recordGazeCalibration(accuracy: number, pointCount: number) {
-    this.pushEvent({ type: "gazeCalibration", at: this.elapsed(), accuracy: byte(accuracy * 255), pointCount: round(pointCount) });
+    this.pushEvent({
+      type: "gazeCalibration",
+      at: this.elapsed(),
+      accuracy: byte(accuracy * 255),
+      pointCount: round(pointCount),
+    });
   }
 
   recordGazeLost(reason: number) {
@@ -673,7 +711,11 @@ export class DeterministicReplayRecorder {
       // Re-capture viewport at finalize time (page content may have loaded since construction)
       this.viewport = getViewport();
       // Try WASM, fall back to TS sync encoder — must not throw
-      let core: { kind: string; encodeReplayEvents: (e: ForensicReplayEncodedEvent[]) => Promise<{ tapeBase64: string; byteLength: number }>; encodeSignature: (s: TimedSignatureStroke[]) => Promise<string> };
+      let core: {
+        kind: string;
+        encodeReplayEvents: (e: ForensicReplayEncodedEvent[]) => Promise<{ tapeBase64: string; byteLength: number }>;
+        encodeSignature: (s: TimedSignatureStroke[]) => Promise<string>;
+      };
       try {
         core = await resolveForensicReplayCore();
       } catch {
@@ -894,7 +936,12 @@ export class DeterministicReplayRecorder {
             encodedEvents.push({ type: "gazeBlink", delta, durationMs: event.durationMs });
             break;
           case "gazeCalibration":
-            encodedEvents.push({ type: "gazeCalibration", delta, accuracy: event.accuracy, pointCount: event.pointCount });
+            encodedEvents.push({
+              type: "gazeCalibration",
+              delta,
+              accuracy: event.accuracy,
+              pointCount: event.pointCount,
+            });
             break;
           case "gazeLost":
             encodedEvents.push({ type: "gazeLost", delta, reason: event.reason });
@@ -919,7 +966,9 @@ export class DeterministicReplayRecorder {
       try {
         const hashSource = JSON.stringify({ encoding: REPLAY_ENCODING, tapeBase64 });
         if (typeof crypto !== "undefined" && crypto.subtle) {
-          tapeHash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(hashSource))))
+          tapeHash = Array.from(
+            new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(hashSource))),
+          )
             .map((byte) => byte.toString(16).padStart(2, "0"))
             .join("");
         } else {

@@ -18,8 +18,30 @@ import { documents, signers, aiProviderConfigs, aiConversations, type AiChatMess
 import { requireFeatureForWallet, resolveWalletIdentity } from "~/server/operator-access";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 // Inline types to avoid hard import from premium/ — these match premium/ai/types.ts
-type AiProviderName = "anthropic" | "openai" | "google" | "mistral" | "cohere" | "groq" | "together" | "perplexity" | "xai" | "deepseek" | "openrouter" | "litellm";
-type ResolvedKey = { apiKey: string; source: string; provider: AiProviderName; ownerAddress?: string; baseUrl?: string; organizationId?: string; connectorSessionId?: string; connectorTool?: string; connectorLabel?: string };
+type AiProviderName =
+  | "anthropic"
+  | "openai"
+  | "google"
+  | "mistral"
+  | "cohere"
+  | "groq"
+  | "together"
+  | "perplexity"
+  | "xai"
+  | "deepseek"
+  | "openrouter"
+  | "litellm";
+type ResolvedKey = {
+  apiKey: string;
+  source: string;
+  provider: AiProviderName;
+  ownerAddress?: string;
+  baseUrl?: string;
+  organizationId?: string;
+  connectorSessionId?: string;
+  connectorTool?: string;
+  connectorLabel?: string;
+};
 import { getOwnedWalletContextFromRequest, requireOwnedWalletActor } from "~/server/owned-wallet-context";
 import { normalizeOwnerAddress } from "~/server/workspace";
 

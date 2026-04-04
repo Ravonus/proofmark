@@ -30,7 +30,10 @@ import { InlineFieldInput } from "./sign-document-inline-field";
 import { DocumentPaper } from "./document-paper";
 import { CenterCard, DocumentHeader, SignerList, CreatorClaimSlot, ChainButtons } from "./sign-document-parts";
 import dynamic from "next/dynamic";
-const AiSignerChat = dynamic(() => import("./ai/ai-signer-chat").then((m) => m.AiSignerChat), { ssr: false, loading: () => null });
+const AiSignerChat = dynamic(() => import("./ai/ai-signer-chat").then((m) => m.AiSignerChat), {
+  ssr: false,
+  loading: () => null,
+});
 import { resolveFieldBadge, resolveFieldLogo, resolveFieldPrefix, resolveFieldSuffix } from "~/lib/field-runtime";
 import { useSigningFlow } from "./hooks/use-signing-flow";
 import { GazeGate } from "./gaze-gate";
@@ -52,7 +55,9 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
       const modPath = "~/premium/eye-tracking/mobile/device";
       const { detectDevice } = require(/* webpackIgnore: true */ modPath);
       return detectDevice();
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
   const [sigPadMode, setSigPadMode] = useState<"signature" | "initials">("signature");
   const initialsFieldRef = useRef<string | null>(null);
@@ -233,7 +238,9 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
         {signingError && (
           <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             <span>{signingError}</span>
-            <button onClick={clearSigningError} className="ml-3 text-red-400/60 hover:text-red-400">Dismiss</button>
+            <button onClick={clearSigningError} className="ml-3 text-red-400/60 hover:text-red-400">
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -252,25 +259,23 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
             </div>
           </div>
 
-          <p className="text-sm text-secondary leading-relaxed">
-            All other signers have completed their signatures. Your finalization signature cryptographically
-            covers the entire completed document — proving you reviewed and approved the final version with
-            everyone&apos;s information included.
+          <p className="text-sm leading-relaxed text-secondary">
+            All other signers have completed their signatures. Your finalization signature cryptographically covers the
+            entire completed document — proving you reviewed and approved the final version with everyone&apos;s
+            information included.
           </p>
 
           <div className="flex gap-3 pt-2">
             <button
               onClick={groupId ? handleBulkFinalize : handleFinalize}
               disabled={!connected || signing}
-              className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/25 transition-all hover:brightness-110 disabled:opacity-50"
+              className="shadow-accent/25 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:brightness-110 disabled:opacity-50"
             >
               {signing ? "Signing..." : groupId ? "Finalize All Contracts" : "Finalize Contract"}
             </button>
           </div>
 
-          {!connected && (
-            <p className="text-xs text-amber-400">Connect your wallet to finalize.</p>
-          )}
+          {!connected && <p className="text-xs text-amber-400">Connect your wallet to finalize.</p>}
         </motion.div>
       </div>
     );
@@ -564,44 +569,45 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
         </div>
       )}
       {/* Eye tracking gate — blocks entire document if mode is "full" */}
-      {needsGazeForFullDoc && (mobileDevice?.isMobile || mobileDevice?.isTablet ? (
-        <GazeGateMobile
-          mode="full"
-          gazeReady={gazeReady}
-          gazeError={gazeError}
-          gazePoint={gazePoint}
-          gazeBlinkCount={gazeBlinkCount}
-          device={mobileDevice}
-          onLivenessComplete={handleGazeLivenessComplete}
-          onStart={startGazeTracking}
-          skipCalibration={hasStoredCalibration}
-          onCalibrationComplete={saveGazeCalibration}
-          onPauseTraining={pauseGazeTraining}
-          onResumeTraining={resumeGazeTraining}
-          onSetLightSmoothing={setGazeLightSmoothing}
-          onDocumentViewingStarted={markDocumentViewingStarted}
-        >
-          <div />
-        </GazeGateMobile>
-      ) : (
-        <GazeGate
-          mode="full"
-          gazeReady={gazeReady}
-          gazeError={gazeError}
-          gazePoint={gazePoint}
-          gazeBlinkCount={gazeBlinkCount}
-          onLivenessComplete={handleGazeLivenessComplete}
-          onStart={startGazeTracking}
-          skipCalibration={hasStoredCalibration}
-          onCalibrationComplete={saveGazeCalibration}
-          onPauseTraining={pauseGazeTraining}
-          onResumeTraining={resumeGazeTraining}
-          onSetLightSmoothing={setGazeLightSmoothing}
-          onDocumentViewingStarted={markDocumentViewingStarted}
-        >
-          <div />
-        </GazeGate>
-      ))}
+      {needsGazeForFullDoc &&
+        (mobileDevice?.isMobile || mobileDevice?.isTablet ? (
+          <GazeGateMobile
+            mode="full"
+            gazeReady={gazeReady}
+            gazeError={gazeError}
+            gazePoint={gazePoint}
+            gazeBlinkCount={gazeBlinkCount}
+            device={mobileDevice}
+            onLivenessComplete={handleGazeLivenessComplete}
+            onStart={startGazeTracking}
+            skipCalibration={hasStoredCalibration}
+            onCalibrationComplete={saveGazeCalibration}
+            onPauseTraining={pauseGazeTraining}
+            onResumeTraining={resumeGazeTraining}
+            onSetLightSmoothing={setGazeLightSmoothing}
+            onDocumentViewingStarted={markDocumentViewingStarted}
+          >
+            <div />
+          </GazeGateMobile>
+        ) : (
+          <GazeGate
+            mode="full"
+            gazeReady={gazeReady}
+            gazeError={gazeError}
+            gazePoint={gazePoint}
+            gazeBlinkCount={gazeBlinkCount}
+            onLivenessComplete={handleGazeLivenessComplete}
+            onStart={startGazeTracking}
+            skipCalibration={hasStoredCalibration}
+            onCalibrationComplete={saveGazeCalibration}
+            onPauseTraining={pauseGazeTraining}
+            onResumeTraining={resumeGazeTraining}
+            onSetLightSmoothing={setGazeLightSmoothing}
+            onDocumentViewingStarted={markDocumentViewingStarted}
+          >
+            <div />
+          </GazeGate>
+        ))}
 
       {showSigningOnlyGazeGate && needsGazeForSigningStep && (
         <GazeGate

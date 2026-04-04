@@ -36,10 +36,11 @@ export function ChatBubble({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${isUser
+        className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
+          isUser
             ? "border border-blue-500/20 bg-blue-600/20 text-blue-100"
             : "border border-white/5 bg-white/5 text-zinc-200"
-          }`}
+        }`}
       >
         <div className="whitespace-pre-wrap">{content}</div>
 
@@ -110,7 +111,7 @@ export function ChatInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder ?? "Ask anything..."}
         rows={rows}
-        className="flex-1 resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 transition focus:border-blue-500/50 focus:outline-none"
+        className="flex-1 resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white transition placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
       />
       <button
         onClick={onSend}
@@ -131,13 +132,7 @@ export type QuickAction = {
   prompt: string;
 };
 
-export function QuickActions({
-  actions,
-  onSelect,
-}: {
-  actions: QuickAction[];
-  onSelect: (prompt: string) => void;
-}) {
+export function QuickActions({ actions, onSelect }: { actions: QuickAction[]; onSelect: (prompt: string) => void }) {
   return (
     <div className="space-y-2">
       {actions.map((action) => (

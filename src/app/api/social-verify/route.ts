@@ -85,7 +85,15 @@ const PROVIDERS: Record<
 const MAX_PENDING_STATES = 10_000;
 const pendingStates = new Map<
   string,
-  { provider: string; documentId: string; claimToken: string; fieldId: string; codeVerifier: string; origin: string; expiresAt: number }
+  {
+    provider: string;
+    documentId: string;
+    claimToken: string;
+    fieldId: string;
+    codeVerifier: string;
+    origin: string;
+    expiresAt: number;
+  }
 >();
 
 function cleanupStates() {

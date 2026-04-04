@@ -99,9 +99,15 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
   for (const event of events) {
     atMs += event.delta * TQ;
     switch (event.type) {
-      case "key": keyTimesMs.push(atMs); break;
-      case "click": clickCount++; break;
-      case "focus": focusChanges++; break;
+      case "key":
+        keyTimesMs.push(atMs);
+        break;
+      case "click":
+        clickCount++;
+        break;
+      case "focus":
+        focusChanges++;
+        break;
       case "scroll":
         if ("scrollY" in event && "scrollMax" in event) {
           const depth = (event as any).scrollMax > 0 ? (event as any).scrollY / (event as any).scrollMax : 0;
@@ -183,7 +189,13 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
   return { classification, interactions };
 }
 
-function VerdictBadge({ classification, serverReview }: { classification: SessionClassification | null; serverReview?: ServerAutomationReview }) {
+function VerdictBadge({
+  classification,
+  serverReview,
+}: {
+  classification: SessionClassification | null;
+  serverReview?: ServerAutomationReview;
+}) {
   // Prefer server-side heuristic review (has full behavioral data) over client-side tape reconstruction
   const verdict = serverReview?.verdict ?? classification?.verdict ?? null;
   if (!verdict) {
@@ -203,7 +215,9 @@ function VerdictBadge({ classification, serverReview }: { classification: Sessio
   const label = normalized === "agent" ? "bot" : normalized;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${tone}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] ${tone}`}
+    >
       <Icon className="h-3 w-3" />
       {label}
     </span>
@@ -271,7 +285,12 @@ function resolveGazeAnchorSample(tape: ForensicReplayTape, sampleIndex: number):
   };
 }
 
-function buildStateAt(tape: ForensicReplayTape, events: ForensicReplayEncodedEvent[], targetMs: number, docViewStartMs = 0): ReplayState {
+function buildStateAt(
+  tape: ForensicReplayTape,
+  events: ForensicReplayEncodedEvent[],
+  targetMs: number,
+  docViewStartMs = 0,
+): ReplayState {
   const state: ReplayState = {
     scrollY: 0,
     scrollMax: 1,
@@ -313,7 +332,10 @@ function buildStateAt(tape: ForensicReplayTape, events: ForensicReplayEncodedEve
         state.lastAction = `Scrolled ${Math.round(state.scrollRatio * 100)}%`;
         break;
       case "signatureStart": {
-        state.signatureStrokes.push({ strokeId: event.strokeId, points: [{ x: event.x, y: event.y, pressure: event.pressure }] });
+        state.signatureStrokes.push({
+          strokeId: event.strokeId,
+          points: [{ x: event.x, y: event.y, pressure: event.pressure }],
+        });
         state.activeStrokeId = event.strokeId;
         state.lastAction = "Signing...";
         break;
@@ -426,10 +448,24 @@ type ServerAutomationReview = {
 } | null;
 
 type ServerSessionProfile = {
-  typing: { verdict: string; reason: string; sampleCount: number; averageDelayMs: number; coefficientOfVariation: number };
+  typing: {
+    verdict: string;
+    reason: string;
+    sampleCount: number;
+    averageDelayMs: number;
+    coefficientOfVariation: number;
+  };
   pointer: { mouseMoveCount: number; clickCount: number; focusChanges: number; clickWithoutMovement: boolean };
   timing: { durationMs: number; hiddenRatio: number };
-  signature: { verdict: string; reason: string; strokeCount: number; pointCount: number; durationMs: number; motionComplexityScore: number | null; motionUniformityScore: number | null } | null;
+  signature: {
+    verdict: string;
+    reason: string;
+    strokeCount: number;
+    pointCount: number;
+    durationMs: number;
+    motionComplexityScore: number | null;
+    motionUniformityScore: number | null;
+  } | null;
   gaze: { active: boolean; verdict: string; reasons: string[] };
   liveness?: { available: boolean; verdict: string; passRatio: number };
   signals: Array<{ code: string; source: string; weight: number; message: string }>;
@@ -507,7 +543,7 @@ function projectGazePoint(root: HTMLDivElement, point: ReplayGazePoint | null) {
     // (Y mapping is the most fragile across viewports due to text reflow)
     return {
       left: anchorLeft * 0.6 + rawLeft * 0.4,
-      top: anchorTop * 0.8 + rawTop * 0.2,  // Trust anchor Y heavily
+      top: anchorTop * 0.8 + rawTop * 0.2, // Trust anchor Y heavily
       confidence: point.confidence,
     };
   }
@@ -581,7 +617,7 @@ function ReplayGazeOverlay({
                   }}
                 />
                 <div
-                  className="absolute text-[8px] font-bold whitespace-nowrap pointer-events-none"
+                  className="pointer-events-none absolute whitespace-nowrap text-[8px] font-bold"
                   style={{
                     left: current.left + 16,
                     top: current.top - 8,
@@ -648,13 +684,34 @@ function buildTimelineEvents(
         }
         break;
       case "fieldCommit":
-        timeline.push({ atMs, type: "field", label: "Field filled", icon: "📝", source: classified?.source ?? "unknown", critical: true });
+        timeline.push({
+          atMs,
+          type: "field",
+          label: "Field filled",
+          icon: "📝",
+          source: classified?.source ?? "unknown",
+          critical: true,
+        });
         break;
       case "signatureStart":
-        timeline.push({ atMs, type: "sig_start", label: "Signing", icon: "✍️", source: classified?.source ?? "unknown", critical: true });
+        timeline.push({
+          atMs,
+          type: "sig_start",
+          label: "Signing",
+          icon: "✍️",
+          source: classified?.source ?? "unknown",
+          critical: true,
+        });
         break;
       case "signatureCommit":
-        timeline.push({ atMs, type: "sig_commit", label: "Signature done", icon: "✅", source: classified?.source ?? "unknown", critical: true });
+        timeline.push({
+          atMs,
+          type: "sig_commit",
+          label: "Signature done",
+          icon: "✅",
+          source: classified?.source ?? "unknown",
+          critical: true,
+        });
         break;
       case "scroll":
         // Only show every 5th scroll
@@ -663,13 +720,27 @@ function buildTimelineEvents(
         }
         break;
       case "clipboard":
-        timeline.push({ atMs, type: "clipboard", label: (ev as any).action ?? "clipboard", icon: "📋", source, critical: false });
+        timeline.push({
+          atMs,
+          type: "clipboard",
+          label: (ev as any).action ?? "clipboard",
+          icon: "📋",
+          source,
+          critical: false,
+        });
         break;
       case "gazeBlink":
         // Only show blinks if they're interesting
         break;
       case "gazeCalibration":
-        timeline.push({ atMs, type: "gaze_cal", label: "Gaze calibrated", icon: "👁", source: "unknown", critical: false });
+        timeline.push({
+          atMs,
+          type: "gaze_cal",
+          label: "Gaze calibrated",
+          icon: "👁",
+          source: "unknown",
+          critical: false,
+        });
         break;
       default:
         break;
@@ -696,20 +767,29 @@ function ReplayTimeline({
   color: string;
   docViewStartMs?: number;
 }) {
-  const timeline = useMemo(() => buildTimelineEvents(events, interactions, durationMs, docViewStartMs), [events, interactions, durationMs, docViewStartMs]);
+  const timeline = useMemo(
+    () => buildTimelineEvents(events, interactions, durationMs, docViewStartMs),
+    [events, interactions, durationMs, docViewStartMs],
+  );
   const [hovered, setHovered] = useState<number | null>(null);
   if (durationMs <= 0) return null;
 
   const hoveredEvent = hovered !== null ? timeline[hovered] : null;
 
   return (
-    <div className="relative h-3 w-full rounded-full bg-white/5 cursor-pointer" onClick={(e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const pct = (e.clientX - rect.left) / rect.width;
-      onSeek(Math.round(pct * durationMs));
-    }}>
+    <div
+      className="relative h-3 w-full cursor-pointer rounded-full bg-white/5"
+      onClick={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        onSeek(Math.round(pct * durationMs));
+      }}
+    >
       {/* Progress fill */}
-      <div className="absolute inset-y-0 left-0 rounded-full bg-white/[0.03]" style={{ width: `${(cursorMs / durationMs) * 100}%` }} />
+      <div
+        className="absolute inset-y-0 left-0 rounded-full bg-white/[0.03]"
+        style={{ width: `${(cursorMs / durationMs) * 100}%` }}
+      />
       {/* Event dots */}
       {timeline.map((ev, i) => {
         const pct = (ev.atMs / durationMs) * 100;
@@ -718,31 +798,45 @@ function ReplayTimeline({
         return (
           <div
             key={`tl-${i}`}
-            className="absolute top-1/2 rounded-full transition-transform hover:scale-[2.5] hover:z-10"
+            className="absolute top-1/2 rounded-full transition-transform hover:z-10 hover:scale-[2.5]"
             style={{
-              left: `${pct}%`, width: size, height: size,
+              left: `${pct}%`,
+              width: size,
+              height: size,
               transform: "translate(-50%, -50%)",
               background: sc,
               boxShadow: ev.critical ? `0 0 6px ${sc}` : undefined,
             }}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
-            onClick={(e) => { e.stopPropagation(); onSeek(ev.atMs); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSeek(ev.atMs);
+            }}
           />
         );
       })}
       {/* Playhead */}
-      <div className="absolute top-0 h-full w-0.5 rounded-full" style={{ left: `${(cursorMs / durationMs) * 100}%`, background: color }} />
+      <div
+        className="absolute top-0 h-full w-0.5 rounded-full"
+        style={{ left: `${(cursorMs / durationMs) * 100}%`, background: color }}
+      />
       {/* Tooltip */}
       {hoveredEvent && hovered !== null && (
         <div
-          className="absolute bottom-full mb-2 rounded-lg border border-white/10 bg-[#0d1117] px-3 py-1.5 text-[10px] shadow-xl whitespace-nowrap pointer-events-none z-50"
+          className="pointer-events-none absolute bottom-full z-50 mb-2 whitespace-nowrap rounded-lg border border-white/10 bg-[#0d1117] px-3 py-1.5 text-[10px] shadow-xl"
           style={{ left: `${(hoveredEvent.atMs / durationMs) * 100}%`, transform: "translateX(-50%)" }}
         >
           <span className="mr-1">{hoveredEvent.icon}</span>
-          <span className="text-white/80 font-medium">{hoveredEvent.label}</span>
+          <span className="font-medium text-white/80">{hoveredEvent.label}</span>
           <span className="ml-2 text-white/30">{formatTime(hoveredEvent.atMs)}</span>
-          <span className="ml-2" style={{ color: hoveredEvent.source === "bot" ? "#f87171" : hoveredEvent.source === "human" ? "#34d399" : "#6b7280" }}>
+          <span
+            className="ml-2"
+            style={{
+              color:
+                hoveredEvent.source === "bot" ? "#f87171" : hoveredEvent.source === "human" ? "#34d399" : "#6b7280",
+            }}
+          >
             {hoveredEvent.source === "bot" ? "🤖" : hoveredEvent.source === "human" ? "👤" : "❓"}
           </span>
         </div>
@@ -816,8 +910,8 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
       const { classification, interactions } = tape
         ? classifyFromTape(tape, events)
         : { classification: null, interactions: [] as InteractionClassification[] };
-      const serverReview = (signer as any).automationReview as ServerAutomationReview ?? null;
-      const sessionProfile = (signer as any).sessionProfile as ServerSessionProfile ?? null;
+      const serverReview = ((signer as any).automationReview as ServerAutomationReview) ?? null;
+      const sessionProfile = ((signer as any).sessionProfile as ServerSessionProfile) ?? null;
       const forensicSessions = ((signer as any).forensicSessions ?? []) as ServerForensicSession[];
       return {
         id: signer.id,
@@ -846,13 +940,13 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
   }, [data]);
 
   const visibleSigners = useMemo(() => {
-    return signers.filter((signer) => (soloIndex !== null ? signer.index === soloIndex : !hiddenSigners.has(signer.index)));
+    return signers.filter((signer) =>
+      soloIndex !== null ? signer.index === soloIndex : !hiddenSigners.has(signer.index),
+    );
   }, [hiddenSigners, signers, soloIndex]);
 
   const totalDurationMs = Math.max(...signers.map((signer) => signer.durationMs), 0);
-  const durationMs = soloIndex !== null
-    ? (signers[soloIndex]?.durationMs ?? 0)
-    : totalDurationMs;
+  const durationMs = soloIndex !== null ? (signers[soloIndex]?.durationMs ?? 0) : totalDurationMs;
 
   useEffect(() => {
     setCursorMs((current) => Math.min(current, totalDurationMs));
@@ -866,7 +960,9 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
   }, [cursorMs, signers]);
 
   const visibleStates = useMemo(() => {
-    return states.filter(({ signer }) => (soloIndex !== null ? signer.index === soloIndex : !hiddenSigners.has(signer.index)));
+    return states.filter(({ signer }) =>
+      soloIndex !== null ? signer.index === soloIndex : !hiddenSigners.has(signer.index),
+    );
   }, [hiddenSigners, soloIndex, states]);
 
   const tokens = useMemo(() => {
@@ -897,8 +993,10 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
 
   const activeSignerIndex = !followEnabled
     ? null
-    : followIndex !== null ? followIndex : visibleStates.find(({ state }) => state?.gaze.current)?.signer.index ?? visibleSigners[0]?.index ?? null;
-  const activeState = activeSignerIndex !== null ? states[activeSignerIndex]?.state ?? null : null;
+    : followIndex !== null
+      ? followIndex
+      : (visibleStates.find(({ state }) => state?.gaze.current)?.signer.index ?? visibleSigners[0]?.index ?? null);
+  const activeState = activeSignerIndex !== null ? (states[activeSignerIndex]?.state ?? null) : null;
 
   const followTargetRef = useRef(0);
 
@@ -906,7 +1004,9 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
     if (!playing || !followEnabled || !paperRef.current) return;
 
     const activeLane =
-      activeSignerIndex !== null ? states[activeSignerIndex] : visibleStates.find(({ state }) => state?.gaze.current) ?? visibleStates[0];
+      activeSignerIndex !== null
+        ? states[activeSignerIndex]
+        : (visibleStates.find(({ state }) => state?.gaze.current) ?? visibleStates[0]);
     if (!activeLane?.state) return;
 
     const paper = paperRef.current;
@@ -1042,9 +1142,10 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 pb-32">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent/70">Forensic Replay</p>
+            <p className="text-accent/70 text-[10px] font-semibold uppercase tracking-[0.3em]">Forensic Replay</p>
             <p className="text-sm text-muted">
-              Playback runs on the same paper document renderer used during signing, with gaze points resolved against live document anchors.
+              Playback runs on the same paper document renderer used during signing, with gaze points resolved against
+              live document anchors.
             </p>
           </div>
           <button
@@ -1072,8 +1173,16 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
             // Find which signer owns this field and their automation verdict
             const ownerSigner = signers.find((s) => s.index === field.signerIdx);
             const ownerVerdict = ownerSigner?.serverReview?.verdict;
-            const verdictIcon = ownerVerdict === "agent" ? "🤖" : ownerVerdict === "human" ? "👤" : ownerVerdict === "uncertain" ? "❓" : null;
-            const verdictColor = ownerVerdict === "agent" ? "#f87171" : ownerVerdict === "human" ? "#34d399" : "#9ca3af";
+            const verdictIcon =
+              ownerVerdict === "agent"
+                ? "🤖"
+                : ownerVerdict === "human"
+                  ? "👤"
+                  : ownerVerdict === "uncertain"
+                    ? "❓"
+                    : null;
+            const verdictColor =
+              ownerVerdict === "agent" ? "#f87171" : ownerVerdict === "human" ? "#34d399" : "#9ca3af";
             return (
               <div className="relative inline-flex items-center gap-1">
                 <InlineFieldInput
@@ -1087,7 +1196,9 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   value={value}
                   signatureReady={Boolean(value)}
                   allValues={mergedFieldValues}
-                  isFilled={!validateField(field, value, { signatureReady: Boolean(value), allValues: mergedFieldValues })}
+                  isFilled={
+                    !validateField(field, value, { signatureReady: Boolean(value), allValues: mergedFieldValues })
+                  }
                   isRequired={isFieldRequired(field, mergedFieldValues)}
                   onApplyAddressSuggestion={noop}
                   onLoadAddressSuggestions={noopSuggestions}
@@ -1105,7 +1216,11 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                 {verdictIcon && value && (
                   <span
                     className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
-                    style={{ background: `${verdictColor}15`, color: verdictColor, border: `1px solid ${verdictColor}30` }}
+                    style={{
+                      background: `${verdictColor}15`,
+                      color: verdictColor,
+                      border: `1px solid ${verdictColor}30`,
+                    }}
                     title={`${ownerSigner?.label}: ${ownerVerdict}`}
                   >
                     {verdictIcon}
@@ -1122,12 +1237,17 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
 
             // Verdict badge for this signer
             const sigVerdict = signer?.serverReview?.verdict;
-            const sigVerdictIcon = sigVerdict === "agent" ? "🤖" : sigVerdict === "human" ? "👤" : sigVerdict === "uncertain" ? "❓" : null;
+            const sigVerdictIcon =
+              sigVerdict === "agent" ? "🤖" : sigVerdict === "human" ? "👤" : sigVerdict === "uncertain" ? "❓" : null;
             const sigVerdictColor = sigVerdict === "agent" ? "#f87171" : sigVerdict === "human" ? "#34d399" : "#9ca3af";
             const verdictBadge = sigVerdictIcon ? (
               <span
-                className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none ml-1.5"
-                style={{ background: `${sigVerdictColor}15`, color: sigVerdictColor, border: `1px solid ${sigVerdictColor}30` }}
+                className="ml-1.5 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+                style={{
+                  background: `${sigVerdictColor}15`,
+                  color: sigVerdictColor,
+                  border: `1px solid ${sigVerdictColor}30`,
+                }}
                 title={`${signer?.label}: ${sigVerdict}`}
               >
                 {sigVerdictIcon} {sigVerdict}
@@ -1138,42 +1258,83 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
             const hasClearedStrokes = replayState && replayState.clearedStrokes.length > 0;
             if ((hasStrokes || hasClearedStrokes) && !isCommitted) {
               // Collect all points (cleared + active) for viewBox calculation
-              const clearedPts = (replayState?.clearedStrokes ?? []).flatMap((attempt) => attempt.flatMap((s) => s.points));
+              const clearedPts = (replayState?.clearedStrokes ?? []).flatMap((attempt) =>
+                attempt.flatMap((s) => s.points),
+              );
               const activePts = (replayState?.signatureStrokes ?? []).flatMap((s) => s.points);
               const allPts = [...clearedPts, ...activePts];
               if (allPts.length >= 2) {
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                let minX = Infinity,
+                  minY = Infinity,
+                  maxX = -Infinity,
+                  maxY = -Infinity;
                 for (const p of allPts) {
-                  if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y;
-                  if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y;
+                  if (p.x < minX) minX = p.x;
+                  if (p.y < minY) minY = p.y;
+                  if (p.x > maxX) maxX = p.x;
+                  if (p.y > maxY) maxY = p.y;
                 }
                 const pad = 8;
-                minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+                minX -= pad;
+                minY -= pad;
+                maxX += pad;
+                maxY += pad;
                 const vbW = Math.max(1, maxX - minX);
                 const color = laneColor(signerIdx);
                 const sw = Math.max(1.5, vbW * 0.007);
                 return (
-                  <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm" data-forensic-id={`signature-${signer?.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}>
+                  <div
+                    className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm"
+                    data-forensic-id={`signature-${signer?.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}
+                  >
                     <div className="relative h-14 w-48">
-                      <svg viewBox={`${minX} ${minY} ${vbW} ${Math.max(1, maxY - minY)}`} preserveAspectRatio="xMidYMid meet" className="h-full w-full">
+                      <svg
+                        viewBox={`${minX} ${minY} ${vbW} ${Math.max(1, maxY - minY)}`}
+                        preserveAspectRatio="xMidYMid meet"
+                        className="h-full w-full"
+                      >
                         {/* Cleared attempts — grayed out */}
                         {(replayState?.clearedStrokes ?? []).map((attempt, ai) =>
                           attempt.map((stroke) => {
                             if (stroke.points.length < 2) return null;
                             const d = stroke.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-                            return <path key={`cleared-${ai}-${stroke.strokeId}`} d={d} fill="none" stroke="#555" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" opacity={0.25} />;
-                          })
+                            return (
+                              <path
+                                key={`cleared-${ai}-${stroke.strokeId}`}
+                                d={d}
+                                fill="none"
+                                stroke="#555"
+                                strokeWidth={sw}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity={0.25}
+                              />
+                            );
+                          }),
                         )}
                         {/* Active strokes — full color */}
                         {(replayState?.signatureStrokes ?? []).map((stroke) => {
                           if (stroke.points.length < 2) return null;
                           const d = stroke.points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-                          return <path key={`active-${stroke.strokeId}`} d={d} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />;
+                          return (
+                            <path
+                              key={`active-${stroke.strokeId}`}
+                              d={d}
+                              fill="none"
+                              stroke={color}
+                              strokeWidth={sw}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          );
                         })}
                       </svg>
                       <div className="absolute -bottom-0.5 left-0 flex items-center">
                         <span className="text-[8px] font-medium" style={{ color }}>
-                          ✍️ {hasClearedStrokes ? `Attempt ${(replayState?.clearedStrokes.length ?? 0) + 1}` : "Drawing..."}
+                          ✍️{" "}
+                          {hasClearedStrokes
+                            ? `Attempt ${(replayState?.clearedStrokes.length ?? 0) + 1}`
+                            : "Drawing..."}
                         </span>
                         {verdictBadge}
                       </div>
@@ -1186,8 +1347,15 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
             // After commit or when replay is past the signature: show final image
             if (signer?.status === "SIGNED" && signer.handSignatureData && isImageDataUrl(signer.handSignatureData)) {
               return (
-                <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm" data-forensic-id={`signature-${signer.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}>
-                  <img src={signer.handSignatureData} alt={`${signer.label} signature`} className="sig-theme-img h-12 w-auto object-contain" />
+                <div
+                  className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm"
+                  data-forensic-id={`signature-${signer.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}
+                >
+                  <img
+                    src={signer.handSignatureData}
+                    alt={`${signer.label} signature`}
+                    className="sig-theme-img h-12 w-auto object-contain"
+                  />
                   <div className="mt-1 flex items-center">
                     <span className="text-[9px] text-emerald-600/60">
                       Signed by {signer.label}
@@ -1205,7 +1373,12 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                 </div>
               );
             }
-            return <div className="inline-block h-8 w-48 border-b-2 border-border" data-forensic-id={`signature-${signer?.label?.toLowerCase().split(" ")[0] ?? signerIdx}`} />;
+            return (
+              <div
+                className="inline-block h-8 w-48 border-b-2 border-border"
+                data-forensic-id={`signature-${signer?.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}
+              />
+            );
           }}
         />
 
@@ -1270,12 +1443,14 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   </div>
 
                   <button
-                    onClick={() => setExpandedSigners((prev) => {
-                      const next = new Set(prev);
-                      next.has(signer.index) ? next.delete(signer.index) : next.add(signer.index);
-                      return next;
-                    })}
-                    className="mt-2 w-full text-left text-[10px] text-muted/60 hover:text-muted transition-colors"
+                    onClick={() =>
+                      setExpandedSigners((prev) => {
+                        const next = new Set(prev);
+                        next.has(signer.index) ? next.delete(signer.index) : next.add(signer.index);
+                        return next;
+                      })
+                    }
+                    className="text-muted/60 mt-2 w-full text-left text-[10px] transition-colors hover:text-muted"
                   >
                     {expandedSigners.has(signer.index) ? "Hide details" : "Show details"}
                   </button>
@@ -1283,151 +1458,257 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   {expandedSigners.has(signer.index) && (
                     <>
                       {/* Category Profiles */}
-                      {signer.sessionProfile && (() => {
-                        // If overall verdict is "agent", override per-category "human" verdicts
-                        const overallVerdict = signer.serverReview?.verdict;
-                        const overrideToAgent = overallVerdict === "agent";
-                        const resolveVerdict = (catVerdict: string, humanLabel: string) => {
-                          if (overrideToAgent && catVerdict === humanLabel) return "overridden";
-                          return catVerdict;
-                        };
-                        const verdictLabel = (v: string) => v === "overridden" ? "⚠ flagged" : v;
-                        const verdictColor = (v: string) => v === "overridden" ? "text-amber-400" : v === "human" || v === "natural" || v === "passed" ? "text-emerald-400" : v === "bot" || v === "synthetic" || v === "absent" ? "text-red-400" : "text-muted";
-                        const verdictSource = (v: string): "human" | "bot" | "unknown" => v === "overridden" ? "bot" : v === "human" || v === "natural" || v === "passed" ? "human" : v === "bot" || v === "synthetic" || v === "absent" ? "bot" : "unknown";
+                      {signer.sessionProfile &&
+                        (() => {
+                          // If overall verdict is "agent", override per-category "human" verdicts
+                          const overallVerdict = signer.serverReview?.verdict;
+                          const overrideToAgent = overallVerdict === "agent";
+                          const resolveVerdict = (catVerdict: string, humanLabel: string) => {
+                            if (overrideToAgent && catVerdict === humanLabel) return "overridden";
+                            return catVerdict;
+                          };
+                          const verdictLabel = (v: string) => (v === "overridden" ? "⚠ flagged" : v);
+                          const verdictColor = (v: string) =>
+                            v === "overridden"
+                              ? "text-amber-400"
+                              : v === "human" || v === "natural" || v === "passed"
+                                ? "text-emerald-400"
+                                : v === "bot" || v === "synthetic" || v === "absent"
+                                  ? "text-red-400"
+                                  : "text-muted";
+                          const verdictSource = (v: string): "human" | "bot" | "unknown" =>
+                            v === "overridden"
+                              ? "bot"
+                              : v === "human" || v === "natural" || v === "passed"
+                                ? "human"
+                                : v === "bot" || v === "synthetic" || v === "absent"
+                                  ? "bot"
+                                  : "unknown";
 
-                        return (
-                        <div className="mt-3 space-y-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted/70">Category Analysis</p>
-                          {overrideToAgent && (
-                            <p className="text-[9px] text-amber-400/70">Overall verdict: agent — individual signals may appear human but deeper analysis detected automation.</p>
-                          )}
-                          {/* Typing */}
-                          {(() => { const v = resolveVerdict(signer.sessionProfile.typing.verdict, "human"); return (
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <ActionIcon source={verdictSource(v)} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-secondary">Typing</span>
-                                <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>{verdictLabel(v)}</span>
-                              </div>
-                              <p className="text-[10px] text-muted truncate">{signer.sessionProfile.typing.reason}</p>
-                            </div>
-                          </div>); })()}
-                          {/* Signature */}
-                          {signer.sessionProfile.signature && (() => { const v = resolveVerdict(signer.sessionProfile.signature.verdict, "human"); return (
-                            <div className="flex items-center gap-2 text-[11px]">
-                              <ActionIcon source={verdictSource(v)} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-secondary">Signature</span>
-                                  <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>{verdictLabel(v)}</span>
+                          return (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-muted/70 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                Category Analysis
+                              </p>
+                              {overrideToAgent && (
+                                <p className="text-[9px] text-amber-400/70">
+                                  Overall verdict: agent — individual signals may appear human but deeper analysis
+                                  detected automation.
+                                </p>
+                              )}
+                              {/* Typing */}
+                              {(() => {
+                                const v = resolveVerdict(signer.sessionProfile.typing.verdict, "human");
+                                return (
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    <ActionIcon source={verdictSource(v)} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-secondary">Typing</span>
+                                        <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>
+                                          {verdictLabel(v)}
+                                        </span>
+                                      </div>
+                                      <p className="truncate text-[10px] text-muted">
+                                        {signer.sessionProfile.typing.reason}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              {/* Signature */}
+                              {signer.sessionProfile.signature &&
+                                (() => {
+                                  const v = resolveVerdict(signer.sessionProfile.signature.verdict, "human");
+                                  return (
+                                    <div className="flex items-center gap-2 text-[11px]">
+                                      <ActionIcon source={verdictSource(v)} />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-secondary">Signature</span>
+                                          <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>
+                                            {verdictLabel(v)}
+                                          </span>
+                                        </div>
+                                        <p className="truncate text-[10px] text-muted">
+                                          {signer.sessionProfile.signature.reason}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              {/* Eye Gaze */}
+                              {signer.sessionProfile.gaze.active &&
+                                (() => {
+                                  const v = resolveVerdict(signer.sessionProfile.gaze.verdict, "natural");
+                                  return (
+                                    <div className="flex items-center gap-2 text-[11px]">
+                                      <ActionIcon source={verdictSource(v)} />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-secondary">Eye Gaze</span>
+                                          <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>
+                                            {verdictLabel(v)}
+                                          </span>
+                                        </div>
+                                        <p className="truncate text-[10px] text-muted">
+                                          {signer.sessionProfile.gaze.reasons[0] ?? ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              {/* Pointer */}
+                              {(() => {
+                                const rawV = signer.sessionProfile.pointer.clickWithoutMovement
+                                  ? "bot"
+                                  : signer.sessionProfile.pointer.mouseMoveCount > 20
+                                    ? "human"
+                                    : "unknown";
+                                const v = resolveVerdict(rawV, "human");
+                                return (
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    <ActionIcon source={verdictSource(v)} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-secondary">Pointer</span>
+                                        <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>
+                                          {verdictLabel(v)}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-muted">
+                                        {signer.sessionProfile.pointer.mouseMoveCount} moves,{" "}
+                                        {signer.sessionProfile.pointer.clickCount} clicks
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              {/* Liveness */}
+                              {signer.sessionProfile.liveness?.available && (
+                                <div className="flex items-center gap-2 text-[11px]">
+                                  <ActionIcon
+                                    source={signer.sessionProfile.liveness.verdict === "passed" ? "human" : "bot"}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-secondary">Liveness</span>
+                                      <span
+                                        className={`text-[9px] font-semibold uppercase ${signer.sessionProfile.liveness.verdict === "passed" ? "text-emerald-400" : "text-red-400"}`}
+                                      >
+                                        {signer.sessionProfile.liveness.verdict}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-muted">
+                                      {Math.round(signer.sessionProfile.liveness.passRatio * 100)}% pass rate
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-[10px] text-muted truncate">{signer.sessionProfile.signature.reason}</p>
-                              </div>
-                            </div>); })()}
-                          {/* Eye Gaze */}
-                          {signer.sessionProfile.gaze.active && (() => { const v = resolveVerdict(signer.sessionProfile.gaze.verdict, "natural"); return (
-                            <div className="flex items-center gap-2 text-[11px]">
-                              <ActionIcon source={verdictSource(v)} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-secondary">Eye Gaze</span>
-                                  <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>{verdictLabel(v)}</span>
-                                </div>
-                                <p className="text-[10px] text-muted truncate">{signer.sessionProfile.gaze.reasons[0] ?? ""}</p>
-                              </div>
-                            </div>); })()}
-                          {/* Pointer */}
-                          {(() => { const rawV = signer.sessionProfile.pointer.clickWithoutMovement ? "bot" : signer.sessionProfile.pointer.mouseMoveCount > 20 ? "human" : "unknown"; const v = resolveVerdict(rawV, "human"); return (
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <ActionIcon source={verdictSource(v)} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-secondary">Pointer</span>
-                                <span className={`text-[9px] font-semibold uppercase ${verdictColor(v)}`}>{verdictLabel(v)}</span>
-                              </div>
-                              <p className="text-[10px] text-muted">{signer.sessionProfile.pointer.mouseMoveCount} moves, {signer.sessionProfile.pointer.clickCount} clicks</p>
-                            </div>
-                          </div>); })()}
-                          {/* Liveness */}
-                          {signer.sessionProfile.liveness?.available && (
-                            <div className="flex items-center gap-2 text-[11px]">
-                              <ActionIcon source={signer.sessionProfile.liveness.verdict === "passed" ? "human" : "bot"} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-secondary">Liveness</span>
-                                  <span className={`text-[9px] font-semibold uppercase ${signer.sessionProfile.liveness.verdict === "passed" ? "text-emerald-400" : "text-red-400"}`}>
-                                    {signer.sessionProfile.liveness.verdict}
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-muted">{Math.round(signer.sessionProfile.liveness.passRatio * 100)}% pass rate</p>
+                              )}
+                              {/* Overall scores */}
+                              <div className="mt-2 flex gap-3 text-[10px]">
+                                <span className="text-emerald-400/80">
+                                  Human: {Math.round(signer.sessionProfile.humanEvidenceScore * 100)}%
+                                </span>
+                                <span className="text-red-400/80">
+                                  Agent: {Math.round(signer.sessionProfile.automationEvidenceScore * 100)}%
+                                </span>
                               </div>
                             </div>
-                          )}
-                          {/* Overall scores */}
-                          <div className="mt-2 flex gap-3 text-[10px]">
-                            <span className="text-emerald-400/80">Human: {Math.round(signer.sessionProfile.humanEvidenceScore * 100)}%</span>
-                            <span className="text-red-400/80">Agent: {Math.round(signer.sessionProfile.automationEvidenceScore * 100)}%</span>
-                          </div>
-                        </div>
-                        ); })()}
+                          );
+                        })()}
 
                       {/* AI Forensic Review (async) */}
-                      {(signer as any).aiForensicReview && (() => {
-                        const air = (signer as any).aiForensicReview as { verdict: string; confidence: number; automationScore: number; rationale: string; chunks: Array<{ chunk: string; verdict: string; score: number; rationale: string; thresholdSuggestions?: Array<{ field: string; currentValue: number; suggestedValue: number; reason: string }> }> };
-                        const airColor = air.verdict === "agent" ? "#f87171" : air.verdict === "human" ? "#34d399" : "#fbbf24";
-                        return (
-                          <div className="mt-3 border-t border-border pt-3 space-y-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted/70">AI Forensic Review</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">{air.verdict === "agent" ? "🤖" : air.verdict === "human" ? "👤" : "❓"}</span>
-                              <div>
-                                <span className="text-[11px] font-bold uppercase" style={{ color: airColor }}>{air.verdict}</span>
-                                <span className="ml-2 text-[10px] text-muted">({Math.round(air.confidence * 100)}% confidence)</span>
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-muted">{air.rationale}</p>
-                            {/* Per-chunk results */}
-                            <div className="space-y-1">
-                              {air.chunks.map((c, ci) => (
-                                <div key={ci} className="flex items-center gap-1.5 text-[10px]">
-                                  <span className={`font-semibold ${c.verdict === "agent" ? "text-red-400" : c.verdict === "human" ? "text-emerald-400" : "text-amber-400"}`}>
-                                    {c.verdict === "agent" ? "🤖" : c.verdict === "human" ? "👤" : "❓"}
+                      {(signer as any).aiForensicReview &&
+                        (() => {
+                          const air = (signer as any).aiForensicReview as {
+                            verdict: string;
+                            confidence: number;
+                            automationScore: number;
+                            rationale: string;
+                            chunks: Array<{
+                              chunk: string;
+                              verdict: string;
+                              score: number;
+                              rationale: string;
+                              thresholdSuggestions?: Array<{
+                                field: string;
+                                currentValue: number;
+                                suggestedValue: number;
+                                reason: string;
+                              }>;
+                            }>;
+                          };
+                          const airColor =
+                            air.verdict === "agent" ? "#f87171" : air.verdict === "human" ? "#34d399" : "#fbbf24";
+                          return (
+                            <div className="mt-3 space-y-2 border-t border-border pt-3">
+                              <p className="text-muted/70 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                                AI Forensic Review
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {air.verdict === "agent" ? "🤖" : air.verdict === "human" ? "👤" : "❓"}
+                                </span>
+                                <div>
+                                  <span className="text-[11px] font-bold uppercase" style={{ color: airColor }}>
+                                    {air.verdict}
                                   </span>
-                                  <span className="text-muted/70">{c.chunk.replace("replay_", "").replace("meta_", "")}</span>
-                                  <span className="text-muted/40 truncate flex-1">{c.rationale.slice(0, 60)}</span>
+                                  <span className="ml-2 text-[10px] text-muted">
+                                    ({Math.round(air.confidence * 100)}% confidence)
+                                  </span>
                                 </div>
-                              ))}
-                            </div>
-                            {/* Threshold suggestions from feedback */}
-                            {air.chunks.some((c) => c.thresholdSuggestions?.length) && (
-                              <div className="mt-1 text-[9px] text-amber-400/60">
-                                <p className="font-semibold">AI Threshold Suggestions:</p>
-                                {air.chunks.flatMap((c) => c.thresholdSuggestions ?? []).map((s, si) => (
-                                  <p key={si}>• {s.field}: {s.currentValue} → {s.suggestedValue} ({s.reason})</p>
+                              </div>
+                              <p className="text-[10px] text-muted">{air.rationale}</p>
+                              {/* Per-chunk results */}
+                              <div className="space-y-1">
+                                {air.chunks.map((c, ci) => (
+                                  <div key={ci} className="flex items-center gap-1.5 text-[10px]">
+                                    <span
+                                      className={`font-semibold ${c.verdict === "agent" ? "text-red-400" : c.verdict === "human" ? "text-emerald-400" : "text-amber-400"}`}
+                                    >
+                                      {c.verdict === "agent" ? "🤖" : c.verdict === "human" ? "👤" : "❓"}
+                                    </span>
+                                    <span className="text-muted/70">
+                                      {c.chunk.replace("replay_", "").replace("meta_", "")}
+                                    </span>
+                                    <span className="text-muted/40 flex-1 truncate">{c.rationale.slice(0, 60)}</span>
+                                  </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        );
-                      })()}
+                              {/* Threshold suggestions from feedback */}
+                              {air.chunks.some((c) => c.thresholdSuggestions?.length) && (
+                                <div className="mt-1 text-[9px] text-amber-400/60">
+                                  <p className="font-semibold">AI Threshold Suggestions:</p>
+                                  {air.chunks
+                                    .flatMap((c) => c.thresholdSuggestions ?? [])
+                                    .map((s, si) => (
+                                      <p key={si}>
+                                        • {s.field}: {s.currentValue} → {s.suggestedValue} ({s.reason})
+                                      </p>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                       {/* Stats grid */}
-                      <div className="mt-3 border-t border-border pt-3 grid grid-cols-2 gap-3 text-xs text-muted">
+                      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs text-muted">
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-muted/70">Duration</p>
+                          <p className="text-muted/70 text-[10px] uppercase tracking-[0.18em]">Duration</p>
                           <p className="mt-1 text-secondary">{formatTime(signer.durationMs)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-muted/70">Events</p>
+                          <p className="text-muted/70 text-[10px] uppercase tracking-[0.18em]">Events</p>
                           <p className="mt-1 text-secondary">{signer.tape?.metrics.eventCount ?? 0}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-muted/70">Gaze</p>
+                          <p className="text-muted/70 text-[10px] uppercase tracking-[0.18em]">Gaze</p>
                           <p className="mt-1 text-secondary">{signer.tape?.metrics.gazePointCount ?? 0} pts</p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-muted/70">Focus</p>
+                          <p className="text-muted/70 text-[10px] uppercase tracking-[0.18em]">Focus</p>
                           <p className="mt-1 text-secondary">{state?.focusedFieldId ?? "None"}</p>
                         </div>
                       </div>
@@ -1435,14 +1716,26 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                       {/* Sessions */}
                       {signer.forensicSessions.length > 0 && (
                         <div className="mt-3 border-t border-border pt-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted/70 mb-2">Sessions ({signer.forensicSessions.length})</p>
+                          <p className="text-muted/70 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                            Sessions ({signer.forensicSessions.length})
+                          </p>
                           <div className="space-y-1.5">
                             {signer.forensicSessions.map((session, i) => (
                               <div key={session.sessionId ?? i} className="flex items-center gap-2 text-[11px]">
-                                <ActionIcon source={session.classification?.verdict === "bot" ? "bot" : session.classification?.verdict === "human" ? "human" : "unknown"} />
+                                <ActionIcon
+                                  source={
+                                    session.classification?.verdict === "bot"
+                                      ? "bot"
+                                      : session.classification?.verdict === "human"
+                                        ? "human"
+                                        : "unknown"
+                                  }
+                                />
                                 <span className="text-secondary">Session {session.visitIndex + 1}</span>
                                 <span className="text-muted">{formatTime(session.durationMs)}</span>
-                                <span className={`ml-auto text-[9px] font-semibold uppercase ${session.classification?.verdict === "human" ? "text-emerald-400" : session.classification?.verdict === "bot" ? "text-red-400" : "text-amber-400"}`}>
+                                <span
+                                  className={`ml-auto text-[9px] font-semibold uppercase ${session.classification?.verdict === "human" ? "text-emerald-400" : session.classification?.verdict === "bot" ? "text-red-400" : "text-amber-400"}`}
+                                >
                                   {session.classification?.verdict ?? "?"}
                                 </span>
                               </div>
@@ -1454,17 +1747,25 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                       {/* Per-action breakdown */}
                       {signer.interactions.length > 0 && (
                         <div className="mt-3 border-t border-border pt-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted/70 mb-2">Actions</p>
+                          <p className="text-muted/70 mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                            Actions
+                          </p>
                           <div className="space-y-1.5">
                             {signer.interactions.map((interaction, i) => (
                               <div key={i} className="flex items-start gap-2 text-[11px]">
                                 <ActionIcon source={interaction.source} />
                                 <div className="min-w-0">
-                                  <span className={`font-medium ${interaction.critical ? "text-amber-300" : "text-secondary"}`}>
+                                  <span
+                                    className={`font-medium ${interaction.critical ? "text-amber-300" : "text-secondary"}`}
+                                  >
                                     {interaction.action.replace(/_/g, " ")}
-                                    {interaction.critical && <span className="ml-1 text-[9px] text-amber-400/70">(critical)</span>}
+                                    {interaction.critical && (
+                                      <span className="ml-1 text-[9px] text-amber-400/70">(critical)</span>
+                                    )}
                                   </span>
-                                  <p className="mt-0.5 text-[10px] text-muted leading-tight truncate">{interaction.reason}</p>
+                                  <p className="mt-0.5 truncate text-[10px] leading-tight text-muted">
+                                    {interaction.reason}
+                                  </p>
                                 </div>
                               </div>
                             ))}
@@ -1474,8 +1775,10 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
 
                       {signer.serverReview?.rationale && (
                         <div className="mt-3 border-t border-border pt-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted/70 mb-1">Rationale</p>
-                          <p className="text-[11px] text-secondary leading-relaxed">{signer.serverReview.rationale}</p>
+                          <p className="text-muted/70 mb-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                            Rationale
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-secondary">{signer.serverReview.rationale}</p>
                         </div>
                       )}
                     </>
@@ -1495,12 +1798,14 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
           {/* Minimize toggle bar */}
           <button
             onClick={() => setBarMinimized((v) => !v)}
-            className="flex w-full items-center justify-center gap-2 px-4 py-1.5 text-[10px] text-muted/60 hover:text-muted transition-colors"
+            className="text-muted/60 flex w-full items-center justify-center gap-2 px-4 py-1.5 text-[10px] transition-colors hover:text-muted"
           >
             {barMinimized ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             <span>{barMinimized ? "Show controls" : ""}</span>
             {barMinimized && (
-              <span className="font-medium text-secondary">{formatTime(cursorMs)} / {formatTime(durationMs)}</span>
+              <span className="font-medium text-secondary">
+                {formatTime(cursorMs)} / {formatTime(durationMs)}
+              </span>
             )}
           </button>
 
@@ -1559,7 +1864,10 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                 </button>
 
                 <button
-                  onClick={() => { setFollowEnabled((v) => !v); if (followEnabled) setFollowIndex(null); }}
+                  onClick={() => {
+                    setFollowEnabled((v) => !v);
+                    if (followEnabled) setFollowIndex(null);
+                  }}
                   className={`rounded-xl p-2 text-xs font-semibold transition-colors ${followEnabled ? "bg-accent/20 text-accent" : "bg-surface-elevated text-secondary"}`}
                   aria-label={followEnabled ? "Disable auto-follow" : "Enable auto-follow"}
                   title={followEnabled ? "Following — click to disable" : "Follow disabled — click to enable"}
@@ -1571,7 +1879,9 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
               {/* Per-signer event timelines */}
               {visibleStates.map(({ signer }) => (
                 <div key={`tl-${signer.id}`} className="flex items-center gap-2">
-                  <span className="w-16 truncate text-[10px] text-muted/60" title={signer.label}>{signer.label.split(" ")[0]}</span>
+                  <span className="text-muted/60 w-16 truncate text-[10px]" title={signer.label}>
+                    {signer.label.split(" ")[0]}
+                  </span>
                   <div className="flex-1">
                     <ReplayTimeline
                       events={signer.events}

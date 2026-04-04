@@ -34,9 +34,7 @@ import { createFakePdf } from "./helpers/fake-pdf";
 beforeAll(async () => {
   const status = await getEngineStatus();
   if (!status.available) {
-    throw new Error(
-      "Rust engine not running on localhost:9090. Start it with: cd rust-service && cargo run --release",
-    );
+    throw new Error("Rust engine not running on localhost:9090. Start it with: cd rust-service && cargo run --release");
   }
 });
 
@@ -256,7 +254,13 @@ describe("audit", () => {
 
     const result = await verifyAuditChain([
       { eventType: "CREATED", actor: "alice", timestamp: "2024-01-01T00:00:00Z", eventHash: h1, prevEventHash: null },
-      { eventType: "SIGNED", actor: "bob", timestamp: "2024-01-01T01:00:00Z", eventHash: "tampered", prevEventHash: h1 },
+      {
+        eventType: "SIGNED",
+        actor: "bob",
+        timestamp: "2024-01-01T01:00:00Z",
+        eventHash: "tampered",
+        prevEventHash: h1,
+      },
     ]);
     expect(result.valid).toBe(false);
     // Rust returns snake_case: broken_at

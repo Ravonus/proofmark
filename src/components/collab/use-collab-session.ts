@@ -145,8 +145,7 @@ export function useCollabSession(options: UseCollabSessionOptions): UseCollabSes
       `${proto}//${location.hostname}:${rustEnginePort}/ws/collab/${options.sessionId}?userId=${encodeURIComponent(options.user.userId)}&displayName=${encodeURIComponent(options.user.displayName)}&color=${encodeURIComponent(options.user.color)}&role=${encodeURIComponent(options.user.role)}`;
 
     // Fallback URL if Rust engine is unavailable
-    const fallbackWsUrl =
-      `${proto}//${location.hostname}:${nodeWsPort}/ws/collab/${options.sessionId}`;
+    const fallbackWsUrl = `${proto}//${location.hostname}:${nodeWsPort}/ws/collab/${options.sessionId}`;
 
     let ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -177,7 +176,9 @@ export function useCollabSession(options: UseCollabSessionOptions): UseCollabSes
         ws.onopen = onWsOpen;
         ws.onmessage = onWsMessage;
         ws.onclose = onWsClose;
-        ws.onerror = () => { setConnected(false); };
+        ws.onerror = () => {
+          setConnected(false);
+        };
       } else {
         setConnected(false);
       }

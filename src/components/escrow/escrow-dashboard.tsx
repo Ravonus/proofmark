@@ -23,8 +23,31 @@ import {
 import { useWallet } from "~/components/wallet-provider";
 import { GlassCard, W3SButton, StaggerContainer, StaggerItem } from "~/components/ui/motion";
 // Inlined from premium/escrow/types to avoid hard import
-type EscrowStatus = "DRAFT" | "AWAITING_SIGNATURES" | "AWAITING_DEPOSITS" | "ACTIVE" | "MONITORING" | "DISPUTED" | "RESOLVING" | "RESOLVED" | "SETTLED" | "CANCELLED" | "VOIDED" | "EXPIRED" | "LOCKED_FOREVER";
-type EscrowMode = "FULL_ESCROW" | "MULTI_ESCROW" | "COMMUNITY_ESCROW" | "SELF_CUSTODY" | "LOCKED_CANCELLABLE" | "LOCKED_PERMANENT" | "HONOR_SYSTEM" | "CASUAL" | "PLATFORM_ESCROW" | "DESIGNATED_ORACLE";
+type EscrowStatus =
+  | "DRAFT"
+  | "AWAITING_SIGNATURES"
+  | "AWAITING_DEPOSITS"
+  | "ACTIVE"
+  | "MONITORING"
+  | "DISPUTED"
+  | "RESOLVING"
+  | "RESOLVED"
+  | "SETTLED"
+  | "CANCELLED"
+  | "VOIDED"
+  | "EXPIRED"
+  | "LOCKED_FOREVER";
+type EscrowMode =
+  | "FULL_ESCROW"
+  | "MULTI_ESCROW"
+  | "COMMUNITY_ESCROW"
+  | "SELF_CUSTODY"
+  | "LOCKED_CANCELLABLE"
+  | "LOCKED_PERMANENT"
+  | "HONOR_SYSTEM"
+  | "CASUAL"
+  | "PLATFORM_ESCROW"
+  | "DESIGNATED_ORACLE";
 
 /* ------------------------------------------------------------------ */
 /*  Status & mode display config                                       */
@@ -94,10 +117,16 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 
 function filterEscrows(escrows: EscrowListItem[], tab: FilterTab): EscrowListItem[] {
   switch (tab) {
-    case "active": return escrows.filter((e) => ["ACTIVE", "MONITORING", "DISPUTED", "RESOLVING"].includes(e.status));
-    case "pending": return escrows.filter((e) => ["DRAFT", "AWAITING_SIGNATURES", "AWAITING_DEPOSITS"].includes(e.status));
-    case "completed": return escrows.filter((e) => ["RESOLVED", "SETTLED", "CANCELLED", "VOIDED", "EXPIRED", "LOCKED_FOREVER"].includes(e.status));
-    default: return escrows;
+    case "active":
+      return escrows.filter((e) => ["ACTIVE", "MONITORING", "DISPUTED", "RESOLVING"].includes(e.status));
+    case "pending":
+      return escrows.filter((e) => ["DRAFT", "AWAITING_SIGNATURES", "AWAITING_DEPOSITS"].includes(e.status));
+    case "completed":
+      return escrows.filter((e) =>
+        ["RESOLVED", "SETTLED", "CANCELLED", "VOIDED", "EXPIRED", "LOCKED_FOREVER"].includes(e.status),
+      );
+    default:
+      return escrows;
   }
 }
 
@@ -131,10 +160,7 @@ function EscrowCard({ escrow }: { escrow: EscrowListItem }) {
   const router = useRouter();
 
   return (
-    <GlassCard
-      className="cursor-pointer"
-      onClick={() => router.push(`/escrow/${escrow.id}`)}
-    >
+    <GlassCard className="cursor-pointer" onClick={() => router.push(`/escrow/${escrow.id}`)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold">{escrow.title}</h3>
@@ -144,7 +170,9 @@ function EscrowCard({ escrow }: { escrow: EscrowListItem }) {
           </div>
           <div className="mt-2 flex items-center gap-3 text-xs text-muted">
             <span>{escrow.parties.length} parties</span>
-            <span>{escrow.amount} {escrow.asset}</span>
+            <span>
+              {escrow.amount} {escrow.asset}
+            </span>
             <span>{new Date(escrow.createdAt).toLocaleDateString()}</span>
           </div>
         </div>
@@ -163,27 +191,17 @@ function EmptyState() {
       </div>
       <h3 className="text-lg font-semibold">No escrows yet</h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-        Create your first escrow, bet, or agreement. Choose from full escrow, self-custody,
-        oracle-linked, or casual bets between friends.
+        Create your first escrow, bet, or agreement. Choose from full escrow, self-custody, oracle-linked, or casual
+        bets between friends.
       </p>
-      <W3SButton
-        variant="primary"
-        className="mt-6"
-        onClick={() => router.push("/escrow/create")}
-      >
+      <W3SButton variant="primary" className="mt-6" onClick={() => router.push("/escrow/create")}>
         <Plus className="h-4 w-4" /> Create Escrow
       </W3SButton>
     </div>
   );
 }
 
-function ModeCard({
-  mode,
-  onClick,
-}: {
-  mode: EscrowMode;
-  onClick: () => void;
-}) {
+function ModeCard({ mode, onClick }: { mode: EscrowMode; onClick: () => void }) {
   const config = MODE_CONFIG[mode];
   const Icon = config.icon;
 
@@ -237,10 +255,9 @@ export function EscrowDashboard() {
           {FILTER_TABS.map((tab) => (
             <button
               key={tab.key}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${activeTab === tab.key
-                  ? "bg-[var(--accent)] text-white"
-                  : "text-muted hover:text-primary"
-                }`}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeTab === tab.key ? "bg-[var(--accent)] text-white" : "text-muted hover:text-primary"
+              }`}
               onClick={() => setActiveTab(tab.key)}
             >
               {tab.label}
@@ -248,11 +265,7 @@ export function EscrowDashboard() {
           ))}
         </div>
 
-        <W3SButton
-          variant="primary"
-          size="sm"
-          onClick={() => setShowQuickCreate(!showQuickCreate)}
-        >
+        <W3SButton variant="primary" size="sm" onClick={() => setShowQuickCreate(!showQuickCreate)}>
           <Plus className="h-4 w-4" /> New Escrow
         </W3SButton>
       </div>
@@ -270,11 +283,7 @@ export function EscrowDashboard() {
               <h3 className="mb-3 text-sm font-semibold">Choose escrow type</h3>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {(Object.keys(MODE_CONFIG) as EscrowMode[]).map((mode) => (
-                  <ModeCard
-                    key={mode}
-                    mode={mode}
-                    onClick={() => router.push(`/escrow/create?mode=${mode}`)}
-                  />
+                  <ModeCard key={mode} mode={mode} onClick={() => router.push(`/escrow/create?mode=${mode}`)} />
                 ))}
               </div>
             </div>

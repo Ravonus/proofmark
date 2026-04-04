@@ -12,20 +12,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, Wand2, Eraser, Check } from "lucide-react";
 import { trpc } from "~/lib/trpc";
 import { useEditorChatStore } from "~/stores/ai-chat";
-import {
-  ChatBubble,
-  ChatInput,
-  ChatLoading,
-  QuickActions,
-  useAutoScroll,
-  type QuickAction,
-} from "./chat-primitives";
+import { ChatBubble, ChatInput, ChatLoading, QuickActions, useAutoScroll, type QuickAction } from "./chat-primitives";
 import type { AiEditOperation } from "~/server/db/schema";
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: "Clean up formatting", icon: Eraser, prompt: "Please clean up the formatting and ensure consistent style throughout the document." },
-  { label: "Review completeness", icon: Check, prompt: "Review this document for completeness. Are there any missing sections, fields, or clauses that should be added?" },
-  { label: "Improve clarity", icon: Wand2, prompt: "Suggest improvements to make this document clearer and more professional." },
+  {
+    label: "Clean up formatting",
+    icon: Eraser,
+    prompt: "Please clean up the formatting and ensure consistent style throughout the document.",
+  },
+  {
+    label: "Review completeness",
+    icon: Check,
+    prompt:
+      "Review this document for completeness. Are there any missing sections, fields, or clauses that should be added?",
+  },
+  {
+    label: "Improve clarity",
+    icon: Wand2,
+    prompt: "Suggest improvements to make this document clearer and more professional.",
+  },
 ];
 
 type Props = {
@@ -160,7 +166,9 @@ export function AiChatPanel({
               onChange={store.setInput}
               onSend={handleSend}
               disabled={store.isLoading}
-              placeholder={store.selectedRange ? "Ask about the selected section..." : "Ask anything about the document..."}
+              placeholder={
+                store.selectedRange ? "Ask about the selected section..." : "Ask anything about the document..."
+              }
             />
           </div>
         </motion.div>

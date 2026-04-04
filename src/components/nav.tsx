@@ -60,7 +60,9 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
                   href={link.href}
                   className="accent-line group relative inline-flex items-center gap-1.5 px-3 py-1 text-[12px] font-medium transition-colors"
                 >
-                  <Icon className={`h-3 w-3 transition-colors ${active ? "text-accent" : "text-muted group-hover:text-secondary"}`} />
+                  <Icon
+                    className={`h-3 w-3 transition-colors ${active ? "text-accent" : "text-muted group-hover:text-secondary"}`}
+                  />
                   <span className={active ? "text-primary" : "text-muted group-hover:text-secondary"}>
                     {link.label}
                   </span>

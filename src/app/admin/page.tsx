@@ -15,9 +15,7 @@ export default function AdminPage() {
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
           <FadeIn className="mb-8">
             <h2 className="text-2xl font-bold">Admin</h2>
-            <p className="mt-1 text-sm text-muted">
-              Manage users, subscriptions, features, and system configuration.
-            </p>
+            <p className="mt-1 text-sm text-muted">Manage users, subscriptions, features, and system configuration.</p>
           </FadeIn>
 
           <FadeIn delay={0.1}>

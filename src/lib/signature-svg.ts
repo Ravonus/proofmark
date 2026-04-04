@@ -132,7 +132,9 @@ export function decodeSignatureSvgDataUrl(value: string) {
   const heightMatch = /height=["']([\d.]+)["']/i.exec(svg);
   const strokeWidthMatch = /stroke-width=["']([\d.]+)["']/i.exec(svg);
   const strokeColorMatch = /stroke=["']([^"']+)["']/i.exec(svg);
-  const paths = Array.from(svg.matchAll(/<path\b[^>]*\bd=["']([^"']+)["'][^>]*\/?>/gi)).map((pathMatch) => pathMatch[1]!);
+  const paths = Array.from(svg.matchAll(/<path\b[^>]*\bd=["']([^"']+)["'][^>]*\/?>/gi)).map(
+    (pathMatch) => pathMatch[1]!,
+  );
 
   const width = Number.parseFloat(viewBoxMatch?.[1] ?? widthMatch?.[1] ?? "320");
   const height = Number.parseFloat(viewBoxMatch?.[2] ?? heightMatch?.[1] ?? "140");

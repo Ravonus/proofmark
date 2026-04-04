@@ -30,7 +30,9 @@ function canonicalize(result: PdfAnalysisResult) {
         signatureBlock: signer.signatureBlock
           ? {
               ...signer.signatureBlock,
-              fields: [...signer.signatureBlock.fields].sort((a, b) => a.line - b.line || a.label.localeCompare(b.label)),
+              fields: [...signer.signatureBlock.fields].sort(
+                (a, b) => a.line - b.line || a.label.localeCompare(b.label),
+              ),
             }
           : null,
       }))
@@ -47,9 +49,7 @@ async function compare(text: string) {
 beforeAll(async () => {
   const status = await getEngineStatus();
   if (!status.available) {
-    throw new Error(
-      "Rust engine not running on localhost:9090. Start it with: cd rust-service && cargo run --release",
-    );
+    throw new Error("Rust engine not running on localhost:9090. Start it with: cd rust-service && cargo run --release");
   }
 });
 

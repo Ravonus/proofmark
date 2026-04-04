@@ -5,14 +5,25 @@
 // Gaze types inlined to avoid hard import from premium/
 // These constants match the values in premium/eye-tracking/gaze-types.ts
 const GAZE_LOST_REASONS: Record<string, number> = {
-  unknown: 0, face_not_detected: 1, eyes_closed: 2,
-  looking_away: 3, low_confidence: 4, camera_error: 5,
+  unknown: 0,
+  face_not_detected: 1,
+  eyes_closed: 2,
+  looking_away: 3,
+  low_confidence: 4,
+  camera_error: 5,
 };
 
 type GazeTrackerCallbacks = {
   onGazePoint?: (pt: { x: number; y: number; confidence: number; timestamp: number }) => void;
   onFixation?: (fix: { x: number; y: number; durationMs: number; element: Element | null; startedAt: number }) => void;
-  onSaccade?: (sac: { fromX: number; fromY: number; toX: number; toY: number; velocityDegPerS: number; timestamp: number }) => void;
+  onSaccade?: (sac: {
+    fromX: number;
+    fromY: number;
+    toX: number;
+    toY: number;
+    velocityDegPerS: number;
+    timestamp: number;
+  }) => void;
   onBlink?: (blink: { durationMs: number; timestamp: number }) => void;
   onCalibrationComplete?: (cal: { accuracy: number; pointCount: number }) => void;
   onTrackingLost?: (reason: number) => void;
@@ -59,7 +70,12 @@ export type GazeCallbacks = {
 };
 
 export async function createGazeTracker(
-  config: { showGazeFeedback?: boolean; runCalibration?: boolean; confidenceThreshold?: number; smoothingMode?: "desktop" | "mobile" | "light" },
+  config: {
+    showGazeFeedback?: boolean;
+    runCalibration?: boolean;
+    confidenceThreshold?: number;
+    smoothingMode?: "desktop" | "mobile" | "light";
+  },
   callbacks: GazeCallbacks,
 ): Promise<GazeTrackerLike> {
   if (typeof window === "undefined") throw new Error("Browser only");

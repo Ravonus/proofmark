@@ -189,7 +189,7 @@ function buildPreparationIndicators(
       const sessionSec = (behavioral.timeOnPage || 1) / 1000;
       const gazeRate = gazeF ? gazeF.pointCount / sessionSec : 0;
       const hasPlausibleDensity = gazeRate >= 15;
-      const hasPlausibleReading = !gazeF || gazeF.readingPatternScore < 0.80;
+      const hasPlausibleReading = !gazeF || gazeF.readingPatternScore < 0.8;
       const isPlausible = hasPlausibleDensity && hasPlausibleReading;
       push({
         code: "NATURAL_GAZE_PREP",
@@ -406,8 +406,9 @@ function buildCriticalIndicators(
       const sessionSec = (behavioral.timeOnPage || 1) / 1000;
       const gazeRate = gazeF ? gazeF.pointCount / sessionSec : 0;
       const hasPlausibleDensity = gazeRate >= 8; // real WebGazer = 15-30/sec, lower on slow hardware
-      const hasPlausibleReadingScore = !gazeF || gazeF.readingPatternScore < 0.80;
-      const hasPlausibleSaccadeRatio = !gazeF || gazeF.saccadeCount === 0 || (gazeF.saccadeCount / Math.max(1, gazeF.fixationCount)) >= 1.5;
+      const hasPlausibleReadingScore = !gazeF || gazeF.readingPatternScore < 0.8;
+      const hasPlausibleSaccadeRatio =
+        !gazeF || gazeF.saccadeCount === 0 || gazeF.saccadeCount / Math.max(1, gazeF.fixationCount) >= 1.5;
       const isPlausible = hasPlausibleDensity && hasPlausibleReadingScore && hasPlausibleSaccadeRatio;
 
       push({
@@ -433,7 +434,7 @@ function buildCriticalIndicators(
     }
     if (gazeFeatures && gazeFeatures.readingPatternScore >= 0.45 && gazeFeatures.anchorHitRatio >= 0.08) {
       // Reading pattern > 0.80 is suspiciously perfect — real humans scan erratically
-      if (gazeFeatures.readingPatternScore >= 0.80) {
+      if (gazeFeatures.readingPatternScore >= 0.8) {
         push({
           code: "READING_PATTERN_TOO_PERFECT",
           severity: "warn",
@@ -477,7 +478,7 @@ function buildCriticalIndicators(
             code: "GAZE_SACCADE_FIXATION_RATIO_LOW",
             severity: "warn",
             stage: "critical",
-            score: 0.20,
+            score: 0.2,
             message: `Saccade/fixation ratio ${saccadeFixRatio.toFixed(1)} is too low — real eyes produce 3-6 saccades per fixation.`,
           });
         }
@@ -496,8 +497,11 @@ function buildCriticalIndicators(
 
       // Fixation CV still too low (below 0.18 is current synthetic threshold, but
       // 0.18-0.30 is also suspicious — real humans have 0.5-0.8)
-      if (gazeFeatures.fixationCount >= 6 && gazeFeatures.fixationCoefficientOfVariation >= 0.08
-          && gazeFeatures.fixationCoefficientOfVariation < 0.40) {
+      if (
+        gazeFeatures.fixationCount >= 6 &&
+        gazeFeatures.fixationCoefficientOfVariation >= 0.08 &&
+        gazeFeatures.fixationCoefficientOfVariation < 0.4
+      ) {
         push({
           code: "GAZE_FIXATION_CV_SUSPICIOUSLY_LOW",
           severity: "warn",
@@ -610,20 +614,22 @@ function buildCriticalIndicators(
   }
 
   // ── Server-issued signing challenge verification ──────────────────
-  const challengeFlags = flags.filter((f) =>
-    f.code.startsWith("TIMING_") || f.code.startsWith("LIVENESS_") || f.code.startsWith("CANVAS_"),
+  const challengeFlags = flags.filter(
+    (f) => f.code.startsWith("TIMING_") || f.code.startsWith("LIVENESS_") || f.code.startsWith("CANVAS_"),
   );
   const criticalChallengeFlags = challengeFlags.filter((f) => f.severity === "critical");
 
   // Missing challenges are a strong signal — real browser clients always provide them
   // Only score missing challenges if they were marked critical (client is expected to provide them)
-  const missingCriticalChallenges = challengeFlags.filter((f) => f.code.endsWith("_MISSING") && f.severity === "critical");
+  const missingCriticalChallenges = challengeFlags.filter(
+    (f) => f.code.endsWith("_MISSING") && f.severity === "critical",
+  );
   if (missingCriticalChallenges.length > 0) {
     push({
       code: "SIGNING_CHALLENGES_MISSING",
       severity: "critical",
       stage: "critical",
-      score: Math.min(0.90, 0.40 + missingCriticalChallenges.length * 0.20),
+      score: Math.min(0.9, 0.4 + missingCriticalChallenges.length * 0.2),
       message: `${missingCriticalChallenges.length} server-issued challenge(s) missing: ${missingCriticalChallenges.map((f) => f.code.replace("_MISSING", "")).join(", ")}. Client did not complete required verification steps.`,
     });
   }
@@ -635,7 +641,7 @@ function buildCriticalIndicators(
       code: "SIGNING_CHALLENGE_TAMPERED",
       severity: "critical",
       stage: "critical",
-      score: 0.80,
+      score: 0.8,
       message: `Server challenge token(s) are invalid or tampered: ${tamperedFlags[0]?.message ?? "token verification failed"}.`,
     });
   }
@@ -661,7 +667,7 @@ function buildCriticalIndicators(
       code: lf.code,
       severity: lf.severity as "info" | "warn" | "critical",
       stage: "critical",
-      score: lf.severity === "critical" ? 0.50 : 0.20,
+      score: lf.severity === "critical" ? 0.5 : 0.2,
       message: lf.message,
     });
   }

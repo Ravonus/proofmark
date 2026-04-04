@@ -8,12 +8,7 @@ import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { Select } from "~/components/ui/select";
 import { useConnectedIdentity } from "~/components/use-connected-identity";
-import {
-  User,
-  ToggleRight,
-  Key,
-  Palette,
-} from "lucide-react";
+import { User, ToggleRight, Key, Palette } from "lucide-react";
 
 type SettingsTab = "account" | "pdf" | "ai" | "features";
 
@@ -51,9 +46,7 @@ export function UserSettings() {
       <FadeIn>
         <GlassCard className="p-6 text-center">
           <p className="text-[12px] text-muted">
-            {identity.isLoading
-              ? "Checking account access..."
-              : "Sign in with email or wallet to manage settings."}
+            {identity.isLoading ? "Checking account access..." : "Sign in with email or wallet to manage settings."}
           </p>
         </GlassCard>
       </FadeIn>
@@ -64,7 +57,7 @@ export function UserSettings() {
     return (
       <FadeIn>
         <GlassCard className="p-6 text-center">
-          <div className="inline-block h-4 w-4 animate-spin rounded-full border border-[var(--accent)]/30 border-t-accent" />
+          <div className="border-[var(--accent)]/30 inline-block h-4 w-4 animate-spin rounded-full border border-t-accent" />
           <p className="mt-2 text-[11px] text-muted">Loading settings...</p>
         </GlassCard>
       </FadeIn>
@@ -105,17 +98,18 @@ export function UserSettings() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] font-medium transition-colors ${active
+                  className={`relative flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] font-medium transition-colors ${
+                    active
                       ? "bg-[var(--bg-hover)] text-primary"
                       : "text-muted hover:bg-[var(--bg-hover)] hover:text-secondary"
-                    }`}
+                  }`}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="flex-1">{tab.label}</span>
                   {active && (
                     <motion.span
                       layoutId="settings-tab"
-                      className="absolute left-0 top-1 bottom-1 w-px bg-[var(--accent)]"
+                      className="absolute bottom-1 left-0 top-1 w-px bg-[var(--accent)]"
                       transition={{ type: "spring", stiffness: 500, damping: 35 }}
                     />
                   )}
@@ -173,29 +167,16 @@ function AccountSection({
             value={`${walletMeta?.icon ?? "?"} ${addressPreview(address)}`}
             detail={walletMeta?.label ?? chain}
           />
-          <InfoCard
-            label="Full Address"
-            value={address}
-            detail="Your connected wallet address"
-            mono
-          />
+          <InfoCard label="Full Address" value={address} detail="Your connected wallet address" mono />
           <InfoCard
             label="Deployment"
             value={status?.deploymentMode === "premium" ? "Premium" : "OSS"}
-            detail={
-              status?.premiumRuntimeAvailable
-                ? "Premium runtime loaded"
-                : "Open-source mode"
-            }
+            detail={status?.premiumRuntimeAvailable ? "Premium runtime loaded" : "Open-source mode"}
           />
           <InfoCard
             label="Role"
             value={status?.isOwner ? "Owner" : "User"}
-            detail={
-              status?.isOwner
-                ? "Full admin access"
-                : "Standard user"
-            }
+            detail={status?.isOwner ? "Full admin access" : "Standard user"}
           />
         </div>
       </GlassCard>
@@ -345,9 +326,7 @@ function PdfSection() {
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] text-muted">
-            New documents inherit this style.
-          </p>
+          <p className="text-[10px] text-muted">New documents inherit this style.</p>
           <W3SButton variant="primary" size="sm" loading={saving} onClick={handleSave}>
             Save Defaults
           </W3SButton>
@@ -357,13 +336,7 @@ function PdfSection() {
   );
 }
 
-function FeaturesSection({
-  address,
-  chain,
-}: {
-  address: string;
-  chain: string;
-}) {
+function FeaturesSection({ address, chain }: { address: string; chain: string }) {
   const utils = trpc.useUtils();
   const featureAccessQuery = trpc.account.featureAccess.useQuery(
     { address, chain: chain as "ETH" | "SOL" | "BTC" },
@@ -399,11 +372,16 @@ function FeaturesSection({
           </div>
           <div className="grid gap-1.5 sm:grid-cols-2">
             {ossFeatures.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 rounded-sm border border-[var(--success)]/15 bg-[var(--success-subtle)] px-2.5 py-1.5 text-[11px]">
+              <div
+                key={f.id}
+                className="border-[var(--success)]/15 flex items-center gap-2 rounded-sm border bg-[var(--success-subtle)] px-2.5 py-1.5 text-[11px]"
+              >
                 <span className="status-dot status-dot-success" />
                 <span>{f.label}</span>
                 {f.byo && (
-                  <span className="ml-auto rounded-xs border border-sky-400/20 bg-sky-400/8 px-1 py-px text-[8px] text-sky-300">BYO</span>
+                  <span className="bg-sky-400/8 ml-auto rounded-xs border border-sky-400/20 px-1 py-px text-[8px] text-sky-300">
+                    BYO
+                  </span>
                 )}
               </div>
             ))}
@@ -416,9 +394,7 @@ function FeaturesSection({
           <div>
             <h3 className="text-[14px] font-semibold">Premium Features</h3>
             <p className="mt-0.5 text-[11px] text-muted">
-              {canManage
-                ? "Features enabled by the administrator."
-                : "Premium feature access for your wallet."}
+              {canManage ? "Features enabled by the administrator." : "Premium feature access for your wallet."}
             </p>
           </div>
 
@@ -429,7 +405,10 @@ function FeaturesSection({
           ) : (
             <div className="space-y-1.5">
               {premiumFeatures.map((f) => (
-                <div key={f.id} className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--bg-inset)] p-2.5">
+                <div
+                  key={f.id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--bg-inset)] p-2.5"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <p className="text-[12px] font-medium">{f.label}</p>
@@ -445,12 +424,14 @@ function FeaturesSection({
                       type="button"
                       onClick={() => toggleFeature(f.id, f.effectiveEnabled)}
                       disabled={setOverrides.isPending || (!f.deploymentEnabled && !f.oss)}
-                      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${f.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
-                        } ${setOverrides.isPending ? "opacity-50" : ""}`}
+                      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                        f.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
+                      } ${setOverrides.isPending ? "opacity-50" : ""}`}
                     >
                       <span
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${f.effectiveEnabled ? "translate-x-[18px]" : "translate-x-0.5"
-                          }`}
+                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                          f.effectiveEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                        }`}
                       />
                     </button>
                   )}
@@ -459,9 +440,7 @@ function FeaturesSection({
             </div>
           )}
 
-          {setOverrides.error && (
-            <p className="text-[11px] text-[var(--danger)]">{setOverrides.error.message}</p>
-          )}
+          {setOverrides.error && <p className="text-[11px] text-[var(--danger)]">{setOverrides.error.message}</p>}
         </GlassCard>
       </FadeIn>
     </div>
@@ -472,7 +451,9 @@ function InfoCard({ label, value, detail, mono }: { label: string; value: string
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--bg-inset)] p-3">
       <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted">{label}</p>
-      <p className={`mt-1.5 text-[12px] font-medium text-primary ${mono ? "break-all font-mono text-[10px]" : ""}`}>{value}</p>
+      <p className={`mt-1.5 text-[12px] font-medium text-primary ${mono ? "break-all font-mono text-[10px]" : ""}`}>
+        {value}
+      </p>
       <p className="mt-0.5 text-[10px] text-muted">{detail}</p>
     </div>
   );
@@ -491,6 +472,8 @@ function StatusPill({ label, tone }: { label: string; tone: "success" | "warning
             : "border-[var(--border)] bg-[var(--bg-inset)] text-muted";
 
   return (
-    <span className={`rounded-xs border px-1.5 py-px text-[8px] font-medium uppercase tracking-[0.1em] ${cls}`}>{label}</span>
+    <span className={`rounded-xs border px-1.5 py-px text-[8px] font-medium uppercase tracking-[0.1em] ${cls}`}>
+      {label}
+    </span>
   );
 }

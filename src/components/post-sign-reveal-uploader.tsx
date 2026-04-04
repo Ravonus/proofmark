@@ -98,19 +98,20 @@ export function PostSignRevealUploader({
         <div>
           <h3 className="text-lg font-semibold">Upload More Documents</h3>
           <p className="mt-1 text-sm text-secondary">
-            Signed participants can add more documents here. The contract owner can review and manage the full list from the dashboard.
+            Signed participants can add more documents here. The contract owner can review and manage the full list from
+            the dashboard.
           </p>
         </div>
       </div>
 
       {message && (
-        <div className="mt-4 rounded-lg border border-[var(--success)]/20 bg-[var(--success-subtle)] px-3 py-2 text-sm text-[var(--success)]">
+        <div className="border-[var(--success)]/20 mt-4 rounded-lg border bg-[var(--success-subtle)] px-3 py-2 text-sm text-[var(--success)]">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="mt-4 rounded-lg border border-[var(--danger)]/20 bg-[var(--danger-subtle)] px-3 py-2 text-sm text-[var(--danger)]">
+        <div className="border-[var(--danger)]/20 mt-4 rounded-lg border bg-[var(--danger-subtle)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}

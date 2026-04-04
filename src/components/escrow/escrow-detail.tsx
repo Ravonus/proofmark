@@ -24,8 +24,31 @@ import {
 import { useWallet } from "~/components/wallet-provider";
 import { GlassCard, W3SButton, FadeIn, StaggerContainer, StaggerItem } from "~/components/ui/motion";
 // Inlined from premium/escrow/types to avoid hard import
-type EscrowStatus = "DRAFT" | "AWAITING_SIGNATURES" | "AWAITING_DEPOSITS" | "ACTIVE" | "MONITORING" | "DISPUTED" | "RESOLVING" | "RESOLVED" | "SETTLED" | "CANCELLED" | "VOIDED" | "EXPIRED" | "LOCKED_FOREVER";
-type EscrowMode = "FULL_ESCROW" | "MULTI_ESCROW" | "COMMUNITY_ESCROW" | "SELF_CUSTODY" | "LOCKED_CANCELLABLE" | "LOCKED_PERMANENT" | "HONOR_SYSTEM" | "CASUAL" | "PLATFORM_ESCROW" | "DESIGNATED_ORACLE";
+type EscrowStatus =
+  | "DRAFT"
+  | "AWAITING_SIGNATURES"
+  | "AWAITING_DEPOSITS"
+  | "ACTIVE"
+  | "MONITORING"
+  | "DISPUTED"
+  | "RESOLVING"
+  | "RESOLVED"
+  | "SETTLED"
+  | "CANCELLED"
+  | "VOIDED"
+  | "EXPIRED"
+  | "LOCKED_FOREVER";
+type EscrowMode =
+  | "FULL_ESCROW"
+  | "MULTI_ESCROW"
+  | "COMMUNITY_ESCROW"
+  | "SELF_CUSTODY"
+  | "LOCKED_CANCELLABLE"
+  | "LOCKED_PERMANENT"
+  | "HONOR_SYSTEM"
+  | "CASUAL"
+  | "PLATFORM_ESCROW"
+  | "DESIGNATED_ORACLE";
 type EscrowContract = Record<string, any>;
 type EscrowParticipant = Record<string, any>;
 
@@ -35,8 +58,18 @@ type EscrowParticipant = Record<string, any>;
 
 const STATUS_CONFIG: Record<EscrowStatus, { label: string; color: string; icon: typeof Clock; bgColor: string }> = {
   DRAFT: { label: "Draft", color: "text-muted", icon: Clock, bgColor: "bg-gray-500/10" },
-  AWAITING_SIGNATURES: { label: "Awaiting Signatures", color: "text-yellow-400", icon: Clock, bgColor: "bg-yellow-500/10" },
-  AWAITING_DEPOSITS: { label: "Awaiting Deposits", color: "text-yellow-400", icon: Wallet, bgColor: "bg-yellow-500/10" },
+  AWAITING_SIGNATURES: {
+    label: "Awaiting Signatures",
+    color: "text-yellow-400",
+    icon: Clock,
+    bgColor: "bg-yellow-500/10",
+  },
+  AWAITING_DEPOSITS: {
+    label: "Awaiting Deposits",
+    color: "text-yellow-400",
+    icon: Wallet,
+    bgColor: "bg-yellow-500/10",
+  },
   ACTIVE: { label: "Active", color: "text-green-400", icon: CheckCircle2, bgColor: "bg-green-500/10" },
   MONITORING: { label: "Monitoring", color: "text-blue-400", icon: Eye, bgColor: "bg-blue-500/10" },
   DISPUTED: { label: "Disputed", color: "text-red-400", icon: AlertTriangle, bgColor: "bg-red-500/10" },
@@ -84,7 +117,9 @@ function StatusHeader({ status }: { status: EscrowStatus }) {
   const Icon = config.icon;
 
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${config.bgColor} ${config.color}`}>
+    <div
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ${config.bgColor} ${config.color}`}
+    >
       <Icon className="h-4 w-4" />
       {config.label}
     </div>
@@ -143,10 +178,7 @@ function CollapsibleSection({
 
   return (
     <GlassCard hover={false}>
-      <button
-        className="flex w-full items-center justify-between"
-        onClick={() => setOpen(!open)}
-      >
+      <button className="flex w-full items-center justify-between" onClick={() => setOpen(!open)}>
         <h3 className="text-sm font-semibold">{title}</h3>
         {open ? <ChevronUp className="h-4 w-4 text-muted" /> : <ChevronDown className="h-4 w-4 text-muted" />}
       </button>
@@ -226,7 +258,8 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
   const isAgent = escrow.participants.some((p) => p.address === address && p.role === "ESCROW_AGENT");
   const myParticipant = escrow.participants.find((p) => p.address === address);
   const canSign = myParticipant && !myParticipant.accepted && escrow.status === "AWAITING_SIGNATURES";
-  const canDeposit = myParticipant && myParticipant.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
+  const canDeposit =
+    myParticipant && myParticipant.accepted && !myParticipant.deposited && escrow.status === "AWAITING_DEPOSITS";
   const canResolve = isAgent && (escrow.status === "ACTIVE" || escrow.status === "DISPUTED");
 
   return (
@@ -304,10 +337,11 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
             {escrow.outcomes.map((outcome) => (
               <div
                 key={outcome.index}
-                className={`flex items-center justify-between rounded-lg border p-3 ${escrow.resolvedOutcomeIndex === outcome.index
+                className={`flex items-center justify-between rounded-lg border p-3 ${
+                  escrow.resolvedOutcomeIndex === outcome.index
                     ? "border-green-500/50 bg-green-500/5"
                     : "border-[var(--border)] bg-[var(--bg-surface)]"
-                  }`}
+                }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--bg-hover)] text-xs font-semibold">
@@ -332,9 +366,14 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
           <CollapsibleSection title="Assets" defaultOpen={false}>
             <div className="space-y-2">
               {escrow.assets.map((asset, i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3 text-sm">
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3 text-sm"
+                >
                   <span>{asset.displayAmount}</span>
-                  <span className="text-xs text-muted">{asset.chain} / {asset.kind}</span>
+                  <span className="text-xs text-muted">
+                    {asset.chain} / {asset.kind}
+                  </span>
                 </div>
               ))}
             </div>

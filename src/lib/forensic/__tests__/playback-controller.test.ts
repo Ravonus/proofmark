@@ -111,12 +111,8 @@ describe("TSPlaybackController", () => {
 
 describe("TSMultiSignerController", () => {
   it("synchronizes multiple signers", () => {
-    const eventsA: ForensicReplayEncodedEvent[] = [
-      { type: "click", delta: 5, targetId: 1, x: 10, y: 20, button: 0 },
-    ];
-    const eventsB: ForensicReplayEncodedEvent[] = [
-      { type: "click", delta: 3, targetId: 2, x: 30, y: 40, button: 0 },
-    ];
+    const eventsA: ForensicReplayEncodedEvent[] = [{ type: "click", delta: 5, targetId: 1, x: 10, y: 20, button: 0 }];
+    const eventsB: ForensicReplayEncodedEvent[] = [{ type: "click", delta: 3, targetId: 2, x: 30, y: 40, button: 0 }];
 
     const ca = new TSPlaybackController(eventsA, 0);
     const cb = new TSPlaybackController(eventsB, 1);
@@ -132,14 +128,8 @@ describe("TSMultiSignerController", () => {
   });
 
   it("seek syncs all controllers", () => {
-    const ca = new TSPlaybackController(
-      [{ type: "page", delta: 5, page: 3, totalPages: 10 }],
-      0,
-    );
-    const cb = new TSPlaybackController(
-      [{ type: "scroll", delta: 2, scrollY: 500, scrollMax: 2000 }],
-      1,
-    );
+    const ca = new TSPlaybackController([{ type: "page", delta: 5, page: 3, totalPages: 10 }], 0);
+    const cb = new TSPlaybackController([{ type: "scroll", delta: 2, scrollY: 500, scrollMax: 2000 }], 1);
     const multi = new TSMultiSignerController([ca, cb]);
     multi.seek(50);
 

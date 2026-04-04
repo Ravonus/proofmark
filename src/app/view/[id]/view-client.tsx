@@ -4,14 +4,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "~/components/wallet-provider";
 import { isImageDataUrl } from "~/lib/field-values";
-import {
-  tokenizeDocument,
-  type DocToken,
-} from "~/lib/document-tokens";
-import {
-  getFieldDisplayText,
-  getFieldVisualStyle,
-} from "~/components/sign-document-helpers";
+import { tokenizeDocument, type DocToken } from "~/lib/document-tokens";
+import { getFieldDisplayText, getFieldVisualStyle } from "~/components/sign-document-helpers";
 import {
   FileDown,
   ShieldCheck,
@@ -131,9 +125,13 @@ export function ViewDocumentClient({ documentId }: Props) {
 
   const tocItems = [
     { id: "content", label: "Document", icon: <FileSignature className="h-3.5 w-3.5" /> },
-    ...(fieldSummary.length > 0 ? [{ id: "fields", label: "Field Index", icon: <List className="h-3.5 w-3.5" /> }] : []),
+    ...(fieldSummary.length > 0
+      ? [{ id: "fields", label: "Field Index", icon: <List className="h-3.5 w-3.5" /> }]
+      : []),
     { id: "signatures", label: "Signatures", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-    ...(isCreatorViewer ? [{ id: "forensic-replay", label: "Forensic Replay", icon: <Play className="h-3.5 w-3.5" /> }] : []),
+    ...(isCreatorViewer
+      ? [{ id: "forensic-replay", label: "Forensic Replay", icon: <Play className="h-3.5 w-3.5" /> }]
+      : []),
     { id: "verification", label: "Verification", icon: <Hash className="h-3.5 w-3.5" /> },
   ];
 
@@ -176,7 +174,7 @@ export function ViewDocumentClient({ documentId }: Props) {
                 href={pdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
+                className="bg-accent/15 hover:bg-accent/25 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-accent transition-colors"
               >
                 <FileDown className="h-3.5 w-3.5" /> PDF
               </a>
@@ -193,9 +191,7 @@ export function ViewDocumentClient({ documentId }: Props) {
 
       <div className="mx-auto flex max-w-7xl gap-0">
         {/* ── Sidebar TOC ── */}
-        <aside
-          className="sticky top-14 hidden h-[calc(100vh-56px)] w-56 shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] p-4 lg:block"
-        >
+        <aside className="sticky top-14 hidden h-[calc(100vh-56px)] w-56 shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] p-4 lg:block">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted">Contents</p>
           <nav className="space-y-1">
             {tocItems.map((item) => (
@@ -241,7 +237,9 @@ export function ViewDocumentClient({ documentId }: Props) {
           {/* ═══ Document Content ═══ */}
           <section
             id="content"
-            ref={(el) => { sectionRefs.current.content = el; }}
+            ref={(el) => {
+              sectionRefs.current.content = el;
+            }}
           >
             {/* Document body */}
             <div
@@ -268,7 +266,9 @@ export function ViewDocumentClient({ documentId }: Props) {
           {fieldSummary.length > 0 && (
             <section
               id="fields"
-              ref={(el) => { sectionRefs.current.fields = el; }}
+              ref={(el) => {
+                sectionRefs.current.fields = el;
+              }}
               className="mt-12"
             >
               <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-primary">
@@ -278,22 +278,30 @@ export function ViewDocumentClient({ documentId }: Props) {
               <div className="overflow-hidden rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface-hover/30">
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">#</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">Field</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">Value</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">Signer</th>
+                    <tr className="bg-surface-hover/30 border-b border-border">
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">
+                        Field
+                      </th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">
+                        Value
+                      </th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted">
+                        Signer
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {fieldSummary.map((entry, idx) => (
                       <tr
                         key={idx}
-                        className={`border-b border-[var(--border-subtle)] transition-colors hover:bg-surface-hover/30 ${
+                        className={`hover:bg-surface-hover/30 border-b border-[var(--border-subtle)] transition-colors ${
                           idx % 2 === 0 ? "bg-surface-hover/10" : ""
                         }`}
                       >
-                        <td className="px-4 py-2.5 font-mono text-xs text-muted/50">{idx + 1}</td>
+                        <td className="text-muted/50 px-4 py-2.5 font-mono text-xs">{idx + 1}</td>
                         <td className="px-4 py-2.5 text-secondary">{entry.label}</td>
                         <td className="px-4 py-2.5 font-medium text-primary">{entry.value}</td>
                         <td className="px-4 py-2.5 text-muted">{entry.signer}</td>
@@ -315,10 +323,7 @@ export function ViewDocumentClient({ documentId }: Props) {
                 return (
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {[...groups.entries()].map(([signer, entries]) => (
-                      <div
-                        key={signer}
-                        className="rounded-xl border border-border bg-surface-card p-4"
-                      >
+                      <div key={signer} className="rounded-xl border border-border bg-surface-card p-4">
                         <h4 className="mb-3 text-xs font-bold text-secondary">{signer}&apos;s Fields</h4>
                         <div className="space-y-2">
                           {entries.map((e, i) => (
@@ -341,7 +346,9 @@ export function ViewDocumentClient({ documentId }: Props) {
           {/* ═══ Signatures ═══ */}
           <section
             id="signatures"
-            ref={(el) => { sectionRefs.current.signatures = el; }}
+            ref={(el) => {
+              sectionRefs.current.signatures = el;
+            }}
             className="mt-12"
           >
             <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-primary">
@@ -354,16 +361,19 @@ export function ViewDocumentClient({ documentId }: Props) {
                 const explorerUrl = getBlockExplorerUrl(signer.chain, signer.address);
 
                 return (
-                  <div
-                    key={signer.id}
-                    className="overflow-hidden rounded-xl border border-border bg-surface-card"
-                  >
+                  <div key={signer.id} className="overflow-hidden rounded-xl border border-border bg-surface-card">
                     <div className={`h-1 ${signed ? "bg-green-500/50" : "bg-amber-500/30"}`} />
                     <div className="p-5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${signed ? "bg-green-500/10" : "bg-amber-500/10"}`}>
-                            {signed ? <CheckCircle className="h-5 w-5 text-green-400" /> : <Clock className="h-5 w-5 text-amber-400" />}
+                          <div
+                            className={`flex h-9 w-9 items-center justify-center rounded-full ${signed ? "bg-green-500/10" : "bg-amber-500/10"}`}
+                          >
+                            {signed ? (
+                              <CheckCircle className="h-5 w-5 text-green-400" />
+                            ) : (
+                              <Clock className="h-5 w-5 text-amber-400" />
+                            )}
                           </div>
                           <div>
                             <p className="font-semibold text-primary">{signer.label}</p>
@@ -373,7 +383,12 @@ export function ViewDocumentClient({ documentId }: Props) {
                                 <span className="mx-1 text-border">|</span>
                                 {signer.address.slice(0, 10)}...{signer.address.slice(-8)}
                                 {explorerUrl && (
-                                  <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-accent/60 hover:text-accent">
+                                  <a
+                                    href={explorerUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-accent/60 hover:text-accent"
+                                  >
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
                                 )}
@@ -381,7 +396,9 @@ export function ViewDocumentClient({ documentId }: Props) {
                             )}
                           </div>
                         </div>
-                        <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${signed ? "bg-green-500/10 text-green-400" : "bg-amber-500/10 text-amber-400"}`}>
+                        <span
+                          className={`rounded-full px-3 py-1 text-[10px] font-bold ${signed ? "bg-green-500/10 text-green-400" : "bg-amber-500/10 text-amber-400"}`}
+                        >
                           {signer.status}
                         </span>
                       </div>
@@ -397,7 +414,10 @@ export function ViewDocumentClient({ documentId }: Props) {
                               <span className="text-muted">Signed</span>
                               <p className="text-secondary">
                                 {signer.signedAt
-                                  ? new Date(signer.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+                                  ? new Date(signer.signedAt).toLocaleString("en-US", {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })
                                   : "\u2014"}
                               </p>
                             </div>
@@ -405,7 +425,7 @@ export function ViewDocumentClient({ documentId }: Props) {
                           {signer.signature && (
                             <div>
                               <span className="text-[10px] text-muted">Cryptographic Signature</span>
-                              <p className="mt-1 break-all font-mono text-[10px] leading-relaxed text-muted/60">
+                              <p className="text-muted/60 mt-1 break-all font-mono text-[10px] leading-relaxed">
                                 {signer.signature}
                               </p>
                             </div>
@@ -413,7 +433,7 @@ export function ViewDocumentClient({ documentId }: Props) {
                           {signer.handSignatureHash && (
                             <div>
                               <span className="text-[10px] text-muted">Ink Signature Hash</span>
-                              <p className="mt-1 font-mono text-[10px] text-muted/60">{signer.handSignatureHash}</p>
+                              <p className="text-muted/60 mt-1 font-mono text-[10px]">{signer.handSignatureHash}</p>
                             </div>
                           )}
                         </div>
@@ -428,14 +448,16 @@ export function ViewDocumentClient({ documentId }: Props) {
           {isCreatorViewer && (
             <section
               id="forensic-replay"
-              ref={(el) => { sectionRefs.current["forensic-replay"] = el; }}
+              ref={(el) => {
+                sectionRefs.current["forensic-replay"] = el;
+              }}
               className="mt-12"
             >
               <ForensicReplayPanel documentId={documentId} />
               <div className="mt-4 flex justify-end">
                 <a
                   href={`/replay/${documentId}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-accent/15 px-4 py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
+                  className="bg-accent/15 hover:bg-accent/25 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium text-accent transition-colors"
                 >
                   <Play className="h-3.5 w-3.5" />
                   Open Full Replay
@@ -448,7 +470,9 @@ export function ViewDocumentClient({ documentId }: Props) {
           {/* ═══ Verification ═══ */}
           <section
             id="verification"
-            ref={(el) => { sectionRefs.current.verification = el; }}
+            ref={(el) => {
+              sectionRefs.current.verification = el;
+            }}
             className="mt-12"
           >
             <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-primary">
@@ -457,7 +481,9 @@ export function ViewDocumentClient({ documentId }: Props) {
 
             <div className="space-y-4 rounded-xl border border-border bg-surface-card p-6">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Content Hash (SHA-256)</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                  Content Hash (SHA-256)
+                </span>
                 <div className="mt-2 flex items-center gap-2">
                   <code className="flex-1 break-all rounded-lg bg-surface-hover px-3 py-2 font-mono text-xs text-secondary">
                     {doc.contentHash}
@@ -479,7 +505,7 @@ export function ViewDocumentClient({ documentId }: Props) {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Verify Online</span>
                 <a
                   href={`/verify/${doc.contentHash}`}
-                  className="mt-2 flex items-center gap-2 text-sm text-accent transition-colors hover:text-accent/80"
+                  className="hover:text-accent/80 mt-2 flex items-center gap-2 text-sm text-accent transition-colors"
                 >
                   <Globe className="h-4 w-4" />
                   {typeof window !== "undefined" ? window.location.origin : ""}/verify/{doc.contentHash}
@@ -488,10 +514,9 @@ export function ViewDocumentClient({ documentId }: Props) {
               </div>
 
               <p className="text-xs leading-relaxed text-muted">
-                This document was signed using cryptographic wallet signatures. Each signature is
-                independently verifiable using the content hash and wallet address. The hash above
-                is a SHA-256 fingerprint of the original document content — any modification would
-                produce a different hash.
+                This document was signed using cryptographic wallet signatures. Each signature is independently
+                verifiable using the content hash and wallet address. The hash above is a SHA-256 fingerprint of the
+                original document content — any modification would produce a different hash.
               </p>
             </div>
           </section>
@@ -559,7 +584,11 @@ function renderToken(
               {token.field.label}
             </span>
             <span className="inline-block border-b-2 border-emerald-400/30 pb-1">
-              <img src={val} alt={`${token.field.label} signature`} className="sig-theme-img h-10 w-auto object-contain" />
+              <img
+                src={val}
+                alt={`${token.field.label} signature`}
+                className="sig-theme-img h-10 w-auto object-contain"
+              />
             </span>
           </span>
         );
@@ -569,14 +598,16 @@ function renderToken(
         <span key={token.field.id} className="mx-0.5 my-1 inline-block align-baseline">
           <span
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${
-              val ? style.border + " " + style.bg : "border-border bg-surface-hover/20"
+              val ? style.border + " " + style.bg : "bg-surface-hover/20 border-border"
             }`}
           >
-            <span className={`shrink-0 text-[9px] font-medium uppercase tracking-wider ${val ? style.text : "text-muted"}`}>
+            <span
+              className={`shrink-0 text-[9px] font-medium uppercase tracking-wider ${val ? style.text : "text-muted"}`}
+            >
               {token.field.label}
             </span>
             <span
-              className={`text-sm ${val ? "font-medium text-primary" : "italic text-muted/50"}`}
+              className={`text-sm ${val ? "font-medium text-primary" : "text-muted/50 italic"}`}
               style={{ fontFamily: "'Georgia', serif" }}
             >
               {getFieldDisplayText(token.field, val)}
@@ -595,7 +626,11 @@ function renderToken(
           <p className="mb-3 text-xs uppercase tracking-wider text-muted">{token.label} Signature</p>
           {hasSigned && sigImage && isImageDataUrl(sigImage) ? (
             <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg,#fefce8)] px-4 py-3 shadow-sm">
-              <img src={sigImage} alt={`${signer.label} signature`} className="sig-theme-img h-14 w-auto object-contain" />
+              <img
+                src={sigImage}
+                alt={`${signer.label} signature`}
+                className="sig-theme-img h-14 w-auto object-contain"
+              />
               <p className="mt-1.5 flex items-center gap-1.5 text-[10px] text-emerald-600/70">
                 <CheckCircle className="h-3 w-3" />
                 Signed by {signer.label}
@@ -606,9 +641,7 @@ function renderToken(
             <div className="inline-flex items-center gap-2 text-sm text-green-400/80">
               <CheckCircle className="h-4 w-4" /> Signed by {signer.label}
               {signer.signedAt && (
-                <span className="text-[10px] text-muted">
-                  ({new Date(signer.signedAt).toLocaleDateString()})
-                </span>
+                <span className="text-[10px] text-muted">({new Date(signer.signedAt).toLocaleDateString()})</span>
               )}
             </div>
           ) : (

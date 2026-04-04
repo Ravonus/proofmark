@@ -204,7 +204,13 @@ function scoreMotionComplexity(metrics: {
   const zeroDeltaFactor = clamp(metrics.zeroDeltaSegmentCount / segmentScale);
   const pressureFactor = metrics.pressureVariance == null ? 0.25 : clamp(metrics.pressureVariance * 10);
 
-  return clamp(0.42 * velocityFactor + 0.24 * directionFactor + 0.16 * pauseFactor + 0.12 * zeroDeltaFactor + 0.06 * pressureFactor);
+  return clamp(
+    0.42 * velocityFactor +
+      0.24 * directionFactor +
+      0.16 * pauseFactor +
+      0.12 * zeroDeltaFactor +
+      0.06 * pressureFactor,
+  );
 }
 
 export function analyzeTimedSignature(strokes: TimedSignatureStroke[]): SignatureMotionAnalysis | null {
@@ -221,9 +227,14 @@ export function analyzeTimedSignature(strokes: TimedSignatureStroke[]): Signatur
   const durationMs = strokeSummaries.reduce((sum, stroke) => sum + stroke.durationMs, 0);
   const penLiftCount = Math.max(0, strokeCount - 1);
   const pathLengthPx = strokeSummaries.reduce((sum, stroke) => sum + stroke.pathLengthPx, 0);
-  const averageVelocityPxPerMs = durationMs > 0 ? pathLengthPx / durationMs : average(strokeSummaries.map((stroke) => stroke.averageVelocityPxPerMs));
+  const averageVelocityPxPerMs =
+    durationMs > 0
+      ? pathLengthPx / durationMs
+      : average(strokeSummaries.map((stroke) => stroke.averageVelocityPxPerMs));
   const velocityVariance = average(strokeSummaries.map((stroke) => stroke.velocityVariance));
-  const velocityCoefficientOfVariation = average(strokeSummaries.map((stroke) => stroke.velocityCoefficientOfVariation));
+  const velocityCoefficientOfVariation = average(
+    strokeSummaries.map((stroke) => stroke.velocityCoefficientOfVariation),
+  );
   const directionChangeCount = strokeSummaries.reduce((sum, stroke) => sum + stroke.directionChangeCount, 0);
   const pauseCount = strokeSummaries.reduce((sum, stroke) => sum + stroke.pauseCount, 0);
   const maxPauseMs = strokeSummaries.reduce((max, stroke) => Math.max(max, stroke.maxPauseMs), 0);
@@ -329,7 +340,7 @@ function collectSignatureStrokes(events: DecodedForensicReplayEvent[]) {
 
   return {
     committed,
-    strokes: activeSnapshot.length > 0 ? activeSnapshot : lastCommittedStrokes ?? [],
+    strokes: activeSnapshot.length > 0 ? activeSnapshot : (lastCommittedStrokes ?? []),
   };
 }
 

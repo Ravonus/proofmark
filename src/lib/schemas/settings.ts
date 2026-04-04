@@ -14,8 +14,14 @@ export const brandingSchema = z.object({
   tagline: z.string().max(200).default(""),
   logoUrl: z.string().url().or(z.literal("")).default(""),
   faviconUrl: z.string().url().or(z.literal("")).default(""),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color").default("#7C5CFC"),
-  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color").default("#5B3EFC"),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color")
+    .default("#7C5CFC"),
+  accentColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color")
+    .default("#5B3EFC"),
   fontFamily: z.string().default("Inter"),
 });
 

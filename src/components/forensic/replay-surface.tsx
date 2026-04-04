@@ -39,7 +39,13 @@ function laneColor(lane: number): string {
   return colors[lane % colors.length]!;
 }
 
-function drawStroke(ctx: CanvasRenderingContext2D, stroke: ActiveStroke, color: string, scaleX: number, scaleY: number) {
+function drawStroke(
+  ctx: CanvasRenderingContext2D,
+  stroke: ActiveStroke,
+  color: string,
+  scaleX: number,
+  scaleY: number,
+) {
   if (stroke.points.length < 2) return;
   ctx.beginPath();
   ctx.strokeStyle = color;
@@ -55,7 +61,13 @@ function drawStroke(ctx: CanvasRenderingContext2D, stroke: ActiveStroke, color: 
   ctx.stroke();
 }
 
-function drawScrollIndicator(ctx: CanvasRenderingContext2D, snap: SceneSnapshot, canvasWidth: number, canvasHeight: number, color: string) {
+function drawScrollIndicator(
+  ctx: CanvasRenderingContext2D,
+  snap: SceneSnapshot,
+  canvasWidth: number,
+  canvasHeight: number,
+  color: string,
+) {
   if (snap.scrollMax <= 0) return;
   const ratio = Math.min(1, snap.scrollY / snap.scrollMax);
   const barHeight = canvasHeight * 0.6;
@@ -63,7 +75,9 @@ function drawScrollIndicator(ctx: CanvasRenderingContext2D, snap: SceneSnapshot,
   const barX = canvasWidth - 12;
   const barY = (canvasHeight - barHeight) / 2;
 
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--replay-canvas-track").trim() || "rgba(255,255,255,0.1)";
+  ctx.fillStyle =
+    getComputedStyle(document.documentElement).getPropertyValue("--replay-canvas-track").trim() ||
+    "rgba(255,255,255,0.1)";
   ctx.fillRect(barX, barY, barWidth, barHeight);
 
   const thumbHeight = Math.max(8, barHeight * 0.1);
@@ -74,11 +88,18 @@ function drawScrollIndicator(ctx: CanvasRenderingContext2D, snap: SceneSnapshot,
   ctx.globalAlpha = 1;
 }
 
-function drawPageIndicator(ctx: CanvasRenderingContext2D, snap: SceneSnapshot, canvasWidth: number, canvasHeight: number) {
+function drawPageIndicator(
+  ctx: CanvasRenderingContext2D,
+  snap: SceneSnapshot,
+  canvasWidth: number,
+  canvasHeight: number,
+) {
   if (snap.totalPages <= 1) return;
   const text = `${snap.page}/${snap.totalPages}`;
   ctx.font = "11px monospace";
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--replay-canvas-text-dim").trim() || "rgba(255,255,255,0.5)";
+  ctx.fillStyle =
+    getComputedStyle(document.documentElement).getPropertyValue("--replay-canvas-text-dim").trim() ||
+    "rgba(255,255,255,0.5)";
   ctx.textAlign = "center";
   ctx.fillText(text, canvasWidth / 2, canvasHeight - 8);
 }
@@ -175,7 +196,7 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
       ctx.fillStyle = color;
       ctx.font = "11px monospace";
       ctx.textAlign = "left";
-      ctx.fillText(`● ${signer.label}`, docPadding + (signer.lane * 120), labelY);
+      ctx.fillText(`● ${signer.label}`, docPadding + signer.lane * 120, labelY);
     }
   }, [width, height, signers, activeLane]);
 
@@ -259,18 +280,18 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
 
   return (
     <div className="flex flex-col gap-2" style={{ width }}>
-      <canvas
-        ref={canvasRef}
-        style={{ width, height, borderRadius: 8 }}
-        className="border border-border"
-      />
+      <canvas ref={canvasRef} style={{ width, height, borderRadius: 8 }} className="border border-border" />
 
       {/* Controls bar */}
       <div className="flex items-center gap-2 px-2">
         <button onClick={() => handleSkip(-1)} className="p-1 text-secondary hover:text-primary" title="Back 5s">
           <SkipBack size={16} />
         </button>
-        <button onClick={handlePlay} className="p-1 text-primary hover:text-primary" title={state === "playing" ? "Pause" : "Play"}>
+        <button
+          onClick={handlePlay}
+          className="p-1 text-primary hover:text-primary"
+          title={state === "playing" ? "Pause" : "Play"}
+        >
           {state === "playing" ? <Pause size={18} /> : <Play size={18} />}
         </button>
         <button onClick={() => handleSkip(1)} className="p-1 text-secondary hover:text-primary" title="Forward 5s">
@@ -286,14 +307,18 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
           max={durationMs}
           value={cursorMs}
           onChange={handleSeek}
-          className="flex-1 h-1 accent-blue-500 cursor-pointer"
+          className="h-1 flex-1 cursor-pointer accent-blue-500"
         />
 
-        <span className="text-[11px] text-muted font-mono tabular-nums min-w-[72px] text-right">
+        <span className="min-w-[72px] text-right font-mono text-[11px] tabular-nums text-muted">
           {formatTime(cursorMs)} / {formatTime(durationMs)}
         </span>
 
-        <button onClick={handleSpeedCycle} className="text-[11px] text-muted hover:text-primary font-mono px-1" title="Change speed">
+        <button
+          onClick={handleSpeedCycle}
+          className="px-1 font-mono text-[11px] text-muted hover:text-primary"
+          title="Change speed"
+        >
           {speed}x
         </button>
       </div>
@@ -303,7 +328,7 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
         <div className="flex gap-2 px-2">
           <button
             onClick={() => setActiveLane(null)}
-            className={`text-[10px] px-2 py-0.5 rounded font-mono ${activeLane === null ? "bg-surface-elevated text-primary" : "text-muted hover:text-secondary"}`}
+            className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === null ? "bg-surface-elevated text-primary" : "text-muted hover:text-secondary"}`}
           >
             All
           </button>
@@ -311,7 +336,7 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
             <button
               key={s.lane}
               onClick={() => handleLaneToggle(s.lane)}
-              className={`text-[10px] px-2 py-0.5 rounded font-mono ${activeLane === s.lane ? "text-primary" : "text-muted hover:text-secondary"}`}
+              className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === s.lane ? "text-primary" : "text-muted hover:text-secondary"}`}
               style={activeLane === s.lane ? { backgroundColor: laneColor(s.lane) + "33" } : undefined}
             >
               <span style={{ color: laneColor(s.lane) }}>●</span> {s.label}

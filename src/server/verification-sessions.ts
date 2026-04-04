@@ -104,12 +104,7 @@ export async function getVerificationSessionsForIdentifier(
     return await db
       .select()
       .from(verificationSessions)
-      .where(
-        and(
-          eq(verificationSessions.identifier, normalized),
-          gt(verificationSessions.expiresAt, now),
-        ),
-      );
+      .where(and(eq(verificationSessions.identifier, normalized), gt(verificationSessions.expiresAt, now)));
   } catch {
     return [];
   }
@@ -129,12 +124,7 @@ export async function getVerificationSessionsForIdentifiers(
     return await db
       .select()
       .from(verificationSessions)
-      .where(
-        and(
-          inArray(verificationSessions.identifier, normalized),
-          gt(verificationSessions.expiresAt, now),
-        ),
-      );
+      .where(and(inArray(verificationSessions.identifier, normalized), gt(verificationSessions.expiresAt, now)));
   } catch {
     return [];
   }
@@ -174,9 +164,7 @@ export async function claimSignerDocuments(params: {
       const result = await db
         .update(signers)
         .set({ userId: params.userId })
-        .where(
-          sql`${isNull(signers.userId)} AND (${conditions.reduce((a, b) => or(a, b)!)})`,
-        );
+        .where(sql`${isNull(signers.userId)} AND (${conditions.reduce((a, b) => or(a, b)!)})`);
       claimedCount += (result as { rowCount?: number }).rowCount ?? 0;
     }
 

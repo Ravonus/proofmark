@@ -5,11 +5,7 @@ import { Nav } from "~/components/nav";
 import { EscrowDetail } from "~/components/escrow/escrow-detail";
 import { PageTransition } from "~/components/ui/motion";
 
-export default function EscrowDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function EscrowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
   return (

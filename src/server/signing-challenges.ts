@@ -14,8 +14,7 @@ import { z } from "zod";
 import { createHmac, createHash, randomBytes } from "crypto";
 
 // Use the encryption master key as HMAC secret (or fall back to random)
-const HMAC_SECRET =
-  process.env.ENCRYPTION_MASTER_KEY ?? randomBytes(32).toString("hex");
+const HMAC_SECRET = process.env.ENCRYPTION_MASTER_KEY ?? randomBytes(32).toString("hex");
 
 const CHALLENGE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -141,7 +140,14 @@ export function verifyLivenessChallenge(
   // Extract challenge ID from token
   const [challengeId, sig] = response.challengeToken.split(".");
   if (!challengeId || !sig) {
-    return { valid: false, passRatio: 0, avgReactionMs: 0, flags: [{ code: "LIVENESS_TOKEN_INVALID", severity: "critical", message: "Liveness challenge token is malformed" }] };
+    return {
+      valid: false,
+      passRatio: 0,
+      avgReactionMs: 0,
+      flags: [
+        { code: "LIVENESS_TOKEN_INVALID", severity: "critical", message: "Liveness challenge token is malformed" },
+      ],
+    };
   }
 
   // We can't fully re-derive the HMAC without storing the original positions,
@@ -152,14 +158,18 @@ export function verifyLivenessChallenge(
   // Check expiry (encoded in token — we trust our HMAC)
   // For simplicity, check that the challenge was issued within TTL
   if (!response.steps || response.steps.length === 0) {
-    return { valid: false, passRatio: 0, avgReactionMs: 0, flags: [{ code: "LIVENESS_NO_STEPS", severity: "critical", message: "No liveness steps returned" }] };
+    return {
+      valid: false,
+      passRatio: 0,
+      avgReactionMs: 0,
+      flags: [{ code: "LIVENESS_NO_STEPS", severity: "critical", message: "No liveness steps returned" }],
+    };
   }
 
   // Verify all step nonces are present
   const passedCount = response.steps.filter((s) => s.passed).length;
   const passRatio = passedCount / response.steps.length;
-  const avgReactionMs =
-    response.steps.reduce((sum, s) => sum + (s.reactionMs ?? 0), 0) / response.steps.length;
+  const avgReactionMs = response.steps.reduce((sum, s) => sum + (s.reactionMs ?? 0), 0) / response.steps.length;
 
   // Check for suspiciously fast reactions (< 200ms is inhuman)
   const tooFastSteps = response.steps.filter((s) => s.passed && s.reactionMs < 200);
@@ -233,7 +243,11 @@ export function verifyTimingToken(
   const flags: Array<{ code: string; severity: string; message: string }> = [];
   const dotIndex = token.indexOf(".");
   if (dotIndex === -1) {
-    return { valid: false, elapsedMs: 0, flags: [{ code: "TIMING_TOKEN_INVALID", severity: "critical", message: "Timing token is malformed" }] };
+    return {
+      valid: false,
+      elapsedMs: 0,
+      flags: [{ code: "TIMING_TOKEN_INVALID", severity: "critical", message: "Timing token is malformed" }],
+    };
   }
 
   const issuedAt = parseInt(token.slice(0, dotIndex), 10);
@@ -242,13 +256,27 @@ export function verifyTimingToken(
   const expectedSig = hmacSign(expectedPayload);
 
   if (sig !== expectedSig) {
-    return { valid: false, elapsedMs: 0, flags: [{ code: "TIMING_TOKEN_TAMPERED", severity: "critical", message: "Timing token signature is invalid" }] };
+    return {
+      valid: false,
+      elapsedMs: 0,
+      flags: [{ code: "TIMING_TOKEN_TAMPERED", severity: "critical", message: "Timing token signature is invalid" }],
+    };
   }
 
   // Check if token expired
   const elapsedMs = Date.now() - issuedAt;
   if (elapsedMs > CHALLENGE_TTL_MS) {
-    return { valid: false, elapsedMs, flags: [{ code: "TIMING_TOKEN_EXPIRED", severity: "warn", message: `Timing token expired (${Math.round(elapsedMs / 1000)}s elapsed)` }] };
+    return {
+      valid: false,
+      elapsedMs,
+      flags: [
+        {
+          code: "TIMING_TOKEN_EXPIRED",
+          severity: "warn",
+          message: `Timing token expired (${Math.round(elapsedMs / 1000)}s elapsed)`,
+        },
+      ],
+    };
   }
 
   // Compare real elapsed time to claimed timeOnPage
@@ -368,7 +396,10 @@ export function issueCanvasChallenge(documentId: string, claimToken: string): Ca
           width: 30 + Math.floor(rng() * 100),
           height: 30 + Math.floor(rng() * 100),
           color,
-          gradientColors: [color, `rgba(${Math.floor(rng() * 256)},${Math.floor(rng() * 256)},${Math.floor(rng() * 256)},1)`],
+          gradientColors: [
+            color,
+            `rgba(${Math.floor(rng() * 256)},${Math.floor(rng() * 256)},${Math.floor(rng() * 256)},1)`,
+          ],
         });
         break;
     }
@@ -402,7 +433,10 @@ export function verifyCanvasChallenge(
 
   const dotIndex = token.indexOf(".");
   if (dotIndex === -1) {
-    return { valid: false, flags: [{ code: "CANVAS_TOKEN_INVALID", severity: "critical", message: "Canvas challenge token is malformed" }] };
+    return {
+      valid: false,
+      flags: [{ code: "CANVAS_TOKEN_INVALID", severity: "critical", message: "Canvas challenge token is malformed" }],
+    };
   }
 
   const seed = token.slice(0, dotIndex);
@@ -410,7 +444,12 @@ export function verifyCanvasChallenge(
   const expectedSig = hmacSign(`canvas:${seed}:${documentId}:${claimToken}`);
 
   if (sig !== expectedSig) {
-    return { valid: false, flags: [{ code: "CANVAS_TOKEN_TAMPERED", severity: "critical", message: "Canvas challenge token signature is invalid" }] };
+    return {
+      valid: false,
+      flags: [
+        { code: "CANVAS_TOKEN_TAMPERED", severity: "critical", message: "Canvas challenge token signature is invalid" },
+      ],
+    };
   }
 
   // Hash should be 64-char hex (SHA-256)
@@ -449,6 +488,6 @@ function seedRng(seed: string): () => number {
   }
   return () => {
     h = (Math.imul(h, 1664525) + 1013904223) | 0;
-    return ((h >>> 0) / 4294967296);
+    return (h >>> 0) / 4294967296;
   };
 }

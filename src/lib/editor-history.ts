@@ -43,10 +43,21 @@ export class EditorHistory<T = unknown> {
     return next;
   }
 
-  get canUndo() { return this.past.length > 0; }
-  get canRedo() { return this.future.length > 0; }
-  get undoLabel() { return this.past.at(-1)?.label; }
-  get redoLabel() { return this.future.at(-1)?.label; }
+  get canUndo() {
+    return this.past.length > 0;
+  }
+  get canRedo() {
+    return this.future.length > 0;
+  }
+  get undoLabel() {
+    return this.past.at(-1)?.label;
+  }
+  get redoLabel() {
+    return this.future.at(-1)?.label;
+  }
 
-  clear() { this.past = []; this.future = []; }
+  clear() {
+    this.past = [];
+    this.future = [];
+  }
 }

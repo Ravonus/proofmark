@@ -64,11 +64,13 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
     try {
       const lockOrientation = (screen.orientation as any)?.lock;
       if (lockOrientation) {
-        (screen.orientation as any).lock("landscape").catch(() => { });
+        (screen.orientation as any).lock("landscape").catch(() => {});
       }
-    } catch { }
+    } catch {}
     return () => {
-      try { (screen.orientation as any)?.unlock?.(); } catch { }
+      try {
+        (screen.orientation as any)?.unlock?.();
+      } catch {}
     };
   }, [status, mode]);
 
@@ -87,7 +89,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
     let fingerprint: Record<string, unknown> = {};
     try {
       fingerprint = (await collectFingerprintBestEffort()) as unknown as Record<string, unknown>;
-    } catch { }
+    } catch {}
 
     const mobileForensic = {
       sessionDurationMs: Date.now() - sessionStartRef.current,
@@ -125,8 +127,8 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
           <p className="text-center text-sm text-white/40">
             Please turn your phone sideways (landscape mode) for the best signing experience.
           </p>
-          <div className="mt-4 h-16 w-28 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center">
-            <div className="h-8 w-20 rounded-lg border border-white/30 flex items-center justify-center text-[10px] text-white/30">
+          <div className="mt-4 flex h-16 w-28 items-center justify-center rounded-xl border-2 border-dashed border-white/20">
+            <div className="flex h-8 w-20 items-center justify-center rounded-lg border border-white/30 text-[10px] text-white/30">
               landscape
             </div>
           </div>
@@ -160,7 +162,9 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
         <div className="flex flex-1 items-center justify-center p-6">
           <div className="space-y-3 text-center">
             <div className="text-5xl text-emerald-400">✓</div>
-            <p className="text-lg font-semibold text-emerald-400">{mode === "initials" ? "Initials Sent!" : "Signature Sent!"}</p>
+            <p className="text-lg font-semibold text-emerald-400">
+              {mode === "initials" ? "Initials Sent!" : "Signature Sent!"}
+            </p>
             <p className="text-sm text-white/50">Return to your computer to continue.</p>
           </div>
         </div>
@@ -202,12 +206,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
           .mobile-sign-pad .space-y-3 > div:last-of-type { flex-shrink: 0; }
         `}</style>
         <div className="mobile-sign-pad h-full">
-          <SignaturePad
-            onCapture={handleCapture}
-            onClear={handleClear}
-            captured={!!signatureData}
-            mode={mode}
-          />
+          <SignaturePad onCapture={handleCapture} onClear={handleClear} captured={!!signatureData} mode={mode} />
         </div>
       </div>
 
@@ -218,7 +217,13 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
           disabled={status === "signing" || !signatureData}
           className="w-full rounded-xl bg-emerald-500 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 active:bg-emerald-600 disabled:opacity-50"
         >
-          {status === "signing" ? "Sending..." : signatureData ? "Submit" : mode === "initials" ? "Draw initials first" : "Draw signature first"}
+          {status === "signing"
+            ? "Sending..."
+            : signatureData
+              ? "Submit"
+              : mode === "initials"
+                ? "Draw initials first"
+                : "Draw signature first"}
         </button>
       </div>
     </MobileShell>

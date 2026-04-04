@@ -255,7 +255,9 @@ export const collabRouter = createTRPCRouter({
 
   annotationCounts: authedProcedure.input(z.object({ sessionId: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_review_mode");
-    const { getAnnotationCounts } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
+    const { getAnnotationCounts } = await import(
+      /* webpackIgnore: true */ "~/premium/collaboration/annotation-manager"
+    );
     return getAnnotationCounts(ctx.db, input.sessionId);
   }),
 
@@ -287,7 +289,9 @@ export const collabRouter = createTRPCRouter({
       const resolved = await ai.resolveKeyWithFallback(ctx.session.address, (input.provider as any) ?? "anthropic");
       if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "No AI provider configured." });
 
-      const { sendSharedMessage, getOrCreateDefaultSharedThread } = await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
+      const { sendSharedMessage, getOrCreateDefaultSharedThread } = await import(
+        /* webpackIgnore: true */ "~/premium/collaboration/ai-threads"
+      );
       const { getSession } = await import(/* webpackIgnore: true */ "~/premium/collaboration/session-manager");
 
       const session = await getSession(ctx.db, input.sessionId);
@@ -349,8 +353,9 @@ export const collabRouter = createTRPCRouter({
       const resolved = await ai.resolveKeyWithFallback(ctx.session.address, (input.provider as any) ?? "anthropic");
       if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "No AI provider configured." });
 
-      const { sendPrivateMessage, getOrCreateDefaultPrivateThread } =
-        await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
+      const { sendPrivateMessage, getOrCreateDefaultPrivateThread } = await import(
+        /* webpackIgnore: true */ "~/premium/collaboration/ai-threads"
+      );
       const { getSession } = await import(/* webpackIgnore: true */ "~/premium/collaboration/session-manager");
 
       const session = await getSession(ctx.db, input.sessionId);

@@ -24,11 +24,13 @@ describe("forensic replay runtime", () => {
     vi.advanceTimersByTime(16);
     recorder.recordSignaturePoint(strokeId, 42, 24, 0.6);
     recorder.recordSignatureStrokeEnd(strokeId);
-    recorder.recordSignatureCommit("signature-pad", [[
-      { x: 10, y: 14, t: 0, force: 0.4 },
-      { x: 24, y: 18, t: 16, force: 0.5 },
-      { x: 42, y: 24, t: 32, force: 0.6 },
-    ]]);
+    recorder.recordSignatureCommit("signature-pad", [
+      [
+        { x: 10, y: 14, t: 0, force: 0.4 },
+        { x: 24, y: 18, t: 16, force: 0.5 },
+        { x: 42, y: 24, t: 32, force: 0.6 },
+      ],
+    ]);
 
     recorder.recordFieldValue("reference-code", "PM-AUTO-20260328-AX9");
     vi.advanceTimersByTime(220);

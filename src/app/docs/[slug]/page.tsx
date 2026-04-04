@@ -49,8 +49,9 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
                 <a
                   key={a.id}
                   href={`#${a.id}`}
-                  className={`block truncate text-xs transition hover:text-accent ${a.level === 2 ? "font-medium text-secondary" : a.level === 3 ? "pl-3 text-muted" : "pl-6 text-muted"
-                    }`}
+                  className={`block truncate text-xs transition hover:text-accent ${
+                    a.level === 2 ? "font-medium text-secondary" : a.level === 3 ? "pl-3 text-muted" : "pl-6 text-muted"
+                  }`}
                 >
                   {a.text}
                 </a>

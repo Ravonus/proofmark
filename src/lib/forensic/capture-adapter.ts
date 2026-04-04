@@ -107,7 +107,12 @@ function readDescriptor(el: Element): string {
 function canonicalize(target: EventTarget | Element | string | null | undefined): string | null {
   if (target == null) return null;
   if (typeof target === "string") return `synthetic|${normalizeText(target).slice(0, 96)}`;
-  const el = target instanceof Element ? target : (target as Node).nodeType === Node.ELEMENT_NODE ? (target as Element) : (target as Node).parentElement;
+  const el =
+    target instanceof Element
+      ? target
+      : (target as Node).nodeType === Node.ELEMENT_NODE
+        ? (target as Element)
+        : (target as Node).parentElement;
   if (!el) return "synthetic|unknown";
   const parts: string[] = [];
   let cur: Element | null = el;
@@ -119,7 +124,8 @@ function canonicalize(target: EventTarget | Element | string | null | undefined)
 }
 
 function snapshotViewport(): CapturedViewport {
-  if (typeof window === "undefined") return { width: 0, height: 0, devicePixelRatio: 1, scrollWidth: 0, scrollHeight: 0 };
+  if (typeof window === "undefined")
+    return { width: 0, height: 0, devicePixelRatio: 1, scrollWidth: 0, scrollHeight: 0 };
   const root = document.documentElement;
   return {
     width: Math.round(window.innerWidth),
@@ -281,21 +287,46 @@ export class ForensicCaptureAdapter {
     const y = Math.max(0, Math.round(scrollY));
     if (Math.abs(y - this.lastScrollRecord.y) < 12 && now - this.lastScrollRecord.at < 64) return;
     this.lastScrollRecord = { at: now, y };
-    this.events.push({ type: "scroll", delta: this.delta(), scrollY: y, scrollMax: Math.max(0, Math.round(scrollMax)) });
+    this.events.push({
+      type: "scroll",
+      delta: this.delta(),
+      scrollY: y,
+      scrollMax: Math.max(0, Math.round(scrollMax)),
+    });
   }
 
   recordClick(e: MouseEvent) {
-    this.events.push({ type: "click", delta: this.delta(), targetId: this.target(e.target), x: Math.max(0, Math.round(e.clientX)), y: Math.max(0, Math.round(e.clientY)), button: e.button ?? 0 });
+    this.events.push({
+      type: "click",
+      delta: this.delta(),
+      targetId: this.target(e.target),
+      x: Math.max(0, Math.round(e.clientX)),
+      y: Math.max(0, Math.round(e.clientY)),
+      button: e.button ?? 0,
+    });
   }
 
   recordContextMenu(e: MouseEvent) {
-    this.events.push({ type: "contextMenu", delta: this.delta(), targetId: this.target(e.target), x: Math.max(0, Math.round(e.clientX)), y: Math.max(0, Math.round(e.clientY)) });
+    this.events.push({
+      type: "contextMenu",
+      delta: this.delta(),
+      targetId: this.target(e.target),
+      x: Math.max(0, Math.round(e.clientX)),
+      y: Math.max(0, Math.round(e.clientY)),
+    });
   }
 
   recordKey(e: KeyboardEvent) {
     const key = e.key.length === 1 ? e.key : e.code;
-    const modifiers = (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? 4 : 0) | (e.metaKey ? 8 : 0) | (e.repeat ? 16 : 0);
-    this.events.push({ type: "key", delta: this.delta(), targetId: this.target(e.target), keyId: this.registerString("key", key), modifiers });
+    const modifiers =
+      (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.altKey ? 4 : 0) | (e.metaKey ? 8 : 0) | (e.repeat ? 16 : 0);
+    this.events.push({
+      type: "key",
+      delta: this.delta(),
+      targetId: this.target(e.target),
+      keyId: this.registerString("key", key),
+      modifiers,
+    });
   }
 
   recordFocus(target: EventTarget | Element | string | null) {
@@ -311,27 +342,56 @@ export class ForensicCaptureAdapter {
   }
 
   recordHighlight(target: EventTarget | Element | string | null, label?: string | null) {
-    this.events.push({ type: "highlight", delta: this.delta(), targetId: this.target(target), labelId: label ? this.registerString("label", label) : 0 });
+    this.events.push({
+      type: "highlight",
+      delta: this.delta(),
+      targetId: this.target(target),
+      labelId: label ? this.registerString("label", label) : 0,
+    });
   }
 
   recordNavigation(direction: NAV, target?: EventTarget | Element | string | null, index?: number) {
-    this.events.push({ type: "navigation", delta: this.delta(), direction, targetId: this.target(target ?? null), index: Math.max(0, index ?? 0) });
+    this.events.push({
+      type: "navigation",
+      delta: this.delta(),
+      direction,
+      targetId: this.target(target ?? null),
+      index: Math.max(0, index ?? 0),
+    });
   }
 
   recordPage(page: number, totalPages: number) {
-    this.events.push({ type: "page", delta: this.delta(), page: Math.max(0, Math.round(page)), totalPages: Math.max(0, Math.round(totalPages)) });
+    this.events.push({
+      type: "page",
+      delta: this.delta(),
+      page: Math.max(0, Math.round(page)),
+      totalPages: Math.max(0, Math.round(totalPages)),
+    });
   }
 
   recordModal(name: string, open: boolean) {
     this.events.push({ type: "modal", delta: this.delta(), nameId: this.registerString("label", name), open });
   }
 
-  recordSignatureStart(target: EventTarget | Element | string | null, x: number, y: number, pressure?: number | null): number {
+  recordSignatureStart(
+    target: EventTarget | Element | string | null,
+    x: number,
+    y: number,
+    pressure?: number | null,
+  ): number {
     const strokeId = this.nextStrokeId++;
     const px = Math.max(0, Math.round(x));
     const py = Math.max(0, Math.round(y));
     this.activeStrokes.set(strokeId, { x: px, y: py });
-    this.events.push({ type: "signatureStart", delta: this.delta(), targetId: this.target(target), strokeId, x: px, y: py, pressure: quantizePressure(pressure) });
+    this.events.push({
+      type: "signatureStart",
+      delta: this.delta(),
+      targetId: this.target(target),
+      strokeId,
+      x: px,
+      y: py,
+      pressure: quantizePressure(pressure),
+    });
     return strokeId;
   }
 
@@ -340,7 +400,14 @@ export class ForensicCaptureAdapter {
     const px = Math.max(0, Math.round(x));
     const py = Math.max(0, Math.round(y));
     this.activeStrokes.set(strokeId, { x: px, y: py });
-    this.events.push({ type: "signaturePoint", delta: this.delta(), strokeId, x: px, y: py, pressure: quantizePressure(pressure) });
+    this.events.push({
+      type: "signaturePoint",
+      delta: this.delta(),
+      strokeId,
+      x: px,
+      y: py,
+      pressure: quantizePressure(pressure),
+    });
   }
 
   recordSignatureEnd(strokeId: number) {
@@ -350,7 +417,12 @@ export class ForensicCaptureAdapter {
   }
 
   recordSignatureCommit(target: EventTarget | Element | string | null, encodedSignature: string) {
-    this.events.push({ type: "signatureCommit", delta: this.delta(), targetId: this.target(target), signatureId: this.registerString("signature", encodedSignature) });
+    this.events.push({
+      type: "signatureCommit",
+      delta: this.delta(),
+      targetId: this.target(target),
+      signatureId: this.registerString("signature", encodedSignature),
+    });
   }
 
   recordSignatureClear(target: EventTarget | Element | string | null) {
@@ -360,7 +432,8 @@ export class ForensicCaptureAdapter {
   recordFieldValue(fieldId: string, value: string) {
     const existing = this.pendingFields.get(fieldId);
     if (existing) clearTimeout(existing.timer);
-    const snapshot = value.length <= MAX_FIELD_SNAPSHOT ? value : `__forensic_large__:${value.length}:${fnv1a64(value)}`;
+    const snapshot =
+      value.length <= MAX_FIELD_SNAPSHOT ? value : `__forensic_large__:${value.length}:${fnv1a64(value)}`;
     const timer = setTimeout(() => this.flushField(fieldId), 180);
     this.pendingFields.set(fieldId, { value: snapshot, timer });
   }
@@ -375,19 +448,43 @@ export class ForensicCaptureAdapter {
   }
 
   recordHoverDwell(target: EventTarget | Element | string | null, durationMs: number) {
-    this.events.push({ type: "hoverDwell", delta: this.delta(), targetId: this.target(target), durationMs: Math.round(durationMs) });
+    this.events.push({
+      type: "hoverDwell",
+      delta: this.delta(),
+      targetId: this.target(target),
+      durationMs: Math.round(durationMs),
+    });
   }
 
   recordViewportResize(width: number, height: number) {
-    this.events.push({ type: "viewportResize", delta: this.delta(), width: Math.round(width), height: Math.round(height) });
+    this.events.push({
+      type: "viewportResize",
+      delta: this.delta(),
+      width: Math.round(width),
+      height: Math.round(height),
+    });
   }
 
   recordTouchStart(x: number, y: number, radius?: number, force?: number) {
-    this.events.push({ type: "touchStart", delta: this.delta(), x: Math.max(0, Math.round(x)), y: Math.max(0, Math.round(y)), radius: Math.round(Math.min(255, radius ?? 0)), force: quantizePressure(force) });
+    this.events.push({
+      type: "touchStart",
+      delta: this.delta(),
+      x: Math.max(0, Math.round(x)),
+      y: Math.max(0, Math.round(y)),
+      radius: Math.round(Math.min(255, radius ?? 0)),
+      force: quantizePressure(force),
+    });
   }
 
   recordTouchMove(dx: number, dy: number, radius?: number, force?: number) {
-    this.events.push({ type: "touchMove", delta: this.delta(), dx: Math.round(dx), dy: Math.round(dy), radius: Math.round(Math.min(255, radius ?? 0)), force: quantizePressure(force) });
+    this.events.push({
+      type: "touchMove",
+      delta: this.delta(),
+      dx: Math.round(dx),
+      dy: Math.round(dy),
+      radius: Math.round(Math.min(255, radius ?? 0)),
+      force: quantizePressure(force),
+    });
   }
 
   recordTouchEnd() {
@@ -396,11 +493,22 @@ export class ForensicCaptureAdapter {
 
   recordFieldCorrection(fieldId: string, kind: "backspace" | "delete" | "selectAllReplace" | "undo", count: number) {
     const kindMap = { backspace: 1, delete: 2, selectAllReplace: 3, undo: 4 };
-    this.events.push({ type: "fieldCorrection", delta: this.delta(), targetId: this.target(`field:${fieldId}`), correctionKind: kindMap[kind], count: Math.max(0, count) });
+    this.events.push({
+      type: "fieldCorrection",
+      delta: this.delta(),
+      targetId: this.target(`field:${fieldId}`),
+      correctionKind: kindMap[kind],
+      count: Math.max(0, count),
+    });
   }
 
   recordScrollMomentum(velocity: number, deceleration: number) {
-    this.events.push({ type: "scrollMomentum", delta: this.delta(), velocity: Math.round(velocity), deceleration: Math.max(0, Math.round(deceleration)) });
+    this.events.push({
+      type: "scrollMomentum",
+      delta: this.delta(),
+      velocity: Math.round(velocity),
+      deceleration: Math.max(0, Math.round(deceleration)),
+    });
   }
 
   recordClipboard(action: CLIP, target: EventTarget | Element | string | null, text?: string | null) {
@@ -408,7 +516,13 @@ export class ForensicCaptureAdapter {
     const summary = normalized
       ? `len:${normalized.length}|hash:${fnv1a64(normalized)}|preview:${normalized.slice(0, MAX_CLIPBOARD_PREVIEW)}`
       : "len:0|hash:0000000000000000";
-    this.events.push({ type: "clipboard", delta: this.delta(), action, targetId: this.target(target), summaryId: this.registerString("clipboard", summary) });
+    this.events.push({
+      type: "clipboard",
+      delta: this.delta(),
+      action,
+      targetId: this.target(target),
+      summaryId: this.registerString("clipboard", summary),
+    });
   }
 
   // ── Attach DOM listeners ──────────────────────────────────
@@ -418,11 +532,18 @@ export class ForensicCaptureAdapter {
     if (!el) return;
     const opts: AddEventListenerOptions = { passive: true, signal: this.abortController.signal };
 
-    el.addEventListener("scroll", () => {
-      const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
-      const scrollMax = typeof document !== "undefined" ? document.documentElement.scrollHeight - document.documentElement.clientHeight : 0;
-      this.recordScroll(scrollY, scrollMax);
-    }, opts);
+    el.addEventListener(
+      "scroll",
+      () => {
+        const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+        const scrollMax =
+          typeof document !== "undefined"
+            ? document.documentElement.scrollHeight - document.documentElement.clientHeight
+            : 0;
+        this.recordScroll(scrollY, scrollMax);
+      },
+      opts,
+    );
 
     el.addEventListener("click", (e) => this.recordClick(e as MouseEvent), opts);
     el.addEventListener("contextmenu", (e) => this.recordContextMenu(e as MouseEvent), opts);
@@ -431,65 +552,93 @@ export class ForensicCaptureAdapter {
     el.addEventListener("focusout", (e) => this.recordBlur((e as FocusEvent).target), opts);
 
     // Mouse trajectory — sample every ~50ms to keep size down
-    el.addEventListener("mousemove", (e) => {
-      const me = e as MouseEvent;
-      const now = this.elapsed();
-      if (now - this.lastMouseSampleAt < 50) return;
-      this.lastMouseSampleAt = now;
-      this.recordMouseMove(me.clientX, me.clientY);
-    }, opts);
+    el.addEventListener(
+      "mousemove",
+      (e) => {
+        const me = e as MouseEvent;
+        const now = this.elapsed();
+        if (now - this.lastMouseSampleAt < 50) return;
+        this.lastMouseSampleAt = now;
+        this.recordMouseMove(me.clientX, me.clientY);
+      },
+      opts,
+    );
 
     // Hover dwell — track time spent hovering over targets
-    el.addEventListener("mouseover", (e) => {
-      const target = (e as MouseEvent).target;
-      if (this.hoverTarget && this.hoverTarget !== target) {
-        const dwell = this.elapsed() - this.hoverStartAt;
-        if (dwell > 200) this.recordHoverDwell(this.hoverTarget, dwell);
-      }
-      this.hoverTarget = target;
-      this.hoverStartAt = this.elapsed();
-    }, opts);
+    el.addEventListener(
+      "mouseover",
+      (e) => {
+        const target = (e as MouseEvent).target;
+        if (this.hoverTarget && this.hoverTarget !== target) {
+          const dwell = this.elapsed() - this.hoverStartAt;
+          if (dwell > 200) this.recordHoverDwell(this.hoverTarget, dwell);
+        }
+        this.hoverTarget = target;
+        this.hoverStartAt = this.elapsed();
+      },
+      opts,
+    );
 
     // Touch events
-    el.addEventListener("touchstart", (e) => {
-      const touch = (e as TouchEvent).touches[0];
-      if (touch) this.recordTouchStart(touch.clientX, touch.clientY, (touch as any).radiusX, touch.force);
-    }, opts);
-    el.addEventListener("touchmove", (e) => {
-      const touch = (e as TouchEvent).touches[0];
-      if (touch) {
-        const dx = touch.clientX - this.lastMouseX;
-        const dy = touch.clientY - this.lastMouseY;
-        this.lastMouseX = touch.clientX;
-        this.lastMouseY = touch.clientY;
-        this.recordTouchMove(dx, dy, (touch as any).radiusX, touch.force);
-      }
-    }, opts);
+    el.addEventListener(
+      "touchstart",
+      (e) => {
+        const touch = (e as TouchEvent).touches[0];
+        if (touch) this.recordTouchStart(touch.clientX, touch.clientY, (touch as any).radiusX, touch.force);
+      },
+      opts,
+    );
+    el.addEventListener(
+      "touchmove",
+      (e) => {
+        const touch = (e as TouchEvent).touches[0];
+        if (touch) {
+          const dx = touch.clientX - this.lastMouseX;
+          const dy = touch.clientY - this.lastMouseY;
+          this.lastMouseX = touch.clientX;
+          this.lastMouseY = touch.clientY;
+          this.recordTouchMove(dx, dy, (touch as any).radiusX, touch.force);
+        }
+      },
+      opts,
+    );
     el.addEventListener("touchend", () => this.recordTouchEnd(), opts);
 
     // Viewport resize
     if (typeof window !== "undefined") {
-      window.addEventListener("resize", () => {
-        this.recordViewportResize(window.innerWidth, window.innerHeight);
-      }, opts);
+      window.addEventListener(
+        "resize",
+        () => {
+          this.recordViewportResize(window.innerWidth, window.innerHeight);
+        },
+        opts,
+      );
     }
 
     // Field corrections — listen for backspace/delete in inputs
-    el.addEventListener("keydown", (e) => {
-      const ke = e as KeyboardEvent;
-      const target = ke.target as HTMLElement | null;
-      const fieldId = target?.getAttribute("data-field-id") ?? target?.getAttribute("name");
-      if (!fieldId) return;
-      if (ke.key === "Backspace") this.recordFieldCorrection(fieldId, "backspace", 1);
-      else if (ke.key === "Delete") this.recordFieldCorrection(fieldId, "delete", 1);
-      else if ((ke.metaKey || ke.ctrlKey) && ke.key === "z") this.recordFieldCorrection(fieldId, "undo", 1);
-    }, opts);
+    el.addEventListener(
+      "keydown",
+      (e) => {
+        const ke = e as KeyboardEvent;
+        const target = ke.target as HTMLElement | null;
+        const fieldId = target?.getAttribute("data-field-id") ?? target?.getAttribute("name");
+        if (!fieldId) return;
+        if (ke.key === "Backspace") this.recordFieldCorrection(fieldId, "backspace", 1);
+        else if (ke.key === "Delete") this.recordFieldCorrection(fieldId, "delete", 1);
+        else if ((ke.metaKey || ke.ctrlKey) && ke.key === "z") this.recordFieldCorrection(fieldId, "undo", 1);
+      },
+      opts,
+    );
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", () => this.recordVisibility(document.hidden), opts);
       document.addEventListener("copy", (e) => this.recordClipboard("copy", (e as ClipboardEvent).target, null), opts);
       document.addEventListener("cut", (e) => this.recordClipboard("cut", (e as ClipboardEvent).target, null), opts);
-      document.addEventListener("paste", (e) => this.recordClipboard("paste", (e as ClipboardEvent).target, null), opts);
+      document.addEventListener(
+        "paste",
+        (e) => this.recordClipboard("paste", (e as ClipboardEvent).target, null),
+        opts,
+      );
     }
   }
 
@@ -508,7 +657,12 @@ export class ForensicCaptureAdapter {
     if (!pending) return;
     clearTimeout(pending.timer);
     this.pendingFields.delete(fieldId);
-    this.events.push({ type: "fieldCommit", delta: this.delta(), targetId: this.target(`field:${fieldId}`), valueId: this.registerString("value", pending.value) });
+    this.events.push({
+      type: "fieldCommit",
+      delta: this.delta(),
+      targetId: this.target(`field:${fieldId}`),
+      valueId: this.registerString("value", pending.value),
+    });
   }
 
   private flushAllFields() {

@@ -103,11 +103,8 @@ export default function VerifyPage() {
   };
 
   const doc = verifyQuery.data;
-  const securityModeLabel = doc ? SECURITY_MODE_LABELS[doc.securityMode ?? "HASH_ONLY"] ?? doc.securityMode : null;
-  const encryptedIpfsCid =
-    doc?.encryptedAtRest && doc.securityMode === "ENCRYPTED_IPFS"
-      ? (doc.ipfsCid ?? null)
-      : null;
+  const securityModeLabel = doc ? (SECURITY_MODE_LABELS[doc.securityMode ?? "HASH_ONLY"] ?? doc.securityMode) : null;
+  const encryptedIpfsCid = doc?.encryptedAtRest && doc.securityMode === "ENCRYPTED_IPFS" ? (doc.ipfsCid ?? null) : null;
   const hasEncryptedIpfs = Boolean(encryptedIpfsCid);
 
   return (
@@ -236,10 +233,11 @@ export default function VerifyPage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               {/* Status banner */}
               <div
-                className={`rounded-2xl border p-6 text-center ${doc.status === "COMPLETED"
+                className={`rounded-2xl border p-6 text-center ${
+                  doc.status === "COMPLETED"
                     ? "border-emerald-500/20 bg-emerald-500/5"
                     : "border-amber-500/20 bg-amber-500/5"
-                  }`}
+                }`}
               >
                 <div className="mb-2 flex justify-center">
                   {doc.status === "COMPLETED" ? (
@@ -267,7 +265,11 @@ export default function VerifyPage() {
                 <div className="grid gap-3">
                   <InfoRow icon={<FileText className="h-3.5 w-3.5" />} label="Document ID" value={doc.id} mono />
                   <InfoRow icon={<Hash className="h-3.5 w-3.5" />} label="SHA-256 Hash" value={doc.contentHash} mono />
-                  <InfoRow icon={<Shield className="h-3.5 w-3.5" />} label="Security Mode" value={securityModeLabel ?? "SHA-256 only"} />
+                  <InfoRow
+                    icon={<Shield className="h-3.5 w-3.5" />}
+                    label="Security Mode"
+                    value={securityModeLabel ?? "SHA-256 only"}
+                  />
                   {hasEncryptedIpfs && (
                     <InfoRow
                       icon={<Link className="h-3.5 w-3.5" />}
@@ -383,7 +385,9 @@ export default function VerifyPage() {
                       {hasEncryptedIpfs && (
                         <div className="flex justify-between border-b border-white/[0.04] py-1.5">
                           <span className="text-muted">Encrypted Payload CID</span>
-                          <span className="font-mono text-[11px] text-white/60">{encryptedIpfsCid!.slice(0, 16)}...</span>
+                          <span className="font-mono text-[11px] text-white/60">
+                            {encryptedIpfsCid!.slice(0, 16)}...
+                          </span>
                         </div>
                       )}
                       <div className="flex justify-between border-b border-white/[0.04] py-1.5">
@@ -431,12 +435,13 @@ export default function VerifyPage() {
                                 <td className="px-3 py-2 text-white/60">{s.signMethod ?? s.scheme ?? "WALLET"}</td>
                                 <td className="px-3 py-2">
                                   <span
-                                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${s.identityLevel === "L2_VERIFIED"
+                                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${
+                                      s.identityLevel === "L2_VERIFIED"
                                         ? "bg-emerald-500/20 text-emerald-400"
                                         : s.identityLevel === "L1_EMAIL"
                                           ? "bg-blue-500/20 text-blue-400"
                                           : "bg-white/10 text-white/50"
-                                      }`}
+                                    }`}
                                   >
                                     {s.identityLevel ?? "L0_WALLET"}
                                   </span>
@@ -463,8 +468,9 @@ export default function VerifyPage() {
                     </h3>
                     {doc.auditChainValid !== undefined && (
                       <span
-                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${doc.auditChainValid ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
-                          }`}
+                        className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          doc.auditChainValid ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                        }`}
                       >
                         {doc.auditChainValid ? (
                           <>
@@ -537,12 +543,16 @@ export default function VerifyPage() {
                     {`# Verify document SHA-256
 echo -n '<document content>' | sha256sum
 # Expected: ${doc.contentHash}
-${hasEncryptedIpfs ? `
+${
+  hasEncryptedIpfs
+    ? `
 # Encrypted payload CID
 ipfs cat ${encryptedIpfsCid!} > encrypted-payload.bin
 # The CID addresses the encrypted payload. Verify the document itself
 # with the SHA-256 hash above after decrypting it through your own flow.
-` : ""}
+`
+    : ""
+}
 
 # Verify wallet signatures on-chain
 # Each signature can be verified using the signer's
@@ -554,7 +564,7 @@ ipfs cat ${encryptedIpfsCid!} > encrypted-payload.bin
               {/* Forensic Replay */}
               <div className="glass-card flex items-center justify-between rounded-2xl p-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10">
+                  <div className="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-full">
                     <Play className="h-5 w-5 text-accent" />
                   </div>
                   <div>

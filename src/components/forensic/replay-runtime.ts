@@ -72,7 +72,14 @@ export type ReplayLaneEvent =
   | (ReplayEventBase & { type: "navigation"; direction: string; target: string | null; index: number })
   | (ReplayEventBase & { type: "page"; page: number; totalPages: number })
   | (ReplayEventBase & { type: "modal"; name: string; open: boolean })
-  | (ReplayEventBase & { type: "signatureStart"; target: string | null; strokeId: number; x: number; y: number; pressure: number })
+  | (ReplayEventBase & {
+      type: "signatureStart";
+      target: string | null;
+      strokeId: number;
+      x: number;
+      y: number;
+      pressure: number;
+    })
   | (ReplayEventBase & { type: "signaturePoint"; strokeId: number; x: number; y: number; pressure: number })
   | (ReplayEventBase & { type: "signatureEnd"; strokeId: number })
   | (ReplayEventBase & { type: "signatureCommit"; target: string | null; signature: string })
@@ -83,7 +90,14 @@ export type ReplayLaneEvent =
   // Gaze tracking events (premium)
   | (ReplayEventBase & { type: "gazePoint"; x: number; y: number; confidence: number })
   | (ReplayEventBase & { type: "gazeFixation"; x: number; y: number; durationMs: number; target: string | null })
-  | (ReplayEventBase & { type: "gazeSaccade"; fromX: number; fromY: number; toX: number; toY: number; velocityDegPerS: number })
+  | (ReplayEventBase & {
+      type: "gazeSaccade";
+      fromX: number;
+      fromY: number;
+      toX: number;
+      toY: number;
+      velocityDegPerS: number;
+    })
   | (ReplayEventBase & { type: "gazeBlink"; durationMs: number })
   | (ReplayEventBase & { type: "gazeCalibration"; accuracy: number; pointCount: number })
   | (ReplayEventBase & { type: "gazeLost"; reason: number });
@@ -141,13 +155,30 @@ export interface ReplayLaneSnapshot {
 
 type WasmPlaybackEvent =
   | { type: "scroll"; lane: number; atMs: number; deltaMs: number; scrollY: number; scrollMax: number }
-  | { type: "click"; lane: number; atMs: number; deltaMs: number; targetId: number; x: number; y: number; button: number }
+  | {
+      type: "click";
+      lane: number;
+      atMs: number;
+      deltaMs: number;
+      targetId: number;
+      x: number;
+      y: number;
+      button: number;
+    }
   | { type: "key"; lane: number; atMs: number; deltaMs: number; targetId: number; keyId: number; modifiers: number }
   | { type: "focus"; lane: number; atMs: number; deltaMs: number; targetId: number }
   | { type: "blur"; lane: number; atMs: number; deltaMs: number; targetId: number }
   | { type: "visibility"; lane: number; atMs: number; deltaMs: number; hidden: boolean }
   | { type: "highlight"; lane: number; atMs: number; deltaMs: number; targetId: number; labelId: number }
-  | { type: "navigation"; lane: number; atMs: number; deltaMs: number; direction: string; targetId: number; index: number }
+  | {
+      type: "navigation";
+      lane: number;
+      atMs: number;
+      deltaMs: number;
+      direction: string;
+      targetId: number;
+      index: number;
+    }
   | { type: "page"; lane: number; atMs: number; deltaMs: number; page: number; totalPages: number }
   | { type: "modal"; lane: number; atMs: number; deltaMs: number; nameId: number; open: boolean }
   | {
@@ -161,12 +192,29 @@ type WasmPlaybackEvent =
       y: number;
       pressure: number;
     }
-  | { type: "signaturePoint"; lane: number; atMs: number; deltaMs: number; strokeId: number; x: number; y: number; pressure: number }
+  | {
+      type: "signaturePoint";
+      lane: number;
+      atMs: number;
+      deltaMs: number;
+      strokeId: number;
+      x: number;
+      y: number;
+      pressure: number;
+    }
   | { type: "signatureEnd"; lane: number; atMs: number; deltaMs: number; strokeId: number }
   | { type: "signatureCommit"; lane: number; atMs: number; deltaMs: number; targetId: number; signatureId: number }
   | { type: "signatureClear"; lane: number; atMs: number; deltaMs: number; targetId: number }
   | { type: "fieldCommit"; lane: number; atMs: number; deltaMs: number; targetId: number; valueId: number }
-  | { type: "clipboard"; lane: number; atMs: number; deltaMs: number; action: string; targetId: number; summaryId: number }
+  | {
+      type: "clipboard";
+      lane: number;
+      atMs: number;
+      deltaMs: number;
+      action: string;
+      targetId: number;
+      summaryId: number;
+    }
   | { type: "contextMenu"; lane: number; atMs: number; deltaMs: number; targetId: number; x: number; y: number };
 
 type WasmPlaybackLane = {
@@ -275,7 +323,16 @@ function normalizeFallbackLane(participant: ReplayParticipantSummary, lane: numb
       case "scroll":
         return { type: "scroll", lane, atMs: event.at, deltaMs, scrollY: event.scrollY, scrollMax: event.scrollMax };
       case "click":
-        return { type: "click", lane, atMs: event.at, deltaMs, target: event.target?.descriptor ?? null, x: event.x, y: event.y, button: event.button };
+        return {
+          type: "click",
+          lane,
+          atMs: event.at,
+          deltaMs,
+          target: event.target?.descriptor ?? null,
+          x: event.x,
+          y: event.y,
+          button: event.button,
+        };
       case "key":
         return {
           type: "key",
@@ -357,7 +414,14 @@ function normalizeFallbackLane(participant: ReplayParticipantSummary, lane: numb
       case "signatureClear":
         return { type: "signatureClear", lane, atMs: event.at, deltaMs, target: event.target?.descriptor ?? null };
       case "fieldCommit":
-        return { type: "fieldCommit", lane, atMs: event.at, deltaMs, target: event.target?.descriptor ?? null, value: event.value };
+        return {
+          type: "fieldCommit",
+          lane,
+          atMs: event.at,
+          deltaMs,
+          target: event.target?.descriptor ?? null,
+          value: event.value,
+        };
       case "clipboard":
         return {
           type: "clipboard",
@@ -379,7 +443,15 @@ function normalizeFallbackLane(participant: ReplayParticipantSummary, lane: numb
           y: event.y,
         };
       case "gazePoint":
-        return { type: "gazePoint", lane, atMs: event.at, deltaMs, x: event.x, y: event.y, confidence: event.confidence };
+        return {
+          type: "gazePoint",
+          lane,
+          atMs: event.at,
+          deltaMs,
+          x: event.x,
+          y: event.y,
+          confidence: event.confidence,
+        };
       case "gazeFixation":
         return {
           type: "gazeFixation",
@@ -406,7 +478,14 @@ function normalizeFallbackLane(participant: ReplayParticipantSummary, lane: numb
       case "gazeBlink":
         return { type: "gazeBlink", lane, atMs: event.at, deltaMs, durationMs: event.durationMs };
       case "gazeCalibration":
-        return { type: "gazeCalibration", lane, atMs: event.at, deltaMs, accuracy: event.accuracy, pointCount: event.pointCount };
+        return {
+          type: "gazeCalibration",
+          lane,
+          atMs: event.at,
+          deltaMs,
+          accuracy: event.accuracy,
+          pointCount: event.pointCount,
+        };
       case "gazeLost":
         return { type: "gazeLost", lane, atMs: event.at, deltaMs, reason: event.reason };
     }
@@ -439,9 +518,7 @@ async function loadPlaybackModule() {
   return playbackModulePromise;
 }
 
-export async function prepareReplaySession(
-  participants: ReplayParticipantSummary[],
-): Promise<PreparedReplaySession> {
+export async function prepareReplaySession(participants: ReplayParticipantSummary[]): Promise<PreparedReplaySession> {
   if (participants.length === 0) {
     return { source: "ts", durationMs: 0, lanes: [], mergedEvents: [] };
   }
@@ -478,7 +555,9 @@ export async function prepareReplaySession(
         source: "wasm",
         durationMs: merged.durationMs,
         lanes,
-        mergedEvents: merged.events.map((event) => normalizeWasmEvent(event, replayByLane.get(event.lane) ?? participants[0]!.replay)),
+        mergedEvents: merged.events.map((event) =>
+          normalizeWasmEvent(event, replayByLane.get(event.lane) ?? participants[0]!.replay),
+        ),
       };
     } catch {
       // Fall through to the deterministic TS path.
@@ -562,10 +641,7 @@ export function describeReplayEvent(event: ReplayLaneEvent | null) {
   }
 }
 
-export function buildReplayLaneSnapshot(
-  lane: PreparedReplayLane,
-  currentMs: number,
-): ReplayLaneSnapshot {
+export function buildReplayLaneSnapshot(lane: PreparedReplayLane, currentMs: number): ReplayLaneSnapshot {
   const recentKeys: string[] = [];
   const recentClipboard: ReplayLaneSnapshot["recentClipboard"] = [];
   const recentFields: ReplayLaneSnapshot["recentFields"] = [];

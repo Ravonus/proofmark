@@ -137,7 +137,9 @@ export function AdminPanel() {
       <FadeIn>
         <GlassCard className="p-8 text-center">
           <Shield className="mx-auto h-8 w-8 text-amber-300" />
-          <p className="mt-3 text-sm text-muted">Link the owner wallet to this account before opening admin settings.</p>
+          <p className="mt-3 text-sm text-muted">
+            Link the owner wallet to this account before opening admin settings.
+          </p>
         </GlassCard>
       </FadeIn>
     );
@@ -183,16 +185,15 @@ export function AdminPanel() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${active
-                    ? "bg-[var(--bg-hover)] text-primary"
-                    : "text-muted hover:bg-[var(--bg-hover)] hover:text-secondary"
-                    }`}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                    active
+                      ? "bg-[var(--bg-hover)] text-primary"
+                      : "text-muted hover:bg-[var(--bg-hover)] hover:text-secondary"
+                  }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1">{tab.label}</span>
-                  {tab.premiumOnly && (
-                    <Crown className="h-3 w-3 shrink-0 text-amber-400/60" />
-                  )}
+                  {tab.premiumOnly && <Crown className="h-3 w-3 shrink-0 text-amber-400/60" />}
                   {active && <ChevronRight className="h-3.5 w-3.5 text-muted" />}
                 </button>
               );
@@ -204,7 +205,9 @@ export function AdminPanel() {
       {/* Content */}
       <div className="min-w-0 flex-1 space-y-6">
         {activeTab === "overview" && <OverviewSection status={statusQuery.data} />}
-        {activeTab === "users" && <UsersSection currentAddress={currentWallet?.address} currentChain={currentWallet?.chain} />}
+        {activeTab === "users" && (
+          <UsersSection currentAddress={currentWallet?.address} currentChain={currentWallet?.chain} />
+        )}
         {activeTab === "features" && <GlobalFeaturesSection />}
         {activeTab === "branding" && <BrandingSection />}
         {activeTab === "integrations" && <IntegrationsSection />}
@@ -279,10 +282,30 @@ function OverviewSection({ status }: { status?: OperatorStatus | null }) {
             <h3 className="text-lg font-semibold">Documents</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <StatCard label="Total" value={String(docs.total)} icon={<FileText className="h-4 w-4" />} tone="info" />
-              <StatCard label="Pending" value={String(docs.pending)} icon={<Clock className="h-4 w-4" />} tone="warning" />
-              <StatCard label="Completed" value={String(docs.completed)} icon={<FileCheck className="h-4 w-4" />} tone="success" />
-              <StatCard label="Expired" value={String(docs.expired)} icon={<FileX className="h-4 w-4" />} tone="danger" />
-              <StatCard label="Voided" value={String(docs.voided)} icon={<AlertTriangle className="h-4 w-4" />} tone="muted" />
+              <StatCard
+                label="Pending"
+                value={String(docs.pending)}
+                icon={<Clock className="h-4 w-4" />}
+                tone="warning"
+              />
+              <StatCard
+                label="Completed"
+                value={String(docs.completed)}
+                icon={<FileCheck className="h-4 w-4" />}
+                tone="success"
+              />
+              <StatCard
+                label="Expired"
+                value={String(docs.expired)}
+                icon={<FileX className="h-4 w-4" />}
+                tone="danger"
+              />
+              <StatCard
+                label="Voided"
+                value={String(docs.voided)}
+                icon={<AlertTriangle className="h-4 w-4" />}
+                tone="muted"
+              />
             </div>
           </GlassCard>
         )}
@@ -292,10 +315,30 @@ function OverviewSection({ status }: { status?: OperatorStatus | null }) {
           <GlassCard className="space-y-4">
             <h3 className="text-lg font-semibold">Platform Activity</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard label="Total Signers" value={String(stats.signers.total)} icon={<FilePlus className="h-4 w-4" />} tone="info" />
-              <StatCard label="Signed" value={String(stats.signers.signed)} icon={<UserCheck className="h-4 w-4" />} tone="success" />
-              <StatCard label="Web2 Users" value={String(stats.users)} icon={<Users className="h-4 w-4" />} tone="info" />
-              <StatCard label="Audit Events" value={String(stats.auditEvents)} icon={<Activity className="h-4 w-4" />} tone="muted" />
+              <StatCard
+                label="Total Signers"
+                value={String(stats.signers.total)}
+                icon={<FilePlus className="h-4 w-4" />}
+                tone="info"
+              />
+              <StatCard
+                label="Signed"
+                value={String(stats.signers.signed)}
+                icon={<UserCheck className="h-4 w-4" />}
+                tone="success"
+              />
+              <StatCard
+                label="Web2 Users"
+                value={String(stats.users)}
+                icon={<Users className="h-4 w-4" />}
+                tone="info"
+              />
+              <StatCard
+                label="Audit Events"
+                value={String(stats.auditEvents)}
+                icon={<Activity className="h-4 w-4" />}
+                tone="muted"
+              />
             </div>
           </GlassCard>
         )}
@@ -305,8 +348,7 @@ function OverviewSection({ status }: { status?: OperatorStatus | null }) {
           <GlassCard className="space-y-2">
             <h4 className="text-sm font-semibold">Owner Wallet</h4>
             <p className="text-sm text-secondary">
-              {CHAIN_META[status.ownerWallet.chain].icon}{" "}
-              {status.ownerWallet.address}
+              {CHAIN_META[status.ownerWallet.chain].icon} {status.ownerWallet.address}
             </p>
             <p className="text-xs text-muted">{CHAIN_META[status.ownerWallet.chain].label}</p>
           </GlassCard>
@@ -318,7 +360,13 @@ function OverviewSection({ status }: { status?: OperatorStatus | null }) {
 
 // ── Users Section ──
 
-function UsersSection({ currentAddress, currentChain }: { currentAddress?: string | null; currentChain?: WalletChain | string | null }) {
+function UsersSection({
+  currentAddress,
+  currentChain,
+}: {
+  currentAddress?: string | null;
+  currentChain?: WalletChain | string | null;
+}) {
   const utils = trpc.useUtils();
   const knownWalletsQuery = trpc.account.knownWallets.useQuery();
   const [selectedWallet, setSelectedWallet] = useState<{ address: string; chain: WalletChain } | null>(null);
@@ -373,7 +421,7 @@ function UsersSection({ currentAddress, currentChain }: { currentAddress?: strin
                 Select a wallet to manage feature access and subscription overrides.
               </p>
             </div>
-            <span className="rounded-full border border-border bg-surface/40 px-2.5 py-1 text-xs text-muted">
+            <span className="bg-surface/40 rounded-full border border-border px-2.5 py-1 text-xs text-muted">
               {wallets.length} users
             </span>
           </div>
@@ -398,19 +446,16 @@ function UsersSection({ currentAddress, currentChain }: { currentAddress?: strin
               </p>
             ) : (
               filteredWallets.map((wallet) => {
-                const isSelected =
-                  selectedWallet?.address === wallet.address && selectedWallet?.chain === wallet.chain;
-                const isCurrent =
-                  currentAddress === wallet.address && currentChain === wallet.chain;
+                const isSelected = selectedWallet?.address === wallet.address && selectedWallet?.chain === wallet.chain;
+                const isCurrent = currentAddress === wallet.address && currentChain === wallet.chain;
                 return (
                   <button
                     key={`${wallet.chain}:${wallet.address}`}
                     type="button"
                     onClick={() => setSelectedWallet({ address: wallet.address, chain: wallet.chain })}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${isSelected
-                      ? "bg-accent/10 ring-1 ring-accent/30"
-                      : "hover:bg-[var(--bg-hover)]"
-                      }`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                      isSelected ? "bg-accent/10 ring-accent/30 ring-1" : "hover:bg-[var(--bg-hover)]"
+                    }`}
                   >
                     <span className="text-lg">{CHAIN_META[wallet.chain].icon}</span>
                     <div className="min-w-0 flex-1">
@@ -440,21 +485,35 @@ function UsersSection({ currentAddress, currentChain }: { currentAddress?: strin
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h3 className="text-lg font-semibold">
-                  {CHAIN_META[selectedWallet.chain].icon}{" "}
-                  {addressPreview(selectedWallet.address)}
+                  {CHAIN_META[selectedWallet.chain].icon} {addressPreview(selectedWallet.address)}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
                   {CHAIN_META[selectedWallet.chain].label} · {selectedWallet.address}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <AnimatedButton variant="primary" className="px-3 py-1.5 text-xs" disabled={setOverrides.isPending} onClick={() => batchOverride(premiumFeatures, true)}>
+                <AnimatedButton
+                  variant="primary"
+                  className="px-3 py-1.5 text-xs"
+                  disabled={setOverrides.isPending}
+                  onClick={() => batchOverride(premiumFeatures, true)}
+                >
                   Enable All Premium
                 </AnimatedButton>
-                <AnimatedButton variant="danger" className="px-3 py-1.5 text-xs" disabled={setOverrides.isPending} onClick={() => batchOverride(premiumFeatures, false)}>
+                <AnimatedButton
+                  variant="danger"
+                  className="px-3 py-1.5 text-xs"
+                  disabled={setOverrides.isPending}
+                  onClick={() => batchOverride(premiumFeatures, false)}
+                >
                   Disable All Premium
                 </AnimatedButton>
-                <AnimatedButton variant="secondary" className="px-3 py-1.5 text-xs" disabled={setOverrides.isPending} onClick={() => batchOverride(premiumFeatures, null)}>
+                <AnimatedButton
+                  variant="secondary"
+                  className="px-3 py-1.5 text-xs"
+                  disabled={setOverrides.isPending}
+                  onClick={() => batchOverride(premiumFeatures, null)}
+                >
                   Clear Overrides
                 </AnimatedButton>
               </div>
@@ -469,7 +528,12 @@ function UsersSection({ currentAddress, currentChain }: { currentAddress?: strin
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">Premium Features</p>
                     {premiumFeatures.map((f) => (
-                      <FeatureToggleRow key={f.id} feature={f} onToggle={toggleFeature} pending={setOverrides.isPending} />
+                      <FeatureToggleRow
+                        key={f.id}
+                        feature={f}
+                        onToggle={toggleFeature}
+                        pending={setOverrides.isPending}
+                      />
                     ))}
                   </div>
                 )}
@@ -478,16 +542,19 @@ function UsersSection({ currentAddress, currentChain }: { currentAddress?: strin
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted">OSS Features</p>
                     {ossFeatures.map((f) => (
-                      <FeatureToggleRow key={f.id} feature={f} onToggle={toggleFeature} pending={setOverrides.isPending} />
+                      <FeatureToggleRow
+                        key={f.id}
+                        feature={f}
+                        onToggle={toggleFeature}
+                        pending={setOverrides.isPending}
+                      />
                     ))}
                   </div>
                 )}
               </>
             )}
 
-            {setOverrides.error && (
-              <p className="text-sm text-red-300">{setOverrides.error.message}</p>
-            )}
+            {setOverrides.error && <p className="text-sm text-red-300">{setOverrides.error.message}</p>}
           </GlassCard>
         </FadeIn>
       )}
@@ -514,11 +581,7 @@ function FeatureToggleRow({
             label={feature.effectiveEnabled ? "On" : "Off"}
           />
           <StatusPill
-            tone={
-              feature.source === "override_on" ? "info"
-                : feature.source === "override_off" ? "danger"
-                  : "muted"
-            }
+            tone={feature.source === "override_on" ? "info" : feature.source === "override_off" ? "danger" : "muted"}
             label={feature.source.replace(/_/g, " ")}
           />
         </div>
@@ -528,12 +591,14 @@ function FeatureToggleRow({
         type="button"
         onClick={() => onToggle(feature.id, feature.effectiveEnabled)}
         disabled={pending}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${feature.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
-          } ${pending ? "opacity-50" : ""}`}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+          feature.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
+        } ${pending ? "opacity-50" : ""}`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${feature.effectiveEnabled ? "translate-x-[22px]" : "translate-x-0.5"
-            }`}
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            feature.effectiveEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
         />
       </button>
     </div>
@@ -591,7 +656,11 @@ function GlobalFeaturesSection() {
                           <p className="text-xs text-muted">{f.summary}</p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          {f.oss ? <StatusPill tone="success" label="OSS" /> : <StatusPill tone="warning" label="Premium" />}
+                          {f.oss ? (
+                            <StatusPill tone="success" label="OSS" />
+                          ) : (
+                            <StatusPill tone="warning" label="Premium" />
+                          )}
                           {f.byo && <StatusPill tone="info" label="BYO" />}
                         </div>
                       </div>
@@ -702,7 +771,10 @@ function BrandingSection() {
             <AnimatedButton
               variant="primary"
               className="px-3 py-1.5 text-xs"
-              onClick={() => { setForm(EMPTY_BRANDING); setEditing(true); }}
+              onClick={() => {
+                setForm(EMPTY_BRANDING);
+                setEditing(true);
+              }}
             >
               <Plus className="mr-1 inline h-3 w-3" /> New Profile
             </AnimatedButton>
@@ -712,11 +784,16 @@ function BrandingSection() {
           {profiles.length > 0 && (
             <div className="space-y-2">
               {profiles.map((profile) => (
-                <div key={profile.id} className="bg-surface/30 flex items-center justify-between gap-3 rounded-xl border border-border p-4">
+                <div
+                  key={profile.id}
+                  className="bg-surface/30 flex items-center justify-between gap-3 rounded-xl border border-border p-4"
+                >
                   <div className="flex items-center gap-3">
                     <div
                       className="h-8 w-8 rounded-lg border border-white/10"
-                      style={{ background: `linear-gradient(135deg, ${profile.settings.primaryColor || "#6366f1"}, ${profile.settings.accentColor || "#22c55e"})` }}
+                      style={{
+                        background: `linear-gradient(135deg, ${profile.settings.primaryColor || "#6366f1"}, ${profile.settings.accentColor || "#22c55e"})`,
+                      }}
                     />
                     <div>
                       <p className="text-sm font-medium">{profile.name}</p>
@@ -725,10 +802,18 @@ function BrandingSection() {
                     {profile.isDefault && <StatusPill tone="success" label="Default" />}
                   </div>
                   <div className="flex gap-2">
-                    <AnimatedButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => editProfile(profile)}>
+                    <AnimatedButton
+                      variant="secondary"
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => editProfile(profile)}
+                    >
                       Edit
                     </AnimatedButton>
-                    <AnimatedButton variant="danger" className="px-2 py-1.5 text-xs" onClick={() => deleteBranding.mutate({ id: profile.id })}>
+                    <AnimatedButton
+                      variant="danger"
+                      className="px-2 py-1.5 text-xs"
+                      onClick={() => deleteBranding.mutate({ id: profile.id })}
+                    >
                       <Trash2 className="h-3 w-3" />
                     </AnimatedButton>
                   </div>
@@ -738,7 +823,9 @@ function BrandingSection() {
           )}
 
           {profiles.length === 0 && !editing && (
-            <p className="py-4 text-center text-sm text-muted">No branding profiles yet. Create one to customize your signing experience.</p>
+            <p className="py-4 text-center text-sm text-muted">
+              No branding profiles yet. Create one to customize your signing experience.
+            </p>
           )}
         </GlassCard>
 
@@ -748,16 +835,48 @@ function BrandingSection() {
             <h4 className="text-sm font-semibold">{form.id ? "Edit Profile" : "New Branding Profile"}</h4>
             <div className="grid gap-3 md:grid-cols-2">
               <TextField label="Profile name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} />
-              <TextField label="Brand name" value={form.brandName} onChange={(v) => setForm({ ...form, brandName: v })} />
+              <TextField
+                label="Brand name"
+                value={form.brandName}
+                onChange={(v) => setForm({ ...form, brandName: v })}
+              />
               <TextField label="Logo URL" value={form.logoUrl} onChange={(v) => setForm({ ...form, logoUrl: v })} />
-              <TextField label="Reply-to email" value={form.emailReplyTo} onChange={(v) => setForm({ ...form, emailReplyTo: v })} />
-              <ColorField label="Primary color" value={form.primaryColor} onChange={(v) => setForm({ ...form, primaryColor: v })} />
-              <ColorField label="Accent color" value={form.accentColor} onChange={(v) => setForm({ ...form, accentColor: v })} />
-              <TextField label="From name" value={form.emailFromName} onChange={(v) => setForm({ ...form, emailFromName: v })} />
-              <TextField label="Signing intro" value={form.signingIntro} onChange={(v) => setForm({ ...form, signingIntro: v })} />
+              <TextField
+                label="Reply-to email"
+                value={form.emailReplyTo}
+                onChange={(v) => setForm({ ...form, emailReplyTo: v })}
+              />
+              <ColorField
+                label="Primary color"
+                value={form.primaryColor}
+                onChange={(v) => setForm({ ...form, primaryColor: v })}
+              />
+              <ColorField
+                label="Accent color"
+                value={form.accentColor}
+                onChange={(v) => setForm({ ...form, accentColor: v })}
+              />
+              <TextField
+                label="From name"
+                value={form.emailFromName}
+                onChange={(v) => setForm({ ...form, emailFromName: v })}
+              />
+              <TextField
+                label="Signing intro"
+                value={form.signingIntro}
+                onChange={(v) => setForm({ ...form, signingIntro: v })}
+              />
             </div>
-            <TextareaField label="Email intro" value={form.emailIntro} onChange={(v) => setForm({ ...form, emailIntro: v })} />
-            <TextareaField label="Email footer" value={form.emailFooter} onChange={(v) => setForm({ ...form, emailFooter: v })} />
+            <TextareaField
+              label="Email intro"
+              value={form.emailIntro}
+              onChange={(v) => setForm({ ...form, emailIntro: v })}
+            />
+            <TextareaField
+              label="Email footer"
+              value={form.emailFooter}
+              onChange={(v) => setForm({ ...form, emailFooter: v })}
+            />
             <div className="flex gap-2">
               <AnimatedButton className="px-4 py-2" onClick={saveProfile} disabled={upsertBranding.isPending}>
                 {upsertBranding.isPending ? "Saving..." : "Save Profile"}
@@ -874,7 +993,11 @@ function IntegrationsSection() {
   const saveAddress = () => {
     let parsedHeaders: Record<string, string> | undefined;
     if (addressProvider === "CUSTOM" && addressHeaders.trim()) {
-      try { parsedHeaders = JSON.parse(addressHeaders); } catch { return; }
+      try {
+        parsedHeaders = JSON.parse(addressHeaders);
+      } catch {
+        return;
+      }
     }
     upsertIntegration.mutate({
       kind: "ADDRESS",
@@ -936,12 +1059,13 @@ function IntegrationsSection() {
           <div>
             <h3 className="text-lg font-semibold">Integration Providers</h3>
             <p className="mt-1 text-sm text-muted">
-              Configure your own API keys for SMS, address autocomplete, payments, and SSO. These are &quot;Bring Your Own&quot; integrations that work in both OSS and Premium.
+              Configure your own API keys for SMS, address autocomplete, payments, and SSO. These are &quot;Bring Your
+              Own&quot; integrations that work in both OSS and Premium.
             </p>
           </div>
 
           {/* Sub-tabs */}
-          <div className="flex gap-1 rounded-lg border border-border bg-surface/30 p-1">
+          <div className="bg-surface/30 flex gap-1 rounded-lg border border-border p-1">
             {intTabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -949,15 +1073,12 @@ function IntegrationsSection() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveIntTab(tab.id)}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${activeIntTab === tab.id
-                    ? "bg-accent/20 text-accent"
-                    : "text-muted hover:text-secondary"
-                    }`}
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    activeIntTab === tab.id ? "bg-accent/20 text-accent" : "text-muted hover:text-secondary"
+                  }`}
                 >
                   <Icon className="h-3.5 w-3.5" /> {tab.label}
-                  {tab.count > 0 && (
-                    <span className="rounded-full bg-surface/50 px-1.5 text-[10px]">{tab.count}</span>
-                  )}
+                  {tab.count > 0 && <span className="bg-surface/50 rounded-full px-1.5 text-[10px]">{tab.count}</span>}
                 </button>
               );
             })}
@@ -970,7 +1091,12 @@ function IntegrationsSection() {
             <h4 className="text-sm font-semibold">SMS Provider</h4>
             <p className="text-xs text-muted">Twilio, Vonage, or Telnyx for SMS invites and reminders.</p>
             <div className="grid gap-3 md:grid-cols-2">
-              <SelectField label="Provider" value={smsProvider} onChange={setSmsProvider} options={["TWILIO", "VONAGE", "TELNYX"]} />
+              <SelectField
+                label="Provider"
+                value={smsProvider}
+                onChange={setSmsProvider}
+                options={["TWILIO", "VONAGE", "TELNYX"]}
+              />
               <TextField label="Label" value={smsLabel} onChange={setSmsLabel} />
               <TextField label="From number / sender" value={smsFrom} onChange={setSmsFrom} />
               {smsProvider === "TWILIO" && (
@@ -1000,9 +1126,16 @@ function IntegrationsSection() {
         {activeIntTab === "address" && (
           <GlassCard className="space-y-4">
             <h4 className="text-sm font-semibold">Address Autocomplete</h4>
-            <p className="text-xs text-muted">Geocoding for signer-side address suggestions — Mapbox, Geoapify, or custom endpoint.</p>
+            <p className="text-xs text-muted">
+              Geocoding for signer-side address suggestions — Mapbox, Geoapify, or custom endpoint.
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
-              <SelectField label="Provider" value={addressProvider} onChange={setAddressProvider} options={["MAPBOX", "GEOAPIFY", "CUSTOM"]} />
+              <SelectField
+                label="Provider"
+                value={addressProvider}
+                onChange={setAddressProvider}
+                options={["MAPBOX", "GEOAPIFY", "CUSTOM"]}
+              />
               <TextField label="Label" value={addressLabel} onChange={setAddressLabel} />
               {addressProvider !== "CUSTOM" ? (
                 <TextField label="API key" value={addressApiKey} onChange={setAddressApiKey} password />
@@ -1013,7 +1146,13 @@ function IntegrationsSection() {
                 <TextareaField label="Custom headers (JSON)" value={addressHeaders} onChange={setAddressHeaders} />
               )}
             </div>
-            <AnimatedButton className="px-4 py-2" onClick={saveAddress} disabled={upsertIntegration.isPending || (addressProvider === "CUSTOM" ? !addressEndpoint : !addressApiKey)}>
+            <AnimatedButton
+              className="px-4 py-2"
+              onClick={saveAddress}
+              disabled={
+                upsertIntegration.isPending || (addressProvider === "CUSTOM" ? !addressEndpoint : !addressApiKey)
+              }
+            >
               Save Address Provider
             </AnimatedButton>
             <IntegrationList items={addressIntegrations} onDelete={(id) => deleteIntegration.mutate({ id })} />
@@ -1024,14 +1163,25 @@ function IntegrationsSection() {
         {activeIntTab === "payment" && (
           <GlassCard className="space-y-4">
             <h4 className="text-sm font-semibold">Payment Collection</h4>
-            <p className="text-xs text-muted">Collect payments inside the signing flow with Stripe or a custom provider.</p>
+            <p className="text-xs text-muted">
+              Collect payments inside the signing flow with Stripe or a custom provider.
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
-              <SelectField label="Provider" value={payProvider} onChange={setPayProvider} options={["STRIPE", "CUSTOM"]} />
+              <SelectField
+                label="Provider"
+                value={payProvider}
+                onChange={setPayProvider}
+                options={["STRIPE", "CUSTOM"]}
+              />
               <TextField label="Label" value={payLabel} onChange={setPayLabel} />
               <TextField label="API key (publishable)" value={payApiKey} onChange={setPayApiKey} password />
               <TextField label="API secret" value={payApiSecret} onChange={setPayApiSecret} password />
             </div>
-            <AnimatedButton className="px-4 py-2" onClick={savePayment} disabled={upsertIntegration.isPending || !payApiKey}>
+            <AnimatedButton
+              className="px-4 py-2"
+              onClick={savePayment}
+              disabled={upsertIntegration.isPending || !payApiKey}
+            >
               Save Payment Provider
             </AnimatedButton>
             <IntegrationList items={paymentIntegrations} onDelete={(id) => deleteIntegration.mutate({ id })} />
@@ -1042,9 +1192,16 @@ function IntegrationsSection() {
         {activeIntTab === "sso" && (
           <GlassCard className="space-y-4">
             <h4 className="text-sm font-semibold">SSO / OAuth Providers</h4>
-            <p className="text-xs text-muted">Identity providers for Web2 login: Google, Auth0, Okta, or custom OIDC.</p>
+            <p className="text-xs text-muted">
+              Identity providers for Web2 login: Google, Auth0, Okta, or custom OIDC.
+            </p>
             <div className="grid gap-3 md:grid-cols-2">
-              <SelectField label="Provider" value={ssoProvider} onChange={setSsoProvider} options={["GOOGLE", "AUTH0", "OKTA", "CUSTOM"]} />
+              <SelectField
+                label="Provider"
+                value={ssoProvider}
+                onChange={setSsoProvider}
+                options={["GOOGLE", "AUTH0", "OKTA", "CUSTOM"]}
+              />
               <TextField label="Label" value={ssoLabel} onChange={setSsoLabel} />
               <TextField label="Client ID" value={ssoClientId} onChange={setSsoClientId} />
               <TextField label="Client Secret" value={ssoClientSecret} onChange={setSsoClientSecret} password />
@@ -1052,7 +1209,11 @@ function IntegrationsSection() {
                 <TextField label="Issuer URL" value={ssoIssuer} onChange={setSsoIssuer} />
               )}
             </div>
-            <AnimatedButton className="px-4 py-2" onClick={saveSso} disabled={upsertIntegration.isPending || !ssoClientId}>
+            <AnimatedButton
+              className="px-4 py-2"
+              onClick={saveSso}
+              disabled={upsertIntegration.isPending || !ssoClientId}
+            >
               Save SSO Provider
             </AnimatedButton>
             <IntegrationList items={ssoIntegrations} onDelete={(id) => deleteIntegration.mutate({ id })} />
@@ -1075,12 +1236,20 @@ function IntegrationList({
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">Configured</p>
       {items.map((entry) => (
-        <div key={entry.id} className="bg-surface/30 flex items-center justify-between rounded-xl border border-border p-3 text-sm">
+        <div
+          key={entry.id}
+          className="bg-surface/30 flex items-center justify-between rounded-xl border border-border p-3 text-sm"
+        >
           <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${entry.config.enabled !== false ? "bg-emerald-400" : "bg-zinc-600"}`} />
+            <div
+              className={`h-2 w-2 rounded-full ${entry.config.enabled !== false ? "bg-emerald-400" : "bg-zinc-600"}`}
+            />
             <div>
               <p className="font-medium">{entry.label}</p>
-              <p className="text-xs text-muted">{entry.provider}{entry.isDefault ? " · Default" : ""}</p>
+              <p className="text-xs text-muted">
+                {entry.provider}
+                {entry.isDefault ? " · Default" : ""}
+              </p>
             </div>
           </div>
           <AnimatedButton variant="danger" className="px-2 py-1 text-xs" onClick={() => onDelete(entry.id)}>
@@ -1098,7 +1267,12 @@ function WebhooksSection() {
   const utils = trpc.useUtils();
   const workspaceQuery = trpc.account.workspace.useQuery();
   const upsertWebhook = trpc.account.upsertWebhook.useMutation({
-    onSuccess: () => { utils.account.workspace.invalidate(); setLabel(""); setUrl(""); setSecret(""); },
+    onSuccess: () => {
+      utils.account.workspace.invalidate();
+      setLabel("");
+      setUrl("");
+      setSecret("");
+    },
   });
   const deleteWebhook = trpc.account.deleteWebhook.useMutation({
     onSuccess: () => utils.account.workspace.invalidate(),
@@ -1112,9 +1286,16 @@ function WebhooksSection() {
   const webhooks = workspaceQuery.data?.webhooks ?? [];
 
   const ALL_EVENTS = [
-    "DOCUMENT_CREATED", "DOCUMENT_COMPLETED", "DOCUMENT_VOIDED", "DOCUMENT_EXPIRED",
-    "SIGNER_INVITED", "SIGNER_SIGNED", "SIGNER_DECLINED", "SIGNER_VIEWED",
-    "AUDIT_HASH_ANCHORED", "PROOF_PACKET_GENERATED",
+    "DOCUMENT_CREATED",
+    "DOCUMENT_COMPLETED",
+    "DOCUMENT_VOIDED",
+    "DOCUMENT_EXPIRED",
+    "SIGNER_INVITED",
+    "SIGNER_SIGNED",
+    "SIGNER_DECLINED",
+    "SIGNER_VIEWED",
+    "AUDIT_HASH_ANCHORED",
+    "PROOF_PACKET_GENERATED",
   ];
 
   return (
@@ -1139,23 +1320,30 @@ function WebhooksSection() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Events to subscribe</p>
             <div className="flex flex-wrap gap-2">
               {ALL_EVENTS.map((evt) => {
-                const selected = events.split(",").map((e) => e.trim()).includes(evt);
+                const selected = events
+                  .split(",")
+                  .map((e) => e.trim())
+                  .includes(evt);
                 return (
                   <button
                     key={evt}
                     type="button"
                     onClick={() => {
-                      const current = events.split(",").map((e) => e.trim()).filter(Boolean);
+                      const current = events
+                        .split(",")
+                        .map((e) => e.trim())
+                        .filter(Boolean);
                       if (selected) {
                         setEvents(current.filter((e) => e !== evt).join(","));
                       } else {
                         setEvents([...current, evt].join(","));
                       }
                     }}
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${selected
-                      ? "border-accent/30 bg-accent/10 text-accent"
-                      : "border-border bg-surface/30 text-muted hover:text-secondary"
-                      }`}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition ${
+                      selected
+                        ? "border-accent/30 bg-accent/10 text-accent"
+                        : "bg-surface/30 border-border text-muted hover:text-secondary"
+                    }`}
                   >
                     {selected && <Check className="mr-1 inline h-2.5 w-2.5" />}
                     {evt.replace(/_/g, " ")}
@@ -1173,7 +1361,10 @@ function WebhooksSection() {
                 url,
                 secret: secret || undefined,
                 active: true,
-                events: events.split(",").map((e) => e.trim()).filter(Boolean),
+                events: events
+                  .split(",")
+                  .map((e) => e.trim())
+                  .filter(Boolean),
               })
             }
             disabled={upsertWebhook.isPending || !label || !url}
@@ -1196,7 +1387,10 @@ function WebhooksSection() {
                     <p className="mt-1 text-sm text-muted">{hook.url}</p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {hook.events.map((evt) => (
-                        <span key={evt} className="rounded-full border border-border bg-surface/40 px-2 py-0.5 text-[10px] text-muted">
+                        <span
+                          key={evt}
+                          className="bg-surface/40 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted"
+                        >
                           {evt.replace(/_/g, " ")}
                         </span>
                       ))}
@@ -1206,11 +1400,13 @@ function WebhooksSection() {
                         Last triggered: {new Date(hook.lastTriggeredAt).toLocaleString()}
                       </p>
                     )}
-                    {hook.lastError && (
-                      <p className="mt-1 text-xs text-red-300">Last error: {hook.lastError}</p>
-                    )}
+                    {hook.lastError && <p className="mt-1 text-xs text-red-300">Last error: {hook.lastError}</p>}
                   </div>
-                  <AnimatedButton variant="danger" className="px-3 py-1.5 text-xs" onClick={() => deleteWebhook.mutate({ id: hook.id })}>
+                  <AnimatedButton
+                    variant="danger"
+                    className="px-3 py-1.5 text-xs"
+                    onClick={() => deleteWebhook.mutate({ id: hook.id })}
+                  >
                     Remove
                   </AnimatedButton>
                 </div>
@@ -1244,27 +1440,37 @@ function TemplatesSection() {
           <div>
             <h3 className="text-lg font-semibold">Document Templates</h3>
             <p className="mt-1 text-sm text-muted">
-              Reusable signing blueprints created from the document editor. Templates include signers, fields, and default settings.
+              Reusable signing blueprints created from the document editor. Templates include signers, fields, and
+              default settings.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label="Total Templates" value={String(templates.length)} icon={<FileText className="h-4 w-4" />} tone="info" />
+            <StatCard
+              label="Total Templates"
+              value={String(templates.length)}
+              icon={<FileText className="h-4 w-4" />}
+              tone="info"
+            />
             <StatCard
               label="With Signers"
-              value={String(templates.filter((t) => {
-                const s = t.signers as unknown[];
-                return s && s.length > 0;
-              }).length)}
+              value={String(
+                templates.filter((t) => {
+                  const s = t.signers as unknown[];
+                  return s && s.length > 0;
+                }).length,
+              )}
               icon={<Users className="h-4 w-4" />}
               tone="success"
             />
             <StatCard
               label="With Expiry"
-              value={String(templates.filter((t) => {
-                const d = t.defaults as { expiresInDays?: number } | null;
-                return d?.expiresInDays;
-              }).length)}
+              value={String(
+                templates.filter((t) => {
+                  const d = t.defaults as { expiresInDays?: number } | null;
+                  return d?.expiresInDays;
+                }).length,
+              )}
               icon={<Clock className="h-4 w-4" />}
               tone="warning"
             />
@@ -1276,7 +1482,11 @@ function TemplatesSection() {
             <h4 className="text-sm font-semibold">All Templates</h4>
             {templates.map((template) => {
               const signerCount = (template.signers as unknown[])?.length ?? 0;
-              const defaults = template.defaults as { proofMode?: string; signingOrder?: string; expiresInDays?: number } | null;
+              const defaults = template.defaults as {
+                proofMode?: string;
+                signingOrder?: string;
+                expiresInDays?: number;
+              } | null;
               return (
                 <div key={template.id} className="bg-surface/30 rounded-xl border border-border p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -1288,7 +1498,9 @@ function TemplatesSection() {
                         <StatusPill tone="info" label={`${signerCount} signer${signerCount !== 1 ? "s" : ""}`} />
                         {defaults?.proofMode && <StatusPill tone="muted" label={defaults.proofMode} />}
                         {defaults?.signingOrder && <StatusPill tone="muted" label={defaults.signingOrder} />}
-                        {defaults?.expiresInDays && <StatusPill tone="warning" label={`${defaults.expiresInDays}d expiry`} />}
+                        {defaults?.expiresInDays && (
+                          <StatusPill tone="warning" label={`${defaults.expiresInDays}d expiry`} />
+                        )}
                       </div>
                     </div>
                     <AnimatedButton
@@ -1325,7 +1537,10 @@ function AiLimitsSection() {
     onSuccess: () => utils.account.adminListAiLimits.invalidate(),
   });
   const setLimitMut = trpc.account.adminSetAiLimits.useMutation({
-    onSuccess: () => { utils.account.adminListAiLimits.invalidate(); setShowForm(false); },
+    onSuccess: () => {
+      utils.account.adminListAiLimits.invalidate();
+      setShowForm(false);
+    },
   });
 
   const [showForm, setShowForm] = useState(false);
@@ -1372,14 +1587,15 @@ function AiLimitsSection() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface/30 p-1">
+          <div className="bg-surface/30 flex flex-wrap gap-1 rounded-lg border border-border p-1">
             {(["tools", "runtime", "providers", "limits", "usage"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveAiTab(tab)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${activeAiTab === tab ? "bg-accent/20 text-accent" : "text-muted hover:text-secondary"
-                  }`}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  activeAiTab === tab ? "bg-accent/20 text-accent" : "text-muted hover:text-secondary"
+                }`}
               >
                 {tab === "tools" && <Sparkles className="h-3.5 w-3.5" />}
                 {tab === "runtime" && <Server className="h-3.5 w-3.5" />}
@@ -1399,7 +1615,8 @@ function AiLimitsSection() {
               <div>
                 <h4 className="text-sm font-semibold">AI CLI Tools</h4>
                 <p className="text-xs text-muted">
-                  Auto-detected AI tools on this server. These can be used with the OpenClaw connector for local AI execution.
+                  Auto-detected AI tools on this server. These can be used with the OpenClaw connector for local AI
+                  execution.
                 </p>
               </div>
               <button
@@ -1418,15 +1635,17 @@ function AiLimitsSection() {
                 {(toolsQuery.data ?? []).map((tool) => (
                   <div
                     key={tool.binary}
-                    className={`rounded-xl border p-4 ${tool.found
-                      ? "border-emerald-400/20 bg-emerald-400/5"
-                      : "border-border bg-surface/30"
-                      }`}
+                    className={`rounded-xl border p-4 ${
+                      tool.found ? "border-emerald-400/20 bg-emerald-400/5" : "bg-surface/30 border-border"
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg ${tool.found ? "bg-emerald-400/10 text-emerald-300" : "bg-surface/50 text-muted"
-                          }`}>
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg ${
+                            tool.found ? "bg-emerald-400/10 text-emerald-300" : "bg-surface/50 text-muted"
+                          }`}
+                        >
                           {tool.binary === "claude" ? "C" : tool.binary === "codex" ? "X" : "O"}
                         </div>
                         <div>
@@ -1441,12 +1660,12 @@ function AiLimitsSection() {
                     </div>
                     {tool.found && (
                       <div className="mt-3 space-y-1">
-                        <div className="flex items-center gap-2 rounded-lg bg-surface/20 px-3 py-2 font-mono text-xs">
+                        <div className="bg-surface/20 flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs">
                           <span className="text-muted">Path:</span>
                           <span className="text-secondary">{tool.path}</span>
                         </div>
                         {tool.version && (
-                          <div className="flex items-center gap-2 rounded-lg bg-surface/20 px-3 py-2 font-mono text-xs">
+                          <div className="bg-surface/20 flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs">
                             <span className="text-muted">Version:</span>
                             <span className="text-secondary">{tool.version}</span>
                           </div>
@@ -1469,19 +1688,26 @@ function AiLimitsSection() {
             <div className="rounded-xl border border-sky-400/20 bg-sky-400/5 p-4">
               <h5 className="text-sm font-semibold text-sky-200">OpenClaw Connector Setup</h5>
               <p className="mt-1 text-xs text-muted">
-                Detected tools can be connected to the platform via the OpenClaw connector. The connector runs locally, executes AI tasks, and reports results back.
+                Detected tools can be connected to the platform via the OpenClaw connector. The connector runs locally,
+                executes AI tasks, and reports results back.
               </p>
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-muted">1. Generate an access token in the connector settings</p>
                 <p className="text-xs text-muted">2. Configure the connector with your platform URL and token</p>
-                <p className="text-xs text-muted">3. The connector will auto-detect installed tools and register capabilities</p>
+                <p className="text-xs text-muted">
+                  3. The connector will auto-detect installed tools and register capabilities
+                </p>
               </div>
               {(toolsQuery.data ?? []).some((t) => t.found) && (
-                <div className="mt-3 rounded-lg bg-surface/20 p-3 font-mono text-xs text-secondary">
+                <div className="bg-surface/20 mt-3 rounded-lg p-3 font-mono text-xs text-secondary">
                   <p className="text-muted"># Detected tool paths for connector config:</p>
-                  {(toolsQuery.data ?? []).filter((t) => t.found).map((t) => (
-                    <p key={t.binary}>{t.binary}_path = &quot;{t.path}&quot;</p>
-                  ))}
+                  {(toolsQuery.data ?? [])
+                    .filter((t) => t.found)
+                    .map((t) => (
+                      <p key={t.binary}>
+                        {t.binary}_path = &quot;{t.path}&quot;
+                      </p>
+                    ))}
                 </div>
               )}
             </div>
@@ -1497,7 +1723,8 @@ function AiLimitsSection() {
                 <div>
                   <h4 className="text-sm font-semibold">Server AI Runtime</h4>
                   <p className="text-xs text-muted">
-                    Install and manage Claude Code, Codex, and OpenClaw directly on this server. Local CLI tools are used first (free), then fall back to API providers.
+                    Install and manage Claude Code, Codex, and OpenClaw directly on this server. Local CLI tools are
+                    used first (free), then fall back to API providers.
                   </p>
                 </div>
                 <button
@@ -1515,7 +1742,7 @@ function AiLimitsSection() {
                   {(["npm", "node", "cargo"] as const).map((dep) => {
                     const info = runtimeQuery.data!.prereqs[dep];
                     return (
-                      <div key={dep} className="flex items-center gap-1.5 rounded-lg bg-surface/20 px-3 py-1.5 text-xs">
+                      <div key={dep} className="bg-surface/20 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs">
                         <div className={`h-2 w-2 rounded-full ${info.available ? "bg-emerald-400" : "bg-red-400"}`} />
                         <span className="font-medium">{dep}</span>
                         {info.version && <span className="text-muted">{info.version}</span>}
@@ -1549,24 +1776,42 @@ function AiLimitsSection() {
                       <div key={tool} className={`rounded-xl border p-4 ${toneClass}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold ${isReady ? "bg-emerald-400/10 text-emerald-300" : "bg-surface/50 text-muted"}`}>
+                            <div
+                              className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold ${isReady ? "bg-emerald-400/10 text-emerald-300" : "bg-surface/50 text-muted"}`}
+                            >
                               {tool === "claude-code" ? "C" : tool === "codex" ? "X" : "O"}
                             </div>
                             <div>
                               <p className="text-sm font-semibold">
-                                {tool === "claude-code" ? "Claude Code" : tool === "codex" ? "OpenAI Codex" : "OpenClaw"}
+                                {tool === "claude-code"
+                                  ? "Claude Code"
+                                  : tool === "codex"
+                                    ? "OpenAI Codex"
+                                    : "OpenClaw"}
                               </p>
                               <p className="font-mono text-xs text-muted">{tool}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <StatusPill
-                              tone={isReady ? "success" : status === "error" ? "danger" : isInstalled ? "warning" : "muted"}
-                              label={status === "ready" ? "Ready" : status === "auth_pending" ? "Needs Auth" : status === "installed" ? "Installed" : status === "installing" ? "Installing..." : status === "error" ? "Error" : "Not Installed"}
+                              tone={
+                                isReady ? "success" : status === "error" ? "danger" : isInstalled ? "warning" : "muted"
+                              }
+                              label={
+                                status === "ready"
+                                  ? "Ready"
+                                  : status === "auth_pending"
+                                    ? "Needs Auth"
+                                    : status === "installed"
+                                      ? "Installed"
+                                      : status === "installing"
+                                        ? "Installing..."
+                                        : status === "error"
+                                          ? "Error"
+                                          : "Not Installed"
+                              }
                             />
-                            {authStatus === "authorized" && (
-                              <StatusPill tone="info" label="Authorized" />
-                            )}
+                            {authStatus === "authorized" && <StatusPill tone="info" label="Authorized" />}
                           </div>
                         </div>
 
@@ -1574,13 +1819,13 @@ function AiLimitsSection() {
                         {install && status !== "not_installed" && (
                           <div className="mt-3 space-y-1">
                             {install.binaryPath && (
-                              <div className="flex items-center gap-2 rounded-lg bg-surface/20 px-3 py-2 font-mono text-xs">
+                              <div className="bg-surface/20 flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs">
                                 <span className="text-muted">Path:</span>
                                 <span className="text-secondary">{install.binaryPath}</span>
                               </div>
                             )}
                             {install.version && (
-                              <div className="flex items-center gap-2 rounded-lg bg-surface/20 px-3 py-2 font-mono text-xs">
+                              <div className="bg-surface/20 flex items-center gap-2 rounded-lg px-3 py-2 font-mono text-xs">
                                 <span className="text-muted">Version:</span>
                                 <span className="text-secondary">{install.version}</span>
                               </div>
@@ -1600,7 +1845,7 @@ function AiLimitsSection() {
                             <AnimatedButton
                               onClick={() => runtimeInstallMut.mutate({ tool })}
                               disabled={isInstalling}
-                              className="rounded-lg bg-accent/20 px-3 py-1.5 text-xs font-medium text-accent transition hover:bg-accent/30 disabled:opacity-50"
+                              className="bg-accent/20 hover:bg-accent/30 rounded-lg px-3 py-1.5 text-xs font-medium text-accent transition disabled:opacity-50"
                             >
                               {isInstalling ? "Installing..." : "Install on Server"}
                             </AnimatedButton>
@@ -1609,7 +1854,7 @@ function AiLimitsSection() {
                               <button
                                 type="button"
                                 onClick={() => runtimeHealthMut.mutate({ tool })}
-                                className="rounded-lg bg-surface/30 px-3 py-1.5 text-xs font-medium text-secondary transition hover:bg-surface/50"
+                                className="bg-surface/30 hover:bg-surface/50 rounded-lg px-3 py-1.5 text-xs font-medium text-secondary transition"
                               >
                                 Health Check
                               </button>
@@ -1628,7 +1873,11 @@ function AiLimitsSection() {
                         {isInstalled && authStatus !== "authorized" && (
                           <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3">
                             <p className="mb-2 text-xs text-amber-200">
-                              {tool === "claude-code" ? "Enter your Anthropic API key to authorize Claude Code:" : tool === "codex" ? "Enter your OpenAI API key to authorize Codex:" : "Enter your API key:"}
+                              {tool === "claude-code"
+                                ? "Enter your Anthropic API key to authorize Claude Code:"
+                                : tool === "codex"
+                                  ? "Enter your OpenAI API key to authorize Codex:"
+                                  : "Enter your API key:"}
                             </p>
                             <div className="flex gap-2">
                               <input
@@ -1636,7 +1885,7 @@ function AiLimitsSection() {
                                 placeholder="sk-..."
                                 value={runtimeApiKeys[tool] ?? ""}
                                 onChange={(e) => setRuntimeApiKeys((prev) => ({ ...prev, [tool]: e.target.value }))}
-                                className="flex-1 rounded-lg border border-border bg-surface/30 px-3 py-1.5 font-mono text-xs text-secondary placeholder:text-muted"
+                                className="bg-surface/30 flex-1 rounded-lg border border-border px-3 py-1.5 font-mono text-xs text-secondary placeholder:text-muted"
                               />
                               <AnimatedButton
                                 onClick={() => {
@@ -1647,7 +1896,7 @@ function AiLimitsSection() {
                                   }
                                 }}
                                 disabled={!runtimeApiKeys[tool] || runtimeAuthorizeMut.isPending}
-                                className="rounded-lg bg-accent/20 px-3 py-1.5 text-xs font-medium text-accent transition hover:bg-accent/30 disabled:opacity-50"
+                                className="bg-accent/20 hover:bg-accent/30 rounded-lg px-3 py-1.5 text-xs font-medium text-accent transition disabled:opacity-50"
                               >
                                 Authorize
                               </AnimatedButton>
@@ -1687,7 +1936,13 @@ function AiLimitsSection() {
                   <SystemRow
                     label="Active Route"
                     value={runtimeQuery.data.routing.activeRoute}
-                    tone={runtimeQuery.data.routing.activeRoute.startsWith("server_cli") ? "success" : runtimeQuery.data.routing.activeRoute === "none" ? "danger" : "info"}
+                    tone={
+                      runtimeQuery.data.routing.activeRoute.startsWith("server_cli")
+                        ? "success"
+                        : runtimeQuery.data.routing.activeRoute === "none"
+                          ? "danger"
+                          : "info"
+                    }
                   />
                   <SystemRow
                     label="User Connector"
@@ -1710,11 +1965,16 @@ function AiLimitsSection() {
                 <div className="space-y-2">
                   <h5 className="text-xs font-semibold text-muted">CLI Tool Status</h5>
                   {runtimeQuery.data.routing.serverCli.map((cli: any) => (
-                    <div key={cli.tool} className="flex items-center justify-between rounded-lg bg-surface/20 px-3 py-2 text-xs">
+                    <div
+                      key={cli.tool}
+                      className="bg-surface/20 flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                    >
                       <span className="font-medium">{cli.tool}</span>
                       <div className="flex items-center gap-2">
                         {cli.ready && !cli.rateLimited && <StatusPill tone="success" label="Active" />}
-                        {cli.ready && cli.rateLimited && <StatusPill tone="warning" label={`Rate Limited: ${cli.rateLimitReason}`} />}
+                        {cli.ready && cli.rateLimited && (
+                          <StatusPill tone="warning" label={`Rate Limited: ${cli.rateLimitReason}`} />
+                        )}
                         {!cli.installed && <StatusPill tone="muted" label="Not Installed" />}
                         {cli.installed && !cli.authorized && <StatusPill tone="warning" label="Not Authorized" />}
                       </div>
@@ -1732,7 +1992,10 @@ function AiLimitsSection() {
 
                 <div className="space-y-2">
                   {runtimeQuery.data.sessions.map((session: any) => (
-                    <div key={session.id} className="flex items-center justify-between rounded-xl border border-border bg-surface/30 p-3">
+                    <div
+                      key={session.id}
+                      className="bg-surface/30 flex items-center justify-between rounded-xl border border-border p-3"
+                    >
                       <div className="flex items-center gap-3">
                         <Activity className="h-4 w-4 text-emerald-400" />
                         <div>
@@ -1770,7 +2033,9 @@ function AiLimitsSection() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-semibold">Rate Limit Records</h4>
-                  <p className="text-xs text-muted">Platform mode: monthly cap with hourly circuit breakers. Admin mode: granular per-user limits.</p>
+                  <p className="text-xs text-muted">
+                    Platform mode: monthly cap with hourly circuit breakers. Admin mode: granular per-user limits.
+                  </p>
                 </div>
                 <AnimatedButton variant="primary" className="px-3 py-1.5 text-xs" onClick={() => setShowForm(true)}>
                   <Plus className="mr-1 inline h-3 w-3" /> Add Limit
@@ -1802,14 +2067,26 @@ function AiLimitsSection() {
                           </div>
                           {limit.mode === "admin" && (
                             <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-amber-300/80 sm:grid-cols-3">
-                              {limit.adminRequestsPerHour != null && <span>Admin req/hr: {limit.adminRequestsPerHour}</span>}
-                              {limit.adminRequestsPerDay != null && <span>Admin req/day: {limit.adminRequestsPerDay}</span>}
-                              {limit.adminRequestsPerMonth != null && <span>Admin req/mo: {limit.adminRequestsPerMonth}</span>}
-                              {limit.adminTokensPerMonth != null && <span>Admin tok/mo: {(limit.adminTokensPerMonth / 1000).toFixed(0)}K</span>}
+                              {limit.adminRequestsPerHour != null && (
+                                <span>Admin req/hr: {limit.adminRequestsPerHour}</span>
+                              )}
+                              {limit.adminRequestsPerDay != null && (
+                                <span>Admin req/day: {limit.adminRequestsPerDay}</span>
+                              )}
+                              {limit.adminRequestsPerMonth != null && (
+                                <span>Admin req/mo: {limit.adminRequestsPerMonth}</span>
+                              )}
+                              {limit.adminTokensPerMonth != null && (
+                                <span>Admin tok/mo: {(limit.adminTokensPerMonth / 1000).toFixed(0)}K</span>
+                              )}
                             </div>
                           )}
                         </div>
-                        <AnimatedButton variant="danger" className="px-2 py-1 text-xs" onClick={() => deleteLimitMut.mutate({ id: limit.id })}>
+                        <AnimatedButton
+                          variant="danger"
+                          className="px-2 py-1 text-xs"
+                          onClick={() => deleteLimitMut.mutate({ id: limit.id })}
+                        >
                           <Trash2 className="h-3 w-3" />
                         </AnimatedButton>
                       </div>
@@ -1817,7 +2094,9 @@ function AiLimitsSection() {
                   ))}
                 </div>
               ) : (
-                <p className="py-4 text-center text-sm text-muted">No rate limit records. Limits are created automatically on first AI usage, or add them manually.</p>
+                <p className="py-4 text-center text-sm text-muted">
+                  No rate limit records. Limits are created automatically on first AI usage, or add them manually.
+                </p>
               )}
             </GlassCard>
 
@@ -1827,7 +2106,12 @@ function AiLimitsSection() {
                 <h4 className="text-sm font-semibold">New Rate Limit</h4>
                 <div className="grid gap-3 md:grid-cols-2">
                   <TextField label="Owner address" value={formOwner} onChange={setFormOwner} />
-                  <SelectField label="Mode" value={formMode} onChange={(v) => setFormMode(v as "platform" | "admin")} options={["platform", "admin"]} />
+                  <SelectField
+                    label="Mode"
+                    value={formMode}
+                    onChange={(v) => setFormMode(v as "platform" | "admin")}
+                    options={["platform", "admin"]}
+                  />
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <TextField label="Requests/month" value={formReqPerMonth} onChange={setFormReqPerMonth} />
@@ -1837,8 +2121,16 @@ function AiLimitsSection() {
                 {formMode === "admin" && (
                   <div className="grid gap-3 md:grid-cols-3">
                     <TextField label="Admin req/day" value={formAdminReqPerDay} onChange={setFormAdminReqPerDay} />
-                    <TextField label="Admin req/month" value={formAdminReqPerMonth} onChange={setFormAdminReqPerMonth} />
-                    <TextField label="Admin tok/month" value={formAdminTokPerMonth} onChange={setFormAdminTokPerMonth} />
+                    <TextField
+                      label="Admin req/month"
+                      value={formAdminReqPerMonth}
+                      onChange={setFormAdminReqPerMonth}
+                    />
+                    <TextField
+                      label="Admin tok/month"
+                      value={formAdminTokPerMonth}
+                      onChange={setFormAdminTokPerMonth}
+                    />
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -1852,9 +2144,12 @@ function AiLimitsSection() {
                         requestsPerMonth: parseInt(formReqPerMonth) || 500,
                         tokensPerMonth: parseInt(formTokPerMonth) || 1000000,
                         maxRequestsPerHour: parseInt(formReqPerHour) || 30,
-                        adminRequestsPerDay: formMode === "admin" && formAdminReqPerDay ? parseInt(formAdminReqPerDay) : undefined,
-                        adminRequestsPerMonth: formMode === "admin" && formAdminReqPerMonth ? parseInt(formAdminReqPerMonth) : undefined,
-                        adminTokensPerMonth: formMode === "admin" && formAdminTokPerMonth ? parseInt(formAdminTokPerMonth) : undefined,
+                        adminRequestsPerDay:
+                          formMode === "admin" && formAdminReqPerDay ? parseInt(formAdminReqPerDay) : undefined,
+                        adminRequestsPerMonth:
+                          formMode === "admin" && formAdminReqPerMonth ? parseInt(formAdminReqPerMonth) : undefined,
+                        adminTokensPerMonth:
+                          formMode === "admin" && formAdminTokPerMonth ? parseInt(formAdminTokPerMonth) : undefined,
                       })
                     }
                   >
@@ -1875,10 +2170,30 @@ function AiLimitsSection() {
             <h4 className="text-sm font-semibold">Platform AI Usage</h4>
             {usage ? (
               <div className="grid gap-3 sm:grid-cols-4">
-                <StatCard label="Total Requests" value={String(usage.totalRequests)} icon={<Activity className="h-4 w-4" />} tone="info" />
-                <StatCard label="Input Tokens" value={formatTokens(usage.totalInputTokens)} icon={<Brain className="h-4 w-4" />} tone="muted" />
-                <StatCard label="Output Tokens" value={formatTokens(usage.totalOutputTokens)} icon={<Brain className="h-4 w-4" />} tone="muted" />
-                <StatCard label="Total Cost" value={`$${(usage.totalCostCents / 100).toFixed(2)}`} icon={<CreditCard className="h-4 w-4" />} tone="warning" />
+                <StatCard
+                  label="Total Requests"
+                  value={String(usage.totalRequests)}
+                  icon={<Activity className="h-4 w-4" />}
+                  tone="info"
+                />
+                <StatCard
+                  label="Input Tokens"
+                  value={formatTokens(usage.totalInputTokens)}
+                  icon={<Brain className="h-4 w-4" />}
+                  tone="muted"
+                />
+                <StatCard
+                  label="Output Tokens"
+                  value={formatTokens(usage.totalOutputTokens)}
+                  icon={<Brain className="h-4 w-4" />}
+                  tone="muted"
+                />
+                <StatCard
+                  label="Total Cost"
+                  value={`$${(usage.totalCostCents / 100).toFixed(2)}`}
+                  icon={<CreditCard className="h-4 w-4" />}
+                  tone="warning"
+                />
               </div>
             ) : (
               <p className="py-4 text-center text-sm text-muted">No AI usage data available.</p>
@@ -1929,7 +2244,8 @@ function SecuritySection(_props: { status?: OperatorStatus | null }) {
         <GlassCard className="space-y-4">
           <h4 className="text-sm font-semibold">Audit Trail</h4>
           <p className="text-xs text-muted">
-            Immutable, hash-chained audit event log. Each event includes SHA-256(prevHash + eventData) for tamper detection.
+            Immutable, hash-chained audit event log. Each event includes SHA-256(prevHash + eventData) for tamper
+            detection.
           </p>
           <div className="space-y-3">
             <SystemRow label="Hash Algorithm" value="SHA-256" tone="info" />
@@ -2033,15 +2349,18 @@ function SystemSection({ status }: { status?: OperatorStatus | null }) {
               }
               tone={status?.ownerConfigured ? "success" : "warning"}
             />
-            <SystemRow label="Environment" value={typeof window !== "undefined" && window.location.hostname === "localhost" ? "Development" : "Production"} />
+            <SystemRow
+              label="Environment"
+              value={
+                typeof window !== "undefined" && window.location.hostname === "localhost" ? "Development" : "Production"
+              }
+            />
           </div>
         </GlassCard>
 
         <GlassCard className="space-y-3">
           <h4 className="text-sm font-semibold">Environment Variables</h4>
-          <p className="text-xs text-muted">
-            Server-side configuration. Sensitive values are masked.
-          </p>
+          <p className="text-xs text-muted">Server-side configuration. Sensitive values are masked.</p>
           <div className="space-y-2">
             <EnvRow label="PROOFMARK_DEPLOYMENT_MODE" value={status?.deploymentMode ?? "—"} />
             <EnvRow label="PDF_UPLOAD_MAX_MB" value={status ? `${status.pdfUploadMaxMb}` : "—"} />
@@ -2057,14 +2376,28 @@ function SystemSection({ status }: { status?: OperatorStatus | null }) {
           <p className="text-xs text-muted">Core tables in the PostgreSQL schema.</p>
           <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
             {[
-              "documents", "signers", "sessions", "users", "accounts",
-              "audit_events", "feature_overrides", "branding_profiles",
-              "integration_configs", "document_templates", "webhook_endpoints",
-              "ai_provider_configs", "ai_usage_logs", "ai_rate_limits",
-              "ai_conversations", "connector_sessions", "user_vaults",
-              "managed_wallets", "document_key_shares", "document_index",
+              "documents",
+              "signers",
+              "sessions",
+              "users",
+              "accounts",
+              "audit_events",
+              "feature_overrides",
+              "branding_profiles",
+              "integration_configs",
+              "document_templates",
+              "webhook_endpoints",
+              "ai_provider_configs",
+              "ai_usage_logs",
+              "ai_rate_limits",
+              "ai_conversations",
+              "connector_sessions",
+              "user_vaults",
+              "managed_wallets",
+              "document_key_shares",
+              "document_index",
             ].map((table) => (
-              <div key={table} className="flex items-center gap-2 rounded-lg bg-surface/20 px-3 py-2">
+              <div key={table} className="bg-surface/20 flex items-center gap-2 rounded-lg px-3 py-2">
                 <Database className="h-3 w-3 text-muted" />
                 <span className="font-mono text-xs text-secondary">{table}</span>
               </div>
@@ -2111,7 +2444,8 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
           <div>
             <h3 className="text-lg font-semibold">Premium Configuration</h3>
             <p className="mt-1 text-sm text-muted">
-              Premium runtime status and configuration for blockchain anchoring, collaboration, and AI enterprise features.
+              Premium runtime status and configuration for blockchain anchoring, collaboration, and AI enterprise
+              features.
             </p>
           </div>
 
@@ -2144,14 +2478,37 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
             Write document hashes to Base (L2), Solana, and Bitcoin for cryptographic proof of signature timing.
           </p>
           <div className="space-y-2">
-            {([
-              { key: "base", label: "Base (L2)", icon: "B", featureId: "blockchain_anchoring", sub: "Hash Anchoring" },
-              { key: "sol", label: "Solana", icon: CHAIN_META.SOL.icon, featureId: "blockchain_anchoring", sub: "Hash Anchoring" },
-              { key: "btc", label: "Bitcoin", icon: CHAIN_META.BTC.icon, featureId: "html_inscriptions", sub: "HTML Inscriptions" },
-            ] as const).map((chain) => {
+            {(
+              [
+                {
+                  key: "base",
+                  label: "Base (L2)",
+                  icon: "B",
+                  featureId: "blockchain_anchoring",
+                  sub: "Hash Anchoring",
+                },
+                {
+                  key: "sol",
+                  label: "Solana",
+                  icon: CHAIN_META.SOL.icon,
+                  featureId: "blockchain_anchoring",
+                  sub: "Hash Anchoring",
+                },
+                {
+                  key: "btc",
+                  label: "Bitcoin",
+                  icon: CHAIN_META.BTC.icon,
+                  featureId: "html_inscriptions",
+                  sub: "HTML Inscriptions",
+                },
+              ] as const
+            ).map((chain) => {
               const feat = premiumFeatures.find((f) => f.id === chain.featureId);
               return (
-                <div key={chain.key} className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3">
+                <div
+                  key={chain.key}
+                  className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3"
+                >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{chain.icon}</span>
                     <div>
@@ -2159,7 +2516,10 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
                       <p className="text-xs text-muted">{chain.sub}</p>
                     </div>
                   </div>
-                  <StatusPill tone={feat?.effectiveEnabled ? "success" : "danger"} label={feat?.effectiveEnabled ? "Enabled" : "Disabled"} />
+                  <StatusPill
+                    tone={feat?.effectiveEnabled ? "success" : "danger"}
+                    label={feat?.effectiveEnabled ? "Enabled" : "Disabled"}
+                  />
                 </div>
               );
             })}
@@ -2176,12 +2536,18 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
             {premiumFeatures
               .filter((f) => f.id.startsWith("collab_"))
               .map((f) => (
-                <div key={f.id} className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3">
+                <div
+                  key={f.id}
+                  className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3"
+                >
                   <div>
                     <p className="text-sm font-medium">{f.label}</p>
                     <p className="text-xs text-muted">{f.summary}</p>
                   </div>
-                  <StatusPill tone={f.effectiveEnabled ? "success" : "danger"} label={f.effectiveEnabled ? "On" : "Off"} />
+                  <StatusPill
+                    tone={f.effectiveEnabled ? "success" : "danger"}
+                    label={f.effectiveEnabled ? "On" : "Off"}
+                  />
                 </div>
               ))}
           </div>
@@ -2197,12 +2563,18 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
             {premiumFeatures
               .filter((f) => f.id.startsWith("ai_"))
               .map((f) => (
-                <div key={f.id} className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3">
+                <div
+                  key={f.id}
+                  className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3"
+                >
                   <div>
                     <p className="text-sm font-medium">{f.label}</p>
                     <p className="text-xs text-muted">{f.summary}</p>
                   </div>
-                  <StatusPill tone={f.effectiveEnabled ? "success" : "danger"} label={f.effectiveEnabled ? "On" : "Off"} />
+                  <StatusPill
+                    tone={f.effectiveEnabled ? "success" : "danger"}
+                    label={f.effectiveEnabled ? "On" : "Off"}
+                  />
                 </div>
               ))}
           </div>
@@ -2213,14 +2585,28 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
           <h4 className="text-sm font-semibold">Enterprise Features</h4>
           <div className="space-y-2">
             {premiumFeatures
-              .filter((f) => !f.id.startsWith("collab_") && !f.id.startsWith("ai_") && f.id !== "blockchain_anchoring" && f.id !== "html_inscriptions" && f.id !== "auto_wallet" && f.id !== "post_sign_access")
+              .filter(
+                (f) =>
+                  !f.id.startsWith("collab_") &&
+                  !f.id.startsWith("ai_") &&
+                  f.id !== "blockchain_anchoring" &&
+                  f.id !== "html_inscriptions" &&
+                  f.id !== "auto_wallet" &&
+                  f.id !== "post_sign_access",
+              )
               .map((f) => (
-                <div key={f.id} className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3">
+                <div
+                  key={f.id}
+                  className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3"
+                >
                   <div>
                     <p className="text-sm font-medium">{f.label}</p>
                     <p className="text-xs text-muted">{f.summary}</p>
                   </div>
-                  <StatusPill tone={f.effectiveEnabled ? "success" : "danger"} label={f.effectiveEnabled ? "On" : "Off"} />
+                  <StatusPill
+                    tone={f.effectiveEnabled ? "success" : "danger"}
+                    label={f.effectiveEnabled ? "On" : "Off"}
+                  />
                 </div>
               ))}
           </div>
@@ -2231,17 +2617,13 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
           <GlassCard className="space-y-3">
             <h4 className="text-sm font-semibold">Enable Premium</h4>
             <p className="text-xs text-muted">
-              To enable premium features, ensure the <code className="rounded bg-surface/50 px-1 py-0.5 font-mono text-xs">/premium</code> directory exists and run:
+              To enable premium features, ensure the{" "}
+              <code className="bg-surface/50 rounded px-1 py-0.5 font-mono text-xs">/premium</code> directory exists and
+              run:
             </p>
-            <div className="rounded-lg bg-surface/20 p-3 font-mono text-xs text-secondary">
-              npm run paid
-            </div>
-            <p className="text-xs text-muted">
-              For full premium with collaboration WebSocket server:
-            </p>
-            <div className="rounded-lg bg-surface/20 p-3 font-mono text-xs text-secondary">
-              npm run paid:full
-            </div>
+            <div className="bg-surface/20 rounded-lg p-3 font-mono text-xs text-secondary">npm run paid</div>
+            <p className="text-xs text-muted">For full premium with collaboration WebSocket server:</p>
+            <div className="bg-surface/20 rounded-lg p-3 font-mono text-xs text-secondary">npm run paid:full</div>
           </GlassCard>
         )}
       </div>
@@ -2306,7 +2688,7 @@ function TierCard({
     <div className={`rounded-xl border p-4 ${toneClass}`}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">{title}</p>
-        <span className="rounded-full border border-current/20 px-1.5 py-0.5 text-[10px]">{count}</span>
+        <span className="border-current/20 rounded-full border px-1.5 py-0.5 text-[10px]">{count}</span>
       </div>
       <div className="mt-3 space-y-1.5 text-xs">
         {items.map((item) => (
@@ -2348,7 +2730,7 @@ function SystemRow({
 
 function EnvRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-surface/20 px-3 py-2 font-mono text-xs">
+    <div className="bg-surface/20 flex items-center justify-between rounded-lg px-3 py-2 font-mono text-xs">
       <span className="text-muted">{label}</span>
       <span className="text-secondary">{value}</span>
     </div>

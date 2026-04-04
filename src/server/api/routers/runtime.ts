@@ -31,7 +31,6 @@ async function requireRuntimeAdmin(ctx: { req?: Request | null | undefined }) {
 }
 
 export const runtimeRouter = createTRPCRouter({
-
   // ── Status ──
 
   /** Get full runtime status: installed tools, auth, active sessions, routing. */
@@ -73,22 +72,18 @@ export const runtimeRouter = createTRPCRouter({
   // ── Installation ──
 
   /** Install a CLI tool on the server. */
-  install: publicProcedure
-    .input(z.object({ tool: zTool }))
-    .mutation(async ({ ctx, input }) => {
-      const { ai } = await requireRuntimeAdmin(ctx);
-      const result = await ai.installTool(input.tool);
-      return result;
-    }),
+  install: publicProcedure.input(z.object({ tool: zTool })).mutation(async ({ ctx, input }) => {
+    const { ai } = await requireRuntimeAdmin(ctx);
+    const result = await ai.installTool(input.tool);
+    return result;
+  }),
 
   /** Uninstall a CLI tool. */
-  uninstall: publicProcedure
-    .input(z.object({ tool: zTool }))
-    .mutation(async ({ ctx, input }) => {
-      const { ai } = await requireRuntimeAdmin(ctx);
-      await ai.uninstallTool(input.tool);
-      return { success: true };
-    }),
+  uninstall: publicProcedure.input(z.object({ tool: zTool })).mutation(async ({ ctx, input }) => {
+    const { ai } = await requireRuntimeAdmin(ctx);
+    await ai.uninstallTool(input.tool);
+    return { success: true };
+  }),
 
   // ── Authorization ──
 
@@ -102,36 +97,32 @@ export const runtimeRouter = createTRPCRouter({
     }),
 
   /** Revoke authorization for a tool. */
-  revokeAuth: publicProcedure
-    .input(z.object({ tool: zTool }))
-    .mutation(async ({ ctx, input }) => {
-      const { ai } = await requireRuntimeAdmin(ctx);
-      await ai.revokeAuth(input.tool);
-      return { success: true };
-    }),
+  revokeAuth: publicProcedure.input(z.object({ tool: zTool })).mutation(async ({ ctx, input }) => {
+    const { ai } = await requireRuntimeAdmin(ctx);
+    await ai.revokeAuth(input.tool);
+    return { success: true };
+  }),
 
   // ── Health ──
 
   /** Run health check on a specific tool or all installed tools. */
-  healthCheck: publicProcedure
-    .input(z.object({ tool: zTool.optional() }))
-    .mutation(async ({ ctx, input }) => {
-      const { ai } = await requireRuntimeAdmin(ctx);
+  healthCheck: publicProcedure.input(z.object({ tool: zTool.optional() })).mutation(async ({ ctx, input }) => {
+    const { ai } = await requireRuntimeAdmin(ctx);
 
-      if (input.tool) {
-        const health = await ai.checkToolHealth(input.tool);
-        return { tools: [health] };
-      }
+    if (input.tool) {
+      const health = await ai.checkToolHealth(input.tool);
+      return { tools: [health] };
+    }
 
-      const tools = await ai.getInstalledTools();
-      const results = await Promise.all(
-        tools
-          .filter((t) => t.status !== "not_installed")
-          .map((t) => ai.checkToolHealth(t.tool as "claude-code" | "codex" | "openclaw")),
-      );
+    const tools = await ai.getInstalledTools();
+    const results = await Promise.all(
+      tools
+        .filter((t) => t.status !== "not_installed")
+        .map((t) => ai.checkToolHealth(t.tool as "claude-code" | "codex" | "openclaw")),
+    );
 
-      return { tools: results };
-    }),
+    return { tools: results };
+  }),
 
   // ── Sessions ──
 

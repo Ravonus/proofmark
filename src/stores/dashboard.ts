@@ -80,9 +80,7 @@ function filterRecursive<T extends { title: string; status: string; contentHash:
   const doc = docs[index]!;
   const matchesStatus = filter === "ALL" || doc.status === filter;
   const matchesQuery =
-    !query ||
-    doc.title.toLowerCase().includes(query) ||
-    doc.contentHash.toLowerCase().includes(query);
+    !query || doc.title.toLowerCase().includes(query) || doc.contentHash.toLowerCase().includes(query);
 
   if (matchesStatus && matchesQuery) {
     acc.push(doc);

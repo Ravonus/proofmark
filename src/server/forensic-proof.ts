@@ -213,7 +213,9 @@ export async function enrichForensicEvidence(
   if (policy.aiReviewInline) {
     try {
       const { reviewAutomationEvidence } = await import(/* webpackIgnore: true */ "~/premium/ai/automation-review");
-      const { getPlatformProviders, readPlatformEnv } = await import(/* webpackIgnore: true */ "~/premium/ai/key-resolver");
+      const { getPlatformProviders, readPlatformEnv } = await import(
+        /* webpackIgnore: true */ "~/premium/ai/key-resolver"
+      );
       const providers = getPlatformProviders().filter((p) => p.available);
       const first = providers[0];
       if (first) {

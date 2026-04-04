@@ -11,14 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, BookOpen, HelpCircle, FileText } from "lucide-react";
 import { trpc } from "~/lib/trpc";
 import { useSignerChatStore } from "~/stores/ai-chat";
-import {
-  ChatBubble,
-  ChatInput,
-  ChatLoading,
-  QuickActions,
-  useAutoScroll,
-  type QuickAction,
-} from "./chat-primitives";
+import { ChatBubble, ChatInput, ChatLoading, QuickActions, useAutoScroll, type QuickAction } from "./chat-primitives";
 
 type Props = {
   documentId: string;
@@ -73,8 +66,16 @@ export function AiSignerChat({ documentId, claimToken, documentTitle, signerLabe
 
   const quickQuestions: QuickAction[] = [
     { label: "Summarize this document", icon: BookOpen, prompt: "__SUMMARY__" },
-    { label: "What am I agreeing to?", icon: FileText, prompt: "What exactly am I agreeing to by signing this document?" },
-    { label: "What are the key dates?", icon: HelpCircle, prompt: "What are the important dates and deadlines in this document?" },
+    {
+      label: "What am I agreeing to?",
+      icon: FileText,
+      prompt: "What exactly am I agreeing to by signing this document?",
+    },
+    {
+      label: "What are the key dates?",
+      icon: HelpCircle,
+      prompt: "What are the important dates and deadlines in this document?",
+    },
   ];
 
   const handleQuickAction = (prompt: string) => {
@@ -111,7 +112,7 @@ export function AiSignerChat({ documentId, claimToken, documentTitle, signerLabe
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 right-0 z-50 flex h-[80vh] w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-zinc-950/98 shadow-2xl backdrop-blur-xl sm:bottom-6 sm:right-6 sm:h-[600px] sm:max-h-[600px] sm:w-[400px] sm:rounded-2xl"
+            className="bg-zinc-950/98 fixed bottom-0 right-0 z-50 flex h-[80vh] w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 shadow-2xl backdrop-blur-xl sm:bottom-6 sm:right-6 sm:h-[600px] sm:max-h-[600px] sm:w-[400px] sm:rounded-2xl"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 bg-zinc-900/50 px-4 py-3">
