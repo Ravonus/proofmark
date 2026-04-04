@@ -288,7 +288,9 @@ function WalletRuntime({ children }: { children: ReactNode }) {
       store.authSuccess(address, chain);
 
       // Claim any documents signed as a guest with this wallet/email/social
-      void claimDocsMut.current.mutateAsync().catch(() => {});
+      void claimDocsMut.current.mutateAsync().catch(() => {
+        /* noop */
+      });
     } catch (err) {
       authTriggeredRef.current = address;
       store.authFail(getWalletAuthErrorMessage(err));
@@ -371,17 +373,7 @@ function WalletRuntime({ children }: { children: ReactNode }) {
     else if (store.chain === "SOL") await solWallet.disconnect();
 
     store.reset();
-  }, [
-    store,
-    store.chain,
-    store.address,
-    laserEyes,
-    evmDisconnectAsync,
-    solWallet,
-    logoutMut,
-    devEthAccount,
-    evmConnected,
-  ]);
+  }, [store, laserEyes, evmDisconnectAsync, solWallet, logoutMut, devEthAccount, evmConnected]);
 
   // ── Sign message ──
   const signMessage = useCallback(
@@ -727,6 +719,7 @@ export function WalletButton() {
                         whileHover={{ x: 3 }}
                       >
                         {w.iconUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element -- wallet icon from dynamic provider URL */
                           <img src={w.iconUrl} alt="" className="h-6 w-6 rounded-md" />
                         ) : (
                           <span
@@ -809,6 +802,7 @@ export function WalletPicker() {
                   disabled={connecting}
                   className="bg-surface-hover/60 hover:border-accent/30 flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-primary transition-colors disabled:opacity-50"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- wallet icon from dynamic provider URL */}
                   {w.iconUrl && <img src={w.iconUrl} alt="" className="h-4 w-4 rounded" />}
                   {w.label}
                 </button>

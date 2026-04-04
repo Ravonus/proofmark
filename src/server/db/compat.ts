@@ -1,7 +1,8 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { documents, signers, type ReminderConfig } from "~/server/db/schema";
+import type { db as _dbRef } from "~/server/db";
 
-type Db = typeof import("~/server/db").db;
+type Db = typeof _dbRef;
 type LegacyDocumentRow = Omit<
   typeof documents.$inferSelect,
   "templateId" | "brandingProfileId" | "pdfStyleTemplateId" | "reminderConfig" | "groupId"
@@ -306,20 +307,15 @@ export async function insertDocumentCompat(db: Db, values: typeof documents.$inf
     return (await db.insert(documents).values(values).returning()).map(withDocumentDefaults);
   } catch (error) {
     if (!isSchemaDriftError(error)) throw error;
-    const {
-      templateId: _templateId,
-      brandingProfileId: _brandingProfileId,
-      pdfStyleTemplateId: _pdfStyleTemplateId,
-      reminderConfig: _reminderConfig,
-      groupId: _groupId,
-      ...legacyValues
-    } = values as typeof values & {
-      templateId?: string | null;
-      brandingProfileId?: string | null;
-      pdfStyleTemplateId?: string | null;
-      reminderConfig?: ReminderConfig | null;
-      groupId?: string | null;
-    };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stripping new columns for legacy fallback
+    const { templateId, brandingProfileId, pdfStyleTemplateId, reminderConfig, groupId, ...legacyValues } =
+      values as typeof values & {
+        templateId?: string | null;
+        brandingProfileId?: string | null;
+        pdfStyleTemplateId?: string | null;
+        reminderConfig?: ReminderConfig | null;
+        groupId?: string | null;
+      };
     return (await db.insert(documents).values(legacyValues).returning()).map(withDocumentDefaults);
   }
 }
@@ -330,20 +326,21 @@ export async function insertSignersCompat(db: Db, values: Array<typeof signers.$
   } catch (error) {
     if (!isSchemaDriftError(error)) throw error;
     const legacyValues = values.map((value) => {
+      /* eslint-disable @typescript-eslint/no-unused-vars -- stripping new columns for legacy fallback */
       const {
-        phone: _phone,
-        deliveryMethods: _deliveryMethods,
-        role: _role,
-        declineReason: _declineReason,
-        declinedAt: _declinedAt,
-        tokenGates: _tokenGates,
-        groupRole: _groupRole,
-        userId: _userId,
-        documentStateHash: _documentStateHash,
-        finalizationSignature: _finalizationSignature,
-        finalizationStateHash: _finalizationStateHash,
-        finalizationSignedAt: _finalizationSignedAt,
-        finalizationMessage: _finalizationMessage,
+        phone,
+        deliveryMethods,
+        role,
+        declineReason,
+        declinedAt,
+        tokenGates,
+        groupRole,
+        userId,
+        documentStateHash,
+        finalizationSignature,
+        finalizationStateHash,
+        finalizationSignedAt,
+        finalizationMessage,
         ...rest
       } = value as typeof value & {
         phone?: string | null;
@@ -360,6 +357,7 @@ export async function insertSignersCompat(db: Db, values: Array<typeof signers.$
         finalizationSignedAt?: Date | null;
         finalizationMessage?: string | null;
       };
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       return rest;
     });
     return (await db.insert(signers).values(legacyValues).returning()).map(withSignerDefaults);

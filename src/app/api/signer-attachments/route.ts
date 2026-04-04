@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
-import { tokenizeDocument } from "~/lib/document-tokens";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
 import { saveSignerAttachment } from "~/server/attachments";
 import { decryptDocument as decryptContent } from "~/server/rust-engine";
 
@@ -10,9 +10,12 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const documentId = String(formData.get("documentId") || "");
-  const claimToken = String(formData.get("claimToken") || "");
-  const fieldId = String(formData.get("fieldId") || "");
+  const _docId = formData.get("documentId");
+  const documentId = typeof _docId === "string" ? _docId : "";
+  const _claim = formData.get("claimToken");
+  const claimToken = typeof _claim === "string" ? _claim : "";
+  const _field = formData.get("fieldId");
+  const fieldId = typeof _field === "string" ? _field : "";
   const file = formData.get("file");
 
   if (!documentId || !claimToken || !fieldId || !(file instanceof File)) {

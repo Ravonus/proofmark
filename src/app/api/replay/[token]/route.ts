@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         mode: "embedded",
         documentId: row.document_id,
         signerId: row.signer_id,
-        replay: JSON.parse(row.replay_data),
+        replay: JSON.parse(row.replay_data) as unknown,
       });
     }
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         mode: "external",
         documentId: row.document_id,
         signerId: row.signer_id,
-        pointer: JSON.parse(row.pointer_data),
+        pointer: JSON.parse(row.pointer_data) as unknown,
       });
     }
 

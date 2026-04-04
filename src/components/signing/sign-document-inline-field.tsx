@@ -9,7 +9,7 @@ import {
   type IdentityVerificationFieldValue,
   type PaymentFieldValue,
   type SocialVerificationFieldValue,
-} from "~/lib/field-values";
+} from "~/lib/document/field-values";
 import {
   getRuntimeFieldSettings,
   resolveFieldAutocomplete,
@@ -21,8 +21,8 @@ import {
   resolveFieldPlaceholder,
   resolveFieldPrefix,
   resolveFieldSuffix,
-} from "~/lib/field-runtime";
-import { AddressAutocompleteInput } from "./fields/address-autocomplete-input";
+} from "~/lib/document/field-runtime";
+import { AddressAutocompleteInput } from "../fields/address-autocomplete-input";
 import { AlertCircle, CheckCircle, Copy } from "lucide-react";
 import type { InlineField } from "./sign-document-helpers";
 import {
@@ -451,6 +451,7 @@ export function InlineFieldInput({
                     {field.type === "initials" ? (
                       <>
                         <span className="truncate">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- data URL initials preview, not a remote image */}
                           {value ? <img src={value} alt="Initials" className="inline-block max-h-5" /> : placeholder}
                         </span>
                         <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted">

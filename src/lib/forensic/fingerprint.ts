@@ -137,9 +137,10 @@ function safeTimezone() {
   }
 }
 
-function safeLanguages() {
+function safeLanguages(): string[] {
   try {
-    if (Array.isArray(navigator.languages) && navigator.languages.length > 0) return [...navigator.languages];
+    if (Array.isArray(navigator.languages) && navigator.languages.length > 0)
+      return Array.from<string>(navigator.languages);
     if (navigator.language) return [navigator.language];
   } catch {
     /* */

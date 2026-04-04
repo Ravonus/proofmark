@@ -1,12 +1,11 @@
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, resolve } from "path";
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import { db } from "~/server/db";
 import { sessions } from "~/server/db/schema";
-import { tokensToContent, type DocToken } from "~/lib/document-tokens";
-import { hashDocument } from "~/lib/hash";
+import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
 import { normalizeSignerTokenGate, type SignerTokenGate } from "~/lib/token-gates";
 import type { AppRouter } from "~/server/api/root";
 import { insertDocumentCompat, insertSignersCompat } from "~/server/db/compat";
@@ -76,14 +75,12 @@ function buildContent(): string {
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "This contract is seeded for local development and exercises Proofmark's signer-level token gate flow across Bitcoin ordinals, Solana assets, and Ethereum assets.",
+      text: "This contract is seeded for local development and exercises Proofmark's signer-level token gate flow across Bitcoin ordinals, Solana assets, and Ethereum assets.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "The signer gate on this packet is configured with a development bypass so any connected wallet can pass locally even if it does not actually hold the listed assets.",
+      text: "The signer gate on this packet is configured with a development bypass so any connected wallet can pass locally even if it does not actually hold the listed assets.",
     },
     { kind: "break" },
     { kind: "heading", text: "1. Required Assets", sectionNum: 2 },
@@ -99,8 +96,7 @@ function buildContent(): string {
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "The provided Magic Eden item link resolves to the same Mad Lads #5454 mint above, so it is represented by the same gate rule rather than duplicated.",
+      text: "The provided Magic Eden item link resolves to the same Mad Lads #5454 mint above, so it is represented by the same gate rule rather than duplicated.",
     },
     { kind: "break" },
     { kind: "heading", text: "2. Signer Details", sectionNum: 3 },
@@ -133,8 +129,7 @@ function buildContent(): string {
     { kind: "heading", text: "3. Acceptance", sectionNum: 4 },
     {
       kind: "text",
-      text:
-        "By signing, the signer acknowledges that this packet exists only to validate the token gate UX and verification plumbing during development.",
+      text: "By signing, the signer acknowledges that this packet exists only to validate the token gate UX and verification plumbing during development.",
     },
     { kind: "break" },
     { kind: "signatureBlock", label: "Cross-Chain Gated Signer", signerIdx: 0 },
@@ -244,10 +239,7 @@ async function isBaseUrlReachable(baseUrl: string): Promise<boolean> {
   }
 }
 
-async function createDocumentViaTrpc(
-  baseUrl: string,
-  ownerSessionToken: string,
-): Promise<CreatedDocumentResult> {
+async function createDocumentViaTrpc(baseUrl: string, ownerSessionToken: string): Promise<CreatedDocumentResult> {
   const ownerClient = createDocumentClient(baseUrl, {
     cookie: `w3s_session=${encodeURIComponent(ownerSessionToken)}`,
     "user-agent": "Proofmark Token Gate Seed/1.0",
@@ -275,7 +267,7 @@ async function createDocumentViaTrpc(
 
 async function createDocumentViaDb(baseUrl: string, ownerAddress: string): Promise<CreatedDocumentResult> {
   const content = buildContent();
-  const contentHash = hashDocument(`${content}\n${Date.now().toString()}`);
+  const contentHash = createHash("sha256").update(`${content}\n${Date.now().toString()}`, "utf8").digest("hex");
   const [doc] = await insertDocumentCompat(db, {
     title: "Cross-Chain Token Gate Demo (Dev Bypass)",
     content,

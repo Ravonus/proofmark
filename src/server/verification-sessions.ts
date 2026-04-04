@@ -184,7 +184,7 @@ export async function claimSignerDocuments(params: {
     }
 
     if (claimedCount > 0) {
-      console.log(`[verification-sessions] Claimed ${claimedCount} signer(s) for user ${params.userId}`);
+      console.warn(`[verification-sessions] Claimed ${claimedCount} signer(s) for user ${params.userId}`);
     }
 
     return { claimedCount };

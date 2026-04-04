@@ -14,7 +14,7 @@ import { isSchemaDriftError } from "~/server/db/compat";
 import { documents, featureOverrides, platformConfig, signers, users, walletSessions } from "~/server/db/schema";
 import { db as defaultDb } from "~/server/db";
 
-type Db = typeof import("~/server/db").db;
+type Db = typeof defaultDb;
 
 // ── Cached DB owner (loaded once, refreshed on claim) ──
 let _cachedDbOwner: WalletIdentity | null | undefined = undefined;

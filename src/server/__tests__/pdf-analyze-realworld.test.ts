@@ -154,9 +154,9 @@ describe("Real-world stress test (final_boss_contract structure)", () => {
 
   it("no signer has more than 10 fields", () => {
     for (const s of result.detectedSigners) {
-      console.log(`  ${s.label} (${s.role}): ${s.fields.length} fields [${s.source}]`);
+      console.warn(`  ${s.label} (${s.role}): ${s.fields.length} fields [${s.source}]`);
       for (const f of s.fields) {
-        console.log(`    - ${f.type}: ${f.label} ${f.blank ? "(blank)" : (f.value ?? "")}`);
+        console.warn(`    - ${f.type}: ${f.label} ${f.blank ? "(blank)" : (f.value ?? "")}`);
       }
     }
     for (const s of result.detectedSigners) {

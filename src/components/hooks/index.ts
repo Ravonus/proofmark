@@ -7,3 +7,4 @@
 
 export { useSigningFlow } from "./use-signing-flow";
 export { useEditorFlow } from "./use-editor-flow";
+export { useConnectedIdentity } from "./use-connected-identity";

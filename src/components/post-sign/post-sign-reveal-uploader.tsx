@@ -2,25 +2,9 @@
 
 import { useState } from "react";
 import { Loader2, UploadCloud } from "lucide-react";
-import { GlassCard } from "./ui/motion";
-
-type PostSignReveal = {
-  enabled: boolean;
-  downloads?: Array<{
-    label: string;
-    filename: string;
-    description?: string;
-    icon?: string;
-    uploadedByAddress?: string;
-    uploadedByLabel?: string;
-    uploadedAt?: string;
-  }>;
-};
-
-function deriveLabel(name: string): string {
-  const withoutExtension = name.replace(/\.[^.]+$/, "");
-  return withoutExtension.replace(/[-_]+/g, " ").trim() || name;
-}
+import { GlassCard } from "../ui/motion";
+import type { PostSignReveal } from "~/server/db/schema";
+import { deriveLabel } from "./post-sign-download-manager";
 
 async function readApiResponse(response: Response): Promise<{ reveal: PostSignReveal }> {
   const body = (await response.json().catch(() => null)) as { error?: string; reveal?: PostSignReveal } | null;

@@ -6,7 +6,7 @@
  */
 
 import { create } from "zustand";
-import type { DocToken, InlineField } from "~/lib/document-tokens";
+import type { DocToken, InlineField } from "~/lib/document/document-tokens";
 import type { SignerDef } from "~/lib/schemas/signer";
 
 // Re-export so consumers can import from ~/stores

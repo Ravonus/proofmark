@@ -1,6 +1,6 @@
-import type { InlineField } from "~/lib/document-tokens";
+import type { InlineField } from "~/lib/document/document-tokens";
 import type { IntegrationConfig } from "~/server/db/schema";
-import type { PaymentFieldValue } from "~/lib/field-values";
+import type { PaymentFieldValue } from "~/lib/document/field-values";
 
 export type PaymentFieldSettings = {
   amount?: number;

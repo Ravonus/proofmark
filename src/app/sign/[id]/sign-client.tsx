@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "~/components/nav";
-import { SignDocument } from "~/components/sign-document";
+import { SignDocument } from "~/components/signing/sign-document";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export function SignPageClient({ id, claim, embed = false }: { id: string; claim: string | null; embed?: boolean }) {

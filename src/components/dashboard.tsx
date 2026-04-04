@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { useSession } from "~/lib/auth-client";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "./wallet-provider";
-import { PostSignDownloadManager } from "./post-sign-download-manager";
+import { PostSignDownloadManager } from "./post-sign/post-sign-download-manager";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { FadeIn, GlassCard } from "./ui/motion";
 import {

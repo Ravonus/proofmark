@@ -2,13 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { PdfAnalysisResult, FieldType } from "~/lib/pdf-types";
+import type { PdfAnalysisResult, FieldType } from "~/lib/document/pdf-types";
 import { FadeIn, ScaleIn, GlassCard, AnimatedButton } from "./ui/motion";
-import dynamic from "next/dynamic";
-const AiScraperReview = dynamic(
-  () => import("./ai/ai-scraper-review").then((m) => m.AiScraperReview).catch(() => () => null),
-  { ssr: false, loading: () => null },
-);
 
 // ─── Result type for the parent ───────────────────────────────────────────────
 
@@ -117,10 +112,10 @@ export function PdfUpload({ onComplete, onCancel }: Props) {
         throw new Error("Server error — please try again.");
       }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const data = (await res.json()) as PdfAnalysisResult & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
 
-      const result = data as PdfAnalysisResult;
+      const result = data;
       setAnalysis(result);
       setReviewTitle(result.title);
 
@@ -183,14 +178,14 @@ export function PdfUpload({ onComplete, onCancel }: Props) {
       e.preventDefault();
       setDragging(false);
       const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      if (file) void handleFile(file);
     },
     [handleFile],
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   };
 
   // ─── Upload step ──────────────────────────────────────────────────────────
@@ -433,21 +428,9 @@ function PdfReview({
     });
   }, []);
 
-  const [activeAnalysis, setActiveAnalysis] = useState(analysis);
-
   return (
     <div className="space-y-6">
-      <AnalysisSummary analysis={activeAnalysis} />
-
-      {/* AI Smart Fix */}
-      <AiScraperReview
-        analysisResult={activeAnalysis}
-        rawContent={activeAnalysis.content}
-        onAccept={(corrected) => setActiveAnalysis(corrected)}
-        onReject={() => {
-          /* keep original */
-        }}
-      />
+      <AnalysisSummary analysis={analysis} />
 
       {/* Signer legend */}
       {signers.length > 1 && (

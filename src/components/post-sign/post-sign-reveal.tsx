@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "~/lib/trpc";
-import { useWallet } from "./wallet-provider";
+import { useWallet } from "../wallet-provider";
 import { PostSignRevealUploader } from "./post-sign-reveal-uploader";
 import { addressPreview } from "~/lib/chains";
-import { FadeIn, GlassCard, AnimatedButton, AnimatedLink, StaggerContainer, StaggerItem } from "./ui/motion";
+import { FadeIn, GlassCard, AnimatedButton, AnimatedLink, StaggerContainer, StaggerItem } from "../ui/motion";
 
 function formatUploadMeta(download: { uploadedByLabel?: string; uploadedAt?: string }) {
   const label = download.uploadedByLabel?.trim();
@@ -34,7 +34,7 @@ export function PostSignReveal({ documentId }: { documentId: string }) {
   const refreshMutation = trpc.document.refreshAccess.useMutation({
     onSuccess: (data) => {
       setRefreshResult(data.ip);
-      revealQuery.refetch();
+      void revealQuery.refetch();
     },
   });
 

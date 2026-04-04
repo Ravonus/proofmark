@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AnimatedButton } from "./ui/motion";
+import { AnimatedButton } from "../ui/motion";
 import { signatureStrokesToDataUrl, type SignatureStroke } from "~/lib/signature-svg";
 import type { TimedSignatureStroke } from "~/lib/forensic";
 import type { BehavioralTracker } from "~/lib/forensic";
@@ -149,7 +149,6 @@ export function SignaturePad({
       strokeColor: sigStroke,
     });
     forensicTracker?.commitSignature(forensicSurfaceId, strokesRef.current);
-    // Save for reuse across contracts
     if (signerIdentity) saveSignature(signerIdentity, mode, dataUrl, documentId);
     onCapture(dataUrl);
   };
@@ -158,7 +157,6 @@ export function SignaturePad({
     if (!signerIdentity) return;
     const saved = getSavedSignature(signerIdentity, mode);
     if (!saved) return;
-    // Save with updated timestamp
     saveSignature(signerIdentity, mode, saved.dataUrl, documentId);
     onCapture(saved.dataUrl);
   };

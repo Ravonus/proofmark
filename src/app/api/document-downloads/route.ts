@@ -65,11 +65,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData();
-    const documentId = String(formData.get("documentId") || "").trim();
-    const existingFilenameRaw = String(formData.get("existingFilename") || "").trim();
-    const label = String(formData.get("label") || "").trim();
-    const description = String(formData.get("description") || "").trim();
-    const icon = String(formData.get("icon") || "").trim();
+    const _docId = formData.get("documentId");
+    const documentId = (typeof _docId === "string" ? _docId : "").trim();
+    const _existFn = formData.get("existingFilename");
+    const existingFilenameRaw = (typeof _existFn === "string" ? _existFn : "").trim();
+    const _label = formData.get("label");
+    const label = (typeof _label === "string" ? _label : "").trim();
+    const _desc = formData.get("description");
+    const description = (typeof _desc === "string" ? _desc : "").trim();
+    const _icon = formData.get("icon");
+    const icon = (typeof _icon === "string" ? _icon : "").trim();
     const file = formData.get("file");
 
     if (!documentId) {

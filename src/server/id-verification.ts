@@ -1,5 +1,5 @@
-import type { InlineField } from "~/lib/document-tokens";
-import type { IdentityVerificationCheck, IdentityVerificationFieldValue } from "~/lib/field-values";
+import type { InlineField } from "~/lib/document/document-tokens";
+import type { IdentityVerificationCheck, IdentityVerificationFieldValue } from "~/lib/document/field-values";
 
 function getFirstValue(fields: InlineField[], fieldValues: Record<string, string>, types: string[]): string {
   for (const field of fields) {

@@ -197,7 +197,6 @@ export const accountRouter = createTRPCRouter({
 
       const actor = resolveWalletIdentity(ctx.session.address, ctx.session.chain);
 
-      // Store in DB
       try {
         await ctx.db
           .insert(platformConfig)
@@ -217,7 +216,7 @@ export const accountRouter = createTRPCRouter({
               claimedAt: new Date(),
             },
           });
-      } catch (error) {
+      } catch {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to store ownership claim. You may need to run `npm run db:push` first.",

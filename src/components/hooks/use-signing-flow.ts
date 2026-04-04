@@ -23,16 +23,22 @@ import { useWalletStore } from "~/stores/wallet";
 import { getWalletActions } from "~/components/wallet-provider";
 import { generateQrDataUrl } from "~/lib/qr-svg";
 import { useSigningStore } from "~/stores/signing";
-import { encodeStructuredFieldValue } from "~/lib/field-values";
-import { formatEditableFieldValue, getFieldLogicState, isFieldVisible, isFieldRequired } from "~/lib/field-runtime";
-import { VERIFY_FIELD_TYPES } from "~/lib/signing-constants";
-import { tokenizeDocument, validateField } from "~/components/sign-document-helpers";
-import type { InlineField, DocToken } from "~/components/sign-document-helpers";
-import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/recipient-roles";
+import { encodeStructuredFieldValue } from "~/lib/document/field-values";
+import type { AttachmentFieldValue } from "~/lib/document/field-values";
+import {
+  formatEditableFieldValue,
+  getFieldLogicState,
+  isFieldVisible,
+  isFieldRequired,
+} from "~/lib/document/field-runtime";
+import { VERIFY_FIELD_TYPES } from "~/lib/signing/signing-constants";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
+import type { InlineField, DocToken } from "~/lib/document/document-tokens";
+import { validateField } from "~/components/signing/sign-document-helpers";
+import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/signing/recipient-roles";
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
 import { collectFingerprintBestEffort, BehavioralTracker, warmForensicReplayCore } from "~/lib/forensic";
 import type { BehavioralSignals } from "~/lib/forensic";
-import type { GazeLivenessSummary } from "~/lib/forensic/types";
 import { CHAIN_META, normalizeAddress, type WalletChain } from "~/lib/chains";
 import {
   buildTokenGateProofMessage,
@@ -41,21 +47,6 @@ import {
   type TokenGateWalletProof,
   type TokenGateWalletVerification,
 } from "~/lib/token-gates";
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-type GazeTrackerInstance = {
-  start: () => Promise<boolean>;
-  stop: () => unknown;
-  getStats: () => { points: number; fixations: number; blinks: number; validMs: number };
-  recordCalibrationClick?: (screenX: number, screenY: number) => void;
-  saveCalibrationToDevice?: (trainingClicks: number) => void;
-  clearCalibration?: () => void;
-  pauseTraining?: () => void;
-  resumeTraining?: () => void;
-  setLightSmoothing?: (light: boolean) => void;
-  hasStoredCalibration?: boolean;
-};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -122,53 +113,12 @@ async function runSigningAction(
   }
 }
 
-/** Stop gaze tracker, kill stray video streams, remove WebGazer DOM nodes. */
-function cleanupGazeTracker(gazeRef: React.MutableRefObject<GazeTrackerInstance | null>): void {
-  try {
-    gazeRef.current?.stop();
-  } catch {
-    /* best-effort */
-  }
-  gazeRef.current = null;
-
-  // Kill all active video streams (WebGazer leaves stray <video> elements)
-  try {
-    document.querySelectorAll("video").forEach((v) => {
-      if (v.srcObject) {
-        (v.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
-        v.srcObject = null;
-      }
-    });
-  } catch {
-    /* best-effort */
-  }
-
-  // Remove WebGazer DOM artifacts
-  for (const id of [
-    "webgazerVideoFeed",
-    "webgazerVideoCanvas",
-    "webgazerFaceOverlay",
-    "webgazerFaceFeedbackBox",
-    "webgazerGazeDot",
-    "pm-gaze-indicator",
-  ]) {
-    document.getElementById(id)?.remove();
-  }
-}
-
 export function useSigningFlow(documentId: string, claimToken: string | null) {
   const wallet = useWalletStore();
   const store = useSigningStore();
 
   // ── Forensic tracker (initialized once via useEffect) ───────────────────────
   const behavioralTracker = useRef<BehavioralTracker | null>(null);
-  const gazeTrackerRef = useRef<GazeTrackerInstance | null>(null);
-  const [gazeReady, setGazeReady] = useState(false);
-  const [gazeError, setGazeError] = useState<string | null>(null);
-  const [gazeAway, setGazeAway] = useState(false);
-  const [gazePoint, setGazePoint] = useState<{ x: number; y: number; confidence: number } | null>(null);
-  const [gazeBlinkCount, setGazeBlinkCount] = useState(0);
-  const [gazeLiveness, setGazeLiveness] = useState<GazeLivenessSummary | null>(null);
   const visitIndexRef = useRef(0);
   const serverSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socialPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -191,9 +141,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     return () => {
       if (serverSaveTimer.current) clearTimeout(serverSaveTimer.current);
       if (socialPollRef.current) clearInterval(socialPollRef.current);
-      cleanupGazeTracker(gazeTrackerRef);
-      setGazePoint(null);
-      setGazeBlinkCount(0);
 
       // Best-effort: save forensic session before the user leaves the page
       if (claimToken && tracker) {
@@ -219,6 +166,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
         })();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: tracker init + cleanup must not re-run
   }, []);
 
   // ── Draft storage key ──────────────────────────────────────────────────────
@@ -227,7 +175,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     [documentId, claimToken],
   );
 
-  // Load draft once on mount
   useEffect(() => {
     store.setDraftStorageKey(draftKey);
     store.loadDraft();
@@ -246,10 +193,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
 
   const signMutation = trpc.document.sign.useMutation({
     onSuccess: () => {
-      cleanupGazeTracker(gazeTrackerRef);
       store.completeSigning();
       store.clearDraft();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
 
@@ -264,14 +210,14 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
   const finalizeMut = trpc.document.finalize.useMutation({
     onSuccess: () => {
       store.completeSigning();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
   const getBulkFinalizationMessageMut = trpc.document.getBulkFinalizationMessage.useMutation();
   const bulkFinalizeMut = trpc.document.bulkFinalize.useMutation({
     onSuccess: () => {
       store.completeSigning();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
   const addressSuggestionsMutation = trpc.document.addressSuggestions.useMutation();
@@ -311,15 +257,17 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     }
   }, [mobileSignPoll.data?.status, mobileSignPoll.data?.signatureData]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const currentSignerId = docQuery.data?.signers?.find((signer) => signer.isYou)?.id;
+
   useEffect(() => {
     setTokenGateProofs({} as Record<WalletChain, TokenGateWalletProof>);
     setProofAwareEvaluation(null);
     setVerifyingTokenGateChain(null);
-  }, [documentId, claimToken, docQuery.data?.signers?.find((signer) => signer.isYou)?.id]);
+  }, [documentId, claimToken, currentSignerId]);
 
   // ── Derived document state (all useMemo, no useEffect) ─────────────────────
   const doc = docQuery.data ?? null;
-  const docSigners = doc?.signers ?? [];
+  const docSigners = useMemo(() => doc?.signers ?? [], [doc?.signers]);
 
   /** Whether the wallet session is fully connected with address + chain. */
   const walletReady = wallet.connected && !!wallet.address && !!wallet.chain;
@@ -375,7 +323,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       signedCount,
       totalRecipients,
     };
-  }, [docSigners, wallet.connected, wallet.address, wallet.chain, doc]);
+  }, [docSigners, wallet.connected, wallet.address, doc]);
 
   // ── Token gate evaluation ─────────────────────────────────────────────────
   // Two modes: "simple" uses server-side evaluation on the signer row;
@@ -930,7 +878,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     fieldsByTypeLabel,
     confirmSigningMessage,
 
-    // Store state (forwarded)
     signing: store.phase === "signing",
     done: store.phase === "done",
     declined: store.phase === "declined",
@@ -946,91 +893,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     qrImage: store.qrImage,
     qrMode: store.qrMode,
     forensicTracker: behavioralTracker.current,
-
-    // Gaze tracking
-    gazeTracking: ((doc as Record<string, unknown> | undefined)?.gazeTracking as string) ?? "off",
-    gazeReady,
-    gazeError,
-    gazeAway,
-    gazePoint,
-    gazeBlinkCount,
-    gazeLiveness,
-    hasStoredCalibration: gazeTrackerRef.current?.hasStoredCalibration ?? false,
-    pauseGazeTraining: () => gazeTrackerRef.current?.pauseTraining?.(),
-    resumeGazeTraining: () => gazeTrackerRef.current?.resumeTraining?.(),
-    setGazeLightSmoothing: (light: boolean) => gazeTrackerRef.current?.setLightSmoothing?.(light),
-    setGazeRecording: (enabled: boolean) => {
-      const tracker = behavioralTracker.current;
-      if (tracker) tracker.gazeRecordingEnabled = enabled;
-    },
-    markDocumentViewingStarted: () => {
-      behavioralTracker.current?.markDocumentViewingStarted();
-    },
-    saveGazeCalibration: (trainingClicks: number) => {
-      gazeTrackerRef.current?.saveCalibrationToDevice?.(trainingClicks);
-    },
-    recordGazeLiveness: (summary: GazeLivenessSummary) => {
-      setGazeLiveness(summary);
-      behavioralTracker.current?.recordGazeLiveness(summary);
-    },
-    startGazeTracking: async () => {
-      if (gazeTrackerRef.current) return true;
-      try {
-        const { createGazeTracker } = await import("~/lib/gaze-loader");
-        const tracker = behavioralTracker.current;
-        setGazeError(null);
-        setGazePoint(null);
-        setGazeBlinkCount(0);
-        setGazeLiveness(null);
-        const gaze = await createGazeTracker(
-          { showGazeFeedback: false, runCalibration: false, confidenceThreshold: 0.15 },
-          {
-            onGazePoint: (pt: { x: number; y: number; confidence: number }) => {
-              tracker?.recordGazePoint(pt.x, pt.y, pt.confidence);
-              setGazePoint(pt);
-            },
-            onFixation: (fix: { x: number; y: number; durationMs: number; element: Element | null }) =>
-              tracker?.recordGazeFixation(fix.x, fix.y, fix.durationMs, fix.element),
-            onSaccade: (sac: { fromX: number; fromY: number; toX: number; toY: number; velocityDegPerS: number }) =>
-              tracker?.recordGazeSaccade(sac.fromX, sac.fromY, sac.toX, sac.toY, sac.velocityDegPerS),
-            onBlink: (blink: { durationMs: number }) => {
-              tracker?.recordGazeBlink(blink.durationMs);
-              setGazeBlinkCount((count) => count + 1);
-            },
-            onCalibrationResult: (cal: { accuracy: number; pointCount: number }) =>
-              tracker?.recordGazeCalibration(cal.accuracy, cal.pointCount),
-            onTrackingLost: (reason: number) => {
-              tracker?.recordGazeLost(reason);
-              setGazePoint(null);
-            },
-            onTrackingRestored: () => tracker?.recordGazeRestored(),
-            onPermissionDenied: () => setGazeError("Camera permission denied. Eye tracking requires camera access."),
-            onError: (err: Error) => setGazeError("Eye tracker error: " + err.message),
-            onGazeAway: () => setGazeAway(true),
-            onGazeReturn: () => setGazeAway(false),
-          },
-        );
-        const ok = await gaze.start();
-        if (!ok) {
-          if (!gazeError) setGazeError("Failed to start eye tracker. Check browser console for details.");
-          return false;
-        }
-
-        gazeTrackerRef.current = gaze as unknown as GazeTrackerInstance;
-        tracker?.activateGazeTracking();
-        setGazeReady(true);
-        return true;
-      } catch (err) {
-        setGazeError("Eye tracking unavailable: " + (err instanceof Error ? err.message : "unknown error"));
-        return false;
-      }
-    },
-    stopGazeTracking: () => {
-      gazeTrackerRef.current?.stop();
-      gazeTrackerRef.current = null;
-      setGazeReady(false);
-      setGazePoint(null);
-    },
 
     // Actions
     handleFieldChange,
@@ -1128,7 +990,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
           return;
         }
 
-        docQuery.refetch().then((res) => {
+        void docQuery.refetch().then((res) => {
           if (!res.data) return;
           const signer = res.data.signers?.find((s: { isYou?: boolean }) => s.isYou);
           const serverVal = signer?.fieldValues?.[field.id];
@@ -1187,7 +1049,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       formData.set("file", file);
       const response = await fetch("/api/signer-attachments", { method: "POST", body: formData });
       const payload = (await response.json()) as {
-        attachment?: import("~/lib/field-values").AttachmentFieldValue;
+        attachment?: AttachmentFieldValue;
         error?: string;
       };
       if (!response.ok || !payload.attachment) throw new Error(payload.error || "Attachment upload failed");

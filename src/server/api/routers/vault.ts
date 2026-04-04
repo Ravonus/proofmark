@@ -43,7 +43,6 @@ export const vaultRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found — create an account first" });
       }
 
-      // Check if this method already exists
       const [existing] = await ctx.db
         .select()
         .from(userVaults)
@@ -51,7 +50,6 @@ export const vaultRouter = createTRPCRouter({
         .limit(1);
 
       if (existing) {
-        // Update existing
         await ctx.db
           .update(userVaults)
           .set({
@@ -63,7 +61,6 @@ export const vaultRouter = createTRPCRouter({
         return { vaultId: existing.id, updated: true };
       }
 
-      // Create new
       const { createId } = await import("~/server/db/utils");
       const id = createId();
       await ctx.db.insert(userVaults).values({

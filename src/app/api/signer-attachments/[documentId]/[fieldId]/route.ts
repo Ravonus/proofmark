@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
-import { decodeStructuredFieldValue, type AttachmentFieldValue } from "~/lib/field-values";
+import { decodeStructuredFieldValue, type AttachmentFieldValue } from "~/lib/document/field-values";
 import { loadSignerAttachment } from "~/server/attachments";
 
 export const dynamic = "force-dynamic";

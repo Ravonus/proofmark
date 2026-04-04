@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- dynamic premium module imports are untyped; full type coverage deferred until premium types are exported
 import { computeIpfsCid, computeSha256 } from "~/lib/ipfs";
 import { loadPremiumChains } from "~/lib/premium";
 import {
@@ -18,6 +18,7 @@ import {
 } from "~/lib/forensic/session";
 import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/automation-review";
 import { logger } from "~/lib/logger";
+import type { ReplayTapeVerification } from "~/server/rust-engine";
 
 type ProofMode = "PRIVATE" | "HYBRID" | "CRYPTO_NATIVE";
 
@@ -160,7 +161,7 @@ export async function enrichForensicEvidence(
   // ── Server-side replay tape validation ──────────────────────────────
   // Decode the binary tape in Rust and cross-check against claimed metrics.
   // Inject any mismatches/anomalies as forensic flags before automation review.
-  let replayValidation: import("~/server/rust-engine").ReplayTapeVerification | null = null;
+  let replayValidation: ReplayTapeVerification | null = null;
   const replay = params.evidence.behavioral.replay;
   if (replay?.tapeBase64) {
     try {
@@ -212,11 +213,12 @@ export async function enrichForensicEvidence(
 
   if (policy.aiReviewInline) {
     try {
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- dynamic premium imports are untyped */
       const { reviewAutomationEvidence } = await import(/* webpackIgnore: true */ "~/premium/ai/automation-review");
       const { getPlatformProviders, readPlatformEnv } = await import(
         /* webpackIgnore: true */ "~/premium/ai/key-resolver"
       );
-      const providers = getPlatformProviders().filter((p) => p.available);
+      const providers = getPlatformProviders().filter((p: { available: boolean }) => p.available);
       const first = providers[0];
       if (first) {
         const env = readPlatformEnv(first.provider);
@@ -237,7 +239,8 @@ export async function enrichForensicEvidence(
           evidence: { ...enrichedBaseEvidence, automationReview: heuristicReview } as EnhancedForensicEvidence,
           policy: params.automationPolicy,
         });
-        aiReview = result.review;
+        aiReview = result.review as AutomationReview;
+        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
         // Use the stricter verdict between heuristic and AI
         if (aiReview.automationScore > heuristicReview.automationScore) {
           review = { ...aiReview, source: "hybrid" as const };
@@ -284,11 +287,13 @@ export async function enrichForensicEvidence(
   const objectHash = computeSha256(canonicalPayload);
   const objectCid = await computeIpfsCid(canonicalPayload);
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- loadPremiumChains returns dynamic untyped module
   const chains = params.proofMode !== "PRIVATE" ? await loadPremiumChains() : null;
   let anchorResult: AnchorResult | null = null;
   const useExternalObject = params.proofMode !== "PRIVATE" && !!chains;
   if (useExternalObject && chains) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- dynamic premium chains module
       anchorResult = await chains.autoAnchorToAllChains(objectHash);
     } catch {
       anchorResult = null;

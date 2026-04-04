@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "~/components/wallet-provider";
-import { isImageDataUrl } from "~/lib/field-values";
-import { tokenizeDocument, type DocToken } from "~/lib/document-tokens";
-import { getFieldDisplayText, getFieldVisualStyle } from "~/components/sign-document-helpers";
+import { isImageDataUrl } from "~/lib/document/field-values";
+import { tokenizeDocument, type DocToken } from "~/lib/document/document-tokens";
+import { getFieldDisplayText, getFieldVisualStyle } from "~/components/signing/sign-document-helpers";
 import {
   FileDown,
   ShieldCheck,
@@ -584,6 +584,7 @@ function renderToken(
               {token.field.label}
             </span>
             <span className="inline-block border-b-2 border-emerald-400/30 pb-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
               <img
                 src={val}
                 alt={`${token.field.label} signature`}
@@ -626,6 +627,7 @@ function renderToken(
           <p className="mb-3 text-xs uppercase tracking-wider text-muted">{token.label} Signature</p>
           {hasSigned && sigImage && isImageDataUrl(sigImage) ? (
             <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg,#fefce8)] px-4 py-3 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
               <img
                 src={sigImage}
                 alt={`${signer.label} signature`}

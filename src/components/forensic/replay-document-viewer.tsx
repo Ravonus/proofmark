@@ -20,7 +20,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { trpc } from "~/lib/trpc";
-import { tokenizeDocument } from "~/lib/document-tokens";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
 import { decodeReplayEventsSync, type ForensicReplayEncodedEvent } from "~/lib/forensic/replay-codec";
 import { REPLAY_FORMAT_LIMITS } from "~/lib/forensic/replay-format";
 import type { BehavioralSignals, ForensicReplayTape } from "~/lib/forensic/types";
@@ -30,12 +30,12 @@ import {
   type InteractionClassification,
   type SessionClassification,
 } from "~/lib/forensic/session";
-import { isImageDataUrl } from "~/lib/field-values";
-import { isFieldRequired, isFieldVisible } from "~/lib/field-runtime";
-import { DocumentPaper } from "../document-paper";
-import { InlineFieldInput } from "../sign-document-inline-field";
-import { DocumentHeader, SignerList } from "../sign-document-parts";
-import { validateField, type SignerInfo } from "../sign-document-helpers";
+import { isImageDataUrl } from "~/lib/document/field-values";
+import { isFieldRequired, isFieldVisible } from "~/lib/document/field-runtime";
+import { DocumentPaper } from "../document-editor/document-paper";
+import { InlineFieldInput } from "../signing/sign-document-inline-field";
+import { DocumentHeader, SignerList } from "../signing/sign-document-parts";
+import { validateField, type SignerInfo } from "../signing/sign-document-helpers";
 
 type Props = { documentId?: string; shareToken?: string };
 
@@ -45,10 +45,14 @@ const GAZE_SCALE = 1000;
 const GAZE_TRAIL_LENGTH = 20;
 const LANE_COLORS = ["#60a5fa", "#f87171", "#34d399", "#fbbf24", "#a78bfa", "#38bdf8", "#fb923c", "#e879f9"];
 
-const noop = () => {};
-const noopUpload = async () => "";
-const noopSuggestions = async () => [];
-const noopPayment = async () => {};
+const noop = () => {
+  /* noop */
+};
+const noopUpload = async () => "" as string;
+const noopSuggestions = async () => [] as never[];
+const noopPayment = async () => {
+  /* noop */
+};
 
 function formatTime(ms: number) {
   const seconds = Math.max(0, Math.round(ms / 1000));
@@ -108,18 +112,16 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
       case "focus":
         focusChanges++;
         break;
-      case "scroll":
-        if ("scrollY" in event && "scrollMax" in event) {
-          const depth = (event as any).scrollMax > 0 ? (event as any).scrollY / (event as any).scrollMax : 0;
-          if (depth > maxScrollDepth) maxScrollDepth = depth;
-        }
+      case "scroll": {
+        const depth = event.scrollMax > 0 ? event.scrollY / event.scrollMax : 0;
+        if (depth > maxScrollDepth) maxScrollDepth = depth;
         mouseMoveCount += 2; // scrolling implies pointer activity
         break;
+      }
       case "clipboard": {
-        const action = (event as any).action;
-        if (action === "paste") pasteEvents++;
-        else if (action === "copy") copyEvents++;
-        else if (action === "cut") cutEvents++;
+        if (event.action === "paste") pasteEvents++;
+        else if (event.action === "copy") copyEvents++;
+        else if (event.action === "cut") cutEvents++;
         break;
       }
       case "gazePoint":
@@ -129,10 +131,11 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
           gazeLastLostAt = null;
         }
         break;
-      case "gazeFixation":
+      case "gazeFixation": {
         gazeFixationCount++;
-        gazeFixTotalMs += (event as any).durationMs ?? 0;
+        gazeFixTotalMs += event.durationMs ?? 0;
         break;
+      }
       case "gazeBlink":
         gazeBlinkCount++;
         break;
@@ -719,16 +722,17 @@ function buildTimelineEvents(
           timeline.push({ atMs, type: "scroll", label: "Scroll", icon: "📜", source, critical: false });
         }
         break;
-      case "clipboard":
+      case "clipboard": {
         timeline.push({
           atMs,
           type: "clipboard",
-          label: (ev as any).action ?? "clipboard",
+          label: ev.action ?? "clipboard",
           icon: "📋",
           source,
           critical: false,
         });
         break;
+      }
       case "gazeBlink":
         // Only show blinks if they're interesting
         break;
@@ -910,9 +914,15 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
       const { classification, interactions } = tape
         ? classifyFromTape(tape, events)
         : { classification: null, interactions: [] as InteractionClassification[] };
-      const serverReview = ((signer as any).automationReview as ServerAutomationReview) ?? null;
-      const sessionProfile = ((signer as any).sessionProfile as ServerSessionProfile) ?? null;
-      const forensicSessions = ((signer as any).forensicSessions ?? []) as ServerForensicSession[];
+      const signerExt = signer as typeof signer & {
+        automationReview?: ServerAutomationReview;
+        sessionProfile?: ServerSessionProfile;
+        forensicSessions?: ServerForensicSession[];
+        documentViewingStartedMs?: number;
+      };
+      const serverReview = signerExt.automationReview ?? null;
+      const sessionProfile = signerExt.sessionProfile ?? null;
+      const forensicSessions = signerExt.forensicSessions ?? [];
       return {
         id: signer.id,
         label: signer.label,
@@ -934,7 +944,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
         email: signer.email ?? null,
         role: signer.role ?? "SIGNER",
         canSign: signer.canSign ?? false,
-        documentViewingStartedMs: (signer as any).documentViewingStartedMs ?? 0,
+        documentViewingStartedMs: signerExt.documentViewingStartedMs ?? 0,
       };
     });
   }, [data]);
@@ -1351,6 +1361,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm"
                   data-forensic-id={`signature-${signer.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                   <img
                     src={signer.handSignatureData}
                     alt={`${signer.label} signature`}
@@ -1446,7 +1457,11 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                     onClick={() =>
                       setExpandedSigners((prev) => {
                         const next = new Set(prev);
-                        next.has(signer.index) ? next.delete(signer.index) : next.add(signer.index);
+                        if (next.has(signer.index)) {
+                          next.delete(signer.index);
+                        } else {
+                          next.add(signer.index);
+                        }
                         return next;
                       })
                     }
@@ -1614,81 +1629,6 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                                   Agent: {Math.round(signer.sessionProfile.automationEvidenceScore * 100)}%
                                 </span>
                               </div>
-                            </div>
-                          );
-                        })()}
-
-                      {/* AI Forensic Review (async) */}
-                      {(signer as any).aiForensicReview &&
-                        (() => {
-                          const air = (signer as any).aiForensicReview as {
-                            verdict: string;
-                            confidence: number;
-                            automationScore: number;
-                            rationale: string;
-                            chunks: Array<{
-                              chunk: string;
-                              verdict: string;
-                              score: number;
-                              rationale: string;
-                              thresholdSuggestions?: Array<{
-                                field: string;
-                                currentValue: number;
-                                suggestedValue: number;
-                                reason: string;
-                              }>;
-                            }>;
-                          };
-                          const airColor =
-                            air.verdict === "agent" ? "#f87171" : air.verdict === "human" ? "#34d399" : "#fbbf24";
-                          return (
-                            <div className="mt-3 space-y-2 border-t border-border pt-3">
-                              <p className="text-muted/70 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                AI Forensic Review
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">
-                                  {air.verdict === "agent" ? "🤖" : air.verdict === "human" ? "👤" : "❓"}
-                                </span>
-                                <div>
-                                  <span className="text-[11px] font-bold uppercase" style={{ color: airColor }}>
-                                    {air.verdict}
-                                  </span>
-                                  <span className="ml-2 text-[10px] text-muted">
-                                    ({Math.round(air.confidence * 100)}% confidence)
-                                  </span>
-                                </div>
-                              </div>
-                              <p className="text-[10px] text-muted">{air.rationale}</p>
-                              {/* Per-chunk results */}
-                              <div className="space-y-1">
-                                {air.chunks.map((c, ci) => (
-                                  <div key={ci} className="flex items-center gap-1.5 text-[10px]">
-                                    <span
-                                      className={`font-semibold ${c.verdict === "agent" ? "text-red-400" : c.verdict === "human" ? "text-emerald-400" : "text-amber-400"}`}
-                                    >
-                                      {c.verdict === "agent" ? "🤖" : c.verdict === "human" ? "👤" : "❓"}
-                                    </span>
-                                    <span className="text-muted/70">
-                                      {c.chunk.replace("replay_", "").replace("meta_", "")}
-                                    </span>
-                                    <span className="text-muted/40 flex-1 truncate">{c.rationale.slice(0, 60)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                              {/* Threshold suggestions from feedback */}
-                              {air.chunks.some((c) => c.thresholdSuggestions?.length) && (
-                                <div className="mt-1 text-[9px] text-amber-400/60">
-                                  <p className="font-semibold">AI Threshold Suggestions:</p>
-                                  {air.chunks
-                                    .flatMap((c) => c.thresholdSuggestions ?? [])
-                                    .map((s, si) => (
-                                      <p key={si}>
-                                        • {s.field}: {s.currentValue} → {s.suggestedValue} ({s.reason})
-                                      </p>
-                                    ))}
-                                </div>
-                              )}
                             </div>
                           );
                         })()}

@@ -8,7 +8,7 @@ import superjson from "superjson";
 import { db } from "~/server/db";
 import { sessions, signers } from "~/server/db/schema";
 import { findSignersByDocumentId } from "~/server/db/compat";
-import { tokensToContent, type DocToken } from "~/lib/document-tokens";
+import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
 import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type { AppRouter } from "~/server/api/root";
@@ -65,8 +65,7 @@ function buildContent(): string {
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "This agreement is intentionally structured to exercise forensic replay, premium evidence storage, and automation review across both mundane preparation and human-critical signing steps.",
+      text: "This agreement is intentionally structured to exercise forensic replay, premium evidence storage, and automation review across both mundane preparation and human-critical signing steps.",
     },
     { kind: "break" },
     { kind: "heading", text: "1. Operational Intake", sectionNum: 2 },
@@ -181,26 +180,22 @@ function buildContent(): string {
     { kind: "heading", text: "3. Review Procedure", sectionNum: 4 },
     {
       kind: "text",
-      text:
-        "The counterparty should scroll the entire packet, highlight the sentence containing the reference code, and complete the verification field by pasting rather than retyping the code. This allows the forensic tape to capture navigation, selection, clipboard, and final signature behavior in one session.",
+      text: "The counterparty should scroll the entire packet, highlight the sentence containing the reference code, and complete the verification field by pasting rather than retyping the code. This allows the forensic tape to capture navigation, selection, clipboard, and final signature behavior in one session.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "Automated preparation is permitted for non-critical intake work, but the final confirmation, drawn signature, and wallet-based finalize action are intended to be completed manually by the actual signer.",
+      text: "Automated preparation is permitted for non-critical intake work, but the final confirmation, drawn signature, and wallet-based finalize action are intended to be completed manually by the actual signer.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "If preparation activity appears automated, the packet should be flagged without necessarily invalidating the agreement. If the critical signing action appears automated, the review should still preserve the distinction between preparation and final consent.",
+      text: "If preparation activity appears automated, the packet should be flagged without necessarily invalidating the agreement. If the critical signing action appears automated, the review should still preserve the distinction between preparation and final consent.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "This document is also long enough to encourage visible scrolling behavior before the final action. Reviewers can use the resulting evidence to compare a scripted low-interaction path against a manual browser session.",
+      text: "This document is also long enough to encourage visible scrolling behavior before the final action. Reviewers can use the resulting evidence to compare a scripted low-interaction path against a manual browser session.",
     },
     { kind: "break" },
     { kind: "heading", text: "4. Signatures", sectionNum: 5 },
@@ -314,11 +309,7 @@ function createDocumentClient(baseUrl: string, headers: HeadersInit) {
   });
 }
 
-async function presignFirstSigner(params: {
-  baseUrl: string;
-  documentId: string;
-  claimToken: string;
-}) {
+async function presignFirstSigner(params: { baseUrl: string; documentId: string; claimToken: string }) {
   const wallet = Wallet.createRandom();
   const client = createDocumentClient(params.baseUrl, {
     "user-agent": "Proofmark Automation Seed/1.0",

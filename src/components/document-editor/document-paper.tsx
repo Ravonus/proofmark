@@ -1,8 +1,8 @@
 "use client";
 
 import { Fragment, type ReactNode, type Ref } from "react";
-import type { DocToken, InlineField } from "~/lib/document-tokens";
-import { ScrollReveal } from "./ui/scroll-reveal";
+import type { DocToken, InlineField } from "~/lib/document/document-tokens";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 function sanitizeForensicPart(value: string) {
   return value

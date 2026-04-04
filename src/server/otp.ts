@@ -37,7 +37,6 @@ export async function sendSigningOtp(params: {
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
-  // Store OTP on the signer record
   await db
     .update(signers)
     .set({
@@ -47,7 +46,6 @@ export async function sendSigningOtp(params: {
     })
     .where(eq(signers.id, params.signerId));
 
-  // Send the OTP via email
   try {
     const { sendOtpEmail } = await import("~/server/email");
     await sendOtpEmail({

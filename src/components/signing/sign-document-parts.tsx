@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { trpc } from "~/lib/trpc";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
-import { getRecipientCompletedLabel, isViewOnlyRecipientRole } from "~/lib/recipient-roles";
+import { getRecipientCompletedLabel, isViewOnlyRecipientRole } from "~/lib/signing/recipient-roles";
 import { describeSignerTokenGate } from "~/lib/token-gates";
 import { AlertCircle, Check } from "lucide-react";
 import type { SignerInfo } from "./sign-document-helpers";

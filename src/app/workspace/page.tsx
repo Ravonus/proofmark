@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "~/components/nav";
-import { WorkspaceSettings } from "~/components/workspace-settings";
+import { WorkspaceSettings } from "~/components/settings/workspace-settings";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export default function WorkspacePage() {

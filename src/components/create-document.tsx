@@ -4,9 +4,9 @@ import { useState, useCallback, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "./wallet-provider";
-import { useConnectedIdentity } from "~/components/use-connected-identity";
-import { CONTRACT_TEMPLATES, type ContractTemplate } from "~/lib/templates";
-import { SECURITY_MODE_DESCRIPTIONS, type SecurityMode } from "~/lib/document-security";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
+import { CONTRACT_TEMPLATES, type ContractTemplate } from "~/lib/document/templates";
+import { SECURITY_MODE_DESCRIPTIONS, type SecurityMode } from "~/lib/signing/document-security";
 import type { SignerTokenGate } from "~/lib/token-gates";
 import { FadeIn, ScaleIn, GlassCard, W3SButton, W3SLink } from "./ui/motion";
 import { Select } from "./ui/select";
@@ -63,7 +63,7 @@ export function CreateDocument() {
   const [creatorEmail, setCreatorEmail] = useState("");
   const [signers, setSigners] = useState<SignerRow[]>([emptySigner(), emptySigner()]);
   const [created, setCreated] = useState<CreatedResult | null>(null);
-  const [_selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
+  const [, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState<string | null>(null);
   const [expiresInDays, setExpiresInDays] = useState("30");
   const [reminderCadence, setReminderCadence] = useState<"NONE" | "DAILY" | "EVERY_2_DAYS" | "EVERY_3_DAYS" | "WEEKLY">(
@@ -71,7 +71,7 @@ export function CreateDocument() {
   );
   const [automationReviewMode, setAutomationReviewMode] = useState<"FLAG" | "DENY" | "DISABLED">("FLAG");
   const [prepAutomationMode, setPrepAutomationMode] = useState<"ALLOW" | "FLAG">("ALLOW");
-  const [term, _setTerm] = useState("2 years");
+  const [term] = useState("2 years");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [showEditor, setShowEditor] = useState(false);

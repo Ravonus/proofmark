@@ -26,7 +26,7 @@ function getStore(): StoredData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { version: 1, signers: {} };
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as StoredData;
     if (parsed.version !== 1) return { version: 1, signers: {} };
     return parsed;
   } catch {

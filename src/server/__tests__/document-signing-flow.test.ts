@@ -2,18 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDocument, buildSigner, resetBuilderCounters } from "./helpers/builders";
 
 // Mock the Rust engine
-vi.mock("~/server/rust-engine", () => {
-  const { createHash } = require("crypto");
+vi.mock("~/server/rust-engine", async () => {
+  const crypto = await import("crypto");
   return {
     hashDocument: vi.fn(async (content: string) => {
-      return createHash("sha256").update(content).digest("hex");
+      return crypto.createHash("sha256").update(content).digest("hex");
     }),
   };
 });
 
 // Mock delivery (sendSignerInvite)
 vi.mock("~/server/delivery", () => ({
-  sendSignerInvite: vi.fn(async () => {}),
+  sendSignerInvite: vi.fn(async () => {
+    /* noop */
+  }),
   resolveDocumentBranding: vi.fn(async () => ({
     companyName: "Test",
     logoUrl: null,
@@ -24,15 +26,21 @@ vi.mock("~/server/delivery", () => ({
 
 // Mock email
 vi.mock("~/server/email", () => ({
-  sendCompletionEmail: vi.fn(async () => {}),
+  sendCompletionEmail: vi.fn(async () => {
+    /* noop */
+  }),
 }));
 
 // Mock audit + search index
 vi.mock("~/server/audit", () => ({
-  logAuditEvent: vi.fn(async () => {}),
+  logAuditEvent: vi.fn(async () => {
+    /* noop */
+  }),
 }));
 vi.mock("~/server/search-index", () => ({
-  indexDocument: vi.fn(async () => {}),
+  indexDocument: vi.fn(async () => {
+    /* noop */
+  }),
 }));
 
 beforeEach(() => {
@@ -204,7 +212,9 @@ describe("handlePostSignCompletion — sequential notification", () => {
     expect(sendSignerInvite).toHaveBeenCalledOnce();
     expect(sendSignerInvite).toHaveBeenCalledWith(
       expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         signer: expect.objectContaining({ email: "discloser@test.com" }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         signUrl: expect.stringContaining(signer1.claimToken),
       }),
     );

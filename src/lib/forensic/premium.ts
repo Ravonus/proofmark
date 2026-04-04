@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ForensicEvidence } from "./types";
 import type { PersistedForensicSessionCapture, ForensicSessionProfile, SignerBaselineProfile } from "./session";
+import type { ReplayTapeVerification } from "~/server/rust-engine";
 
 export const automationDecisionSchema = z.enum(["ALLOW", "FLAG", "DENY"]);
 export const automationAssessmentSchema = z.enum(["human", "agent", "mixed", "uncertain"]);
@@ -119,57 +120,13 @@ export interface ForensicPdfSummary {
   lines: string[];
 }
 
-/* ── Eye tracking policy (premium) ─────────────────────────── */
-
-export const eyeTrackingModeSchema = z.enum(["off", "optional", "required"]);
-export type EyeTrackingMode = z.infer<typeof eyeTrackingModeSchema>;
-
-export const documentEyeTrackingPolicySchema = z.object({
-  mode: eyeTrackingModeSchema.default("off"),
-  minTrackingCoverage: z.number().min(0).max(1).default(0.6),
-  showGazeFeedback: z.boolean().default(true),
-  storeCalibrationData: z.boolean().default(false),
-  blockWithoutCamera: z.boolean().default(true),
-});
-
-export type DocumentEyeTrackingPolicy = z.infer<typeof documentEyeTrackingPolicySchema>;
-
-export const DEFAULT_EYE_TRACKING_POLICY: DocumentEyeTrackingPolicy = {
-  mode: "off",
-  minTrackingCoverage: 0.6,
-  showGazeFeedback: true,
-  storeCalibrationData: false,
-  blockWithoutCamera: true,
-};
-
-export function normalizeEyeTrackingPolicy(
-  input?: Partial<DocumentEyeTrackingPolicy> | null,
-): DocumentEyeTrackingPolicy {
-  return documentEyeTrackingPolicySchema.parse({ ...DEFAULT_EYE_TRACKING_POLICY, ...(input ?? {}) });
-}
-
-export interface EyeTrackingSessionSummary {
-  active: boolean;
-  pointCount: number;
-  fixationCount: number;
-  avgFixationMs: number;
-  blinkCount: number;
-  blinkRate: number;
-  trackingCoverage: number;
-  passedCoverageThreshold: boolean;
-  calibrationAccuracy: number | null;
-  livenessPassRatio?: number | null;
-  livenessSuspicious?: boolean | null;
-}
-
 export type EnhancedForensicEvidence = ForensicEvidence & {
   storage?: ForensicStorageMetadata;
   automationReview?: AutomationReview;
   policyOutcome?: AutomationPolicyOutcome;
   pdfSummary?: ForensicPdfSummary;
-  eyeTracking?: EyeTrackingSessionSummary;
   sessionProfile?: ForensicSessionProfile;
   signerBaseline?: SignerBaselineProfile | null;
   forensicSessions?: PersistedForensicSessionCapture[];
-  replayValidation?: import("~/server/rust-engine").ReplayTapeVerification;
+  replayValidation?: ReplayTapeVerification;
 };

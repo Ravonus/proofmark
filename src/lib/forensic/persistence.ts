@@ -55,7 +55,7 @@ function openIdb(): Promise<IDBDatabase> {
     const req = indexedDB.open(IDB_NAME, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE, { keyPath: "key" });
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onerror = () => reject(req.error ?? new Error("IndexedDB open failed"));
   });
 }
 
@@ -101,7 +101,9 @@ function writeToAllLayers(data: StoredId) {
       const tx = db.transaction(IDB_STORE, "readwrite");
       tx.objectStore(IDB_STORE).put({ key: STORAGE_KEY, ...data });
     })
-    .catch(() => {});
+    .catch(() => {
+      /* write failed — non-critical */
+    });
 }
 
 /* ── Public API ─────────────────────────────────────────────── */

@@ -2,11 +2,11 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getRecipientActionLabel } from "~/lib/recipient-roles";
-import { useWallet } from "./wallet-provider";
+import { getRecipientActionLabel } from "~/lib/signing/recipient-roles";
+import { useWallet } from "../wallet-provider";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { SignaturePad } from "./signature-pad";
-import { isFieldVisible, isFieldLocked, isFieldRequired } from "~/lib/field-runtime";
+import { isFieldVisible, isFieldLocked, isFieldRequired } from "~/lib/document/field-runtime";
 import {
   Check,
   ChevronLeft,
@@ -25,40 +25,23 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { getFieldVisualStyle, getFieldMinWidth, getFieldDisplayText, validateField } from "./sign-document-helpers";
-import { isImageDataUrl } from "~/lib/field-values";
+import { isImageDataUrl } from "~/lib/document/field-values";
 import { InlineFieldInput } from "./sign-document-inline-field";
-import { DocumentPaper } from "./document-paper";
+import { DocumentPaper } from "../document-editor/document-paper";
 import { CenterCard, DocumentHeader, SignerList, CreatorClaimSlot, ChainButtons } from "./sign-document-parts";
-import dynamic from "next/dynamic";
-const AiSignerChat = dynamic(() => import("./ai/ai-signer-chat").then((m) => m.AiSignerChat), {
-  ssr: false,
-  loading: () => null,
-});
-import { resolveFieldBadge, resolveFieldLogo, resolveFieldPrefix, resolveFieldSuffix } from "~/lib/field-runtime";
-import { useSigningFlow } from "./hooks/use-signing-flow";
-import { GazeGate } from "./gaze-gate";
-import { GazeGateMobile } from "./gaze-gate-mobile";
-import { isGazeLivenessAccepted } from "~/lib/forensic/gaze-liveness";
-import type { GazeLivenessSummary } from "~/lib/forensic/types";
+import {
+  resolveFieldBadge,
+  resolveFieldLogo,
+  resolveFieldPrefix,
+  resolveFieldSuffix,
+} from "~/lib/document/field-runtime";
+import { useSigningFlow } from "../hooks/use-signing-flow";
 import { describeSignerTokenGate } from "~/lib/token-gates";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function SignDocument({ documentId, claimToken }: { documentId: string; claimToken: string | null }) {
   const { connected, address, chain } = useWallet();
-  const [showSigningOnlyGazeGate, setShowSigningOnlyGazeGate] = useState(false);
-
-  // Detect mobile once for gaze gate routing
-  const [mobileDevice] = useState(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const modPath = "~/premium/eye-tracking/mobile/device";
-      const { detectDevice } = require(/* webpackIgnore: true */ modPath);
-      return detectDevice();
-    } catch {
-      return null;
-    }
-  });
   const [sigPadMode, setSigPadMode] = useState<"signature" | "initials">("signature");
   const initialsFieldRef = useRef<string | null>(null);
   // All state + logic extracted to useSigningFlow (0 useEffect, 0 useState)
@@ -118,21 +101,6 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
     handleFieldFocus,
     handleFieldBlur,
     forensicTracker,
-    gazeTracking,
-    gazeReady,
-    gazeError,
-    gazeAway,
-    gazePoint,
-    gazeBlinkCount,
-    gazeLiveness,
-    recordGazeLiveness,
-    startGazeTracking,
-    hasStoredCalibration,
-    saveGazeCalibration,
-    pauseGazeTraining,
-    resumeGazeTraining,
-    setGazeLightSmoothing,
-    markDocumentViewingStarted,
     navigateToField,
     goToNextField,
     goToPrevField,
@@ -171,21 +139,6 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
         ? "failed"
         : "pending";
 
-  // ── REMOVED: All 15 useState declarations (now in useSigningStore)
-  // ── REMOVED: All 9 useEffects (now derived state / event handlers)
-
-  // The rest below is unchanged JSX — it references the same variable names.
-
-  // Old state declarations removed — all in useSigningFlow hook above.
-
-  // tRPC + state logic removed — all in useSigningFlow hook
-
-  // [removed: signMutation — now in useSigningFlow]
-
-  // [removed: tRPC mutations — now in useSigningFlow]
-
-  // All derived state from useSigningFlow hook.
-
   // Re-derive values the JSX needs that aren't in the hook return
   const mySignerIdx = currentSigner ? docSigners.findIndex((s) => s.id === currentSigner.id) : -1;
   const otherSignerValues: Record<string, string> = {};
@@ -196,9 +149,11 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
       }
     }
   }
-  const mobileSignPoll = { data: null as any };
-  const signMutation = { isPending: false, error: null as any };
-  const setQrToken = (_: any) => {};
+  const mobileSignPoll = { data: null as { status?: string; signatureData?: string } | null };
+  const signMutation = { isPending: false, error: null as { message: string } | null };
+  const setQrToken = (_: string | null) => {
+    /* noop — legacy compat stub */
+  };
 
   if (!claimToken && !connected) {
     return (
@@ -422,6 +377,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                             {token.field.label}
                           </span>
                           <span className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                             <img
                               src={val}
                               alt={`${token.field.label} signature`}
@@ -479,6 +435,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                         <p className="mb-3 text-xs uppercase tracking-wider text-muted">{token.label} Signature</p>
                         {hasSigned && signatureImage && isImageDataUrl(signatureImage) ? (
                           <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                             <img
                               src={signatureImage}
                               alt={`${signerForBlock.label} signature`}
@@ -521,40 +478,20 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   }
 
   // ── Main document view ──
-  const hasAcceptedGazeLiveness = isGazeLivenessAccepted(gazeLiveness);
-  const needsGazeForFullDoc = gazeTracking === "full" && (!gazeReady || !hasAcceptedGazeLiveness);
-  const needsGazeForSigningStep = gazeTracking === "signing_only" && (!gazeReady || !hasAcceptedGazeLiveness);
-
-  const handleGazeLivenessComplete = (summary: GazeLivenessSummary) => {
-    recordGazeLiveness(summary);
-    markDocumentViewingStarted();
-    if (isGazeLivenessAccepted(summary)) {
-      setShowSigningOnlyGazeGate(false);
-    }
-  };
-
-  const requireCriticalGazeGate = () => {
-    if (!needsGazeForSigningStep) return false;
-    setShowSigningOnlyGazeGate(true);
-    return true;
-  };
 
   const openSignaturePad = (mode: "signature" | "initials" = "signature", fieldId?: string) => {
-    if (requireCriticalGazeGate()) return;
     setSigPadMode(mode);
     if (mode === "initials" && fieldId) initialsFieldRef.current = fieldId;
     setShowSigPad(true);
   };
 
   const openConfirmModal = () => {
-    if (requireCriticalGazeGate()) return;
     setShowConfirmModal(true);
   };
 
   const confirmAndSign = () => {
-    if (requireCriticalGazeGate()) return;
     setShowConfirmModal(false);
-    handleSign();
+    void handleSign();
   };
 
   return (
@@ -568,87 +505,6 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
           </button>
         </div>
       )}
-      {/* Eye tracking gate — blocks entire document if mode is "full" */}
-      {needsGazeForFullDoc &&
-        (mobileDevice?.isMobile || mobileDevice?.isTablet ? (
-          <GazeGateMobile
-            mode="full"
-            gazeReady={gazeReady}
-            gazeError={gazeError}
-            gazePoint={gazePoint}
-            gazeBlinkCount={gazeBlinkCount}
-            device={mobileDevice}
-            onLivenessComplete={handleGazeLivenessComplete}
-            onStart={startGazeTracking}
-            skipCalibration={hasStoredCalibration}
-            onCalibrationComplete={saveGazeCalibration}
-            onPauseTraining={pauseGazeTraining}
-            onResumeTraining={resumeGazeTraining}
-            onSetLightSmoothing={setGazeLightSmoothing}
-            onDocumentViewingStarted={markDocumentViewingStarted}
-          >
-            <div />
-          </GazeGateMobile>
-        ) : (
-          <GazeGate
-            mode="full"
-            gazeReady={gazeReady}
-            gazeError={gazeError}
-            gazePoint={gazePoint}
-            gazeBlinkCount={gazeBlinkCount}
-            onLivenessComplete={handleGazeLivenessComplete}
-            onStart={startGazeTracking}
-            skipCalibration={hasStoredCalibration}
-            onCalibrationComplete={saveGazeCalibration}
-            onPauseTraining={pauseGazeTraining}
-            onResumeTraining={resumeGazeTraining}
-            onSetLightSmoothing={setGazeLightSmoothing}
-            onDocumentViewingStarted={markDocumentViewingStarted}
-          >
-            <div />
-          </GazeGate>
-        ))}
-
-      {showSigningOnlyGazeGate && needsGazeForSigningStep && (
-        <GazeGate
-          mode="signing_only"
-          gazeReady={gazeReady}
-          gazeError={gazeError}
-          gazePoint={gazePoint}
-          gazeBlinkCount={gazeBlinkCount}
-          onLivenessComplete={handleGazeLivenessComplete}
-          onStart={startGazeTracking}
-          skipCalibration={hasStoredCalibration}
-          onCalibrationComplete={saveGazeCalibration}
-          onPauseTraining={pauseGazeTraining}
-          onResumeTraining={resumeGazeTraining}
-          onSetLightSmoothing={setGazeLightSmoothing}
-          onDocumentViewingStarted={markDocumentViewingStarted}
-        >
-          <div />
-        </GazeGate>
-      )}
-
-      {/* Gaze away overlay — blocks document when signer looks away */}
-      {gazeTracking !== "off" && gazeReady && gazeAway && (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 backdrop-blur-md">
-          <div className="mx-4 max-w-sm space-y-4 rounded-2xl border border-amber-500/20 bg-[#0d1117] p-8 text-center shadow-2xl">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
-              <Eye className="h-7 w-7 text-amber-400" />
-            </div>
-            <h3 className="text-lg font-bold text-amber-400">Eyes Not Detected</h3>
-            <p className="text-sm text-white/50">
-              Please look at the screen to continue. The document is paused because eye tracking cannot detect your
-              gaze.
-            </p>
-            <div className="flex items-center justify-center gap-2 text-xs text-white/30">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-              Waiting for gaze...
-            </div>
-          </div>
-        </div>
-      )}
-
       <DocumentHeader doc={doc} signedCount={signedCount} totalRecipients={totalRecipients} />
 
       {/* Floating toolbar */}
@@ -763,6 +619,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                   className="inline-flex items-center gap-2 rounded-xl border border-dashed border-emerald-400/30 bg-emerald-400/5 px-4 py-2 text-sm text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.08)] transition-all hover:bg-emerald-400/10"
                 >
                   {handSignature ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image
                     <img src={handSignature} alt="Your signature" className="sig-theme-img h-8" />
                   ) : (
                     <>
@@ -791,6 +648,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
           if (blockSigned && blockSigImg && isImageDataUrl(blockSigImg)) {
             return (
               <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                 <img
                   src={blockSigImg}
                   alt={`${blockSigner.label} signature`}
@@ -1180,6 +1038,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
               {handSignature && (
                 <div className="rounded-lg bg-[var(--sig-bg)] p-3">
                   <p className="mb-2 text-xs text-muted">Preview</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                   <img src={handSignature} alt="Signature" className="mx-auto max-h-16" />
                 </div>
               )}
@@ -1231,6 +1090,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
 
               <div className="mx-auto overflow-hidden rounded-xl">
                 {qrImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data URL QR code, not a remote image
                   <img src={qrImage} alt="Scan to sign" className="h-56 w-56" />
                 ) : (
                   <div className="flex h-56 w-56 items-center justify-center rounded-xl bg-surface-elevated">
@@ -1362,18 +1222,6 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* AI Document Assistant for Signers */}
-      {claimToken && docQuery.data && (
-        <AiSignerChat
-          documentId={documentId}
-          claimToken={claimToken}
-          documentTitle={docQuery.data.title}
-          signerLabel={
-            docQuery.data.signers?.find((s) => "claimToken" in s && s.claimToken === claimToken)?.label ?? "Signer"
-          }
-        />
-      )}
     </div>
   );
 }

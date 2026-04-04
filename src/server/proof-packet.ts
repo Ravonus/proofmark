@@ -18,8 +18,8 @@ import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
 import { getAuditTrail, verifyAuditChainByDocId as verifyAuditChain, generateSignedPDF } from "~/server/rust-engine";
-import { deriveSecurityMode } from "~/lib/document-security";
-import type { EnhancedForensicEvidence, EyeTrackingSessionSummary } from "~/lib/forensic/premium";
+import { deriveSecurityMode } from "~/lib/signing/document-security";
+import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type {
   ForensicSessionLivenessProfile,
   ForensicSessionProfile,
@@ -128,7 +128,7 @@ export interface ProofPacket {
         mode: string;
         lines: string[];
       } | null;
-      eyeTracking: EyeTrackingSessionSummary | null;
+      eyeTracking: Record<string, unknown> | null;
       sessionProfile: ForensicSessionProfile | null;
       liveness: ForensicSessionLivenessProfile | null;
       signerBaseline: SignerBaselineProfile | null;
@@ -256,7 +256,7 @@ export function buildProofPacketForensicSection(
           lines: fe.pdfSummary.lines,
         }
       : null,
-    eyeTracking: fe.eyeTracking ?? null,
+    eyeTracking: ((fe as Record<string, unknown>).eyeTracking as Record<string, unknown> | undefined) ?? null,
     sessionProfile: fe.sessionProfile ?? null,
     liveness: fe.sessionProfile?.liveness ?? null,
     signerBaseline: fe.signerBaseline ?? null,
@@ -270,45 +270,18 @@ export function buildProofPacketForensicSection(
  * Generate a complete proof packet for a document.
  */
 export async function generateProofPacket(documentId: string): Promise<{ manifest: ProofPacket; pdf: Buffer }> {
-  // Load document
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
 
   if (!doc) throw new Error("Document not found");
 
-  // Load signers
   const allSigners = await db.select().from(signers).where(eq(signers.documentId, documentId));
 
-  // Load audit trail
   const events = await getAuditTrail(documentId);
   const chainValidity = await verifyAuditChain(documentId);
   const lastEvent = events.length > 0 ? events[events.length - 1] : undefined;
   const trailHash = lastEvent?.eventHash ?? "empty";
 
-  // Try to get blockchain anchoring info (if anchor service available)
-  let blockchainRefs: ProofPacket["blockchain"]["references"] = [];
-  try {
-    const { getDocumentAnchors } = await import("~/lib/anchor-client");
-    const anchorResult = (await getDocumentAnchors(documentId)) as {
-      anchors?: Array<{
-        chain: string;
-        anchorType: string;
-        txHash?: string | null;
-        inscriptionId?: string | null;
-        confirmedAt?: string | null;
-      }>;
-    } | null;
-    if (anchorResult?.anchors) {
-      blockchainRefs = anchorResult.anchors.map((a) => ({
-        chain: a.chain,
-        type: a.anchorType,
-        txHash: a.txHash ?? null,
-        inscriptionId: a.inscriptionId ?? null,
-        confirmedAt: a.confirmedAt ?? null,
-      }));
-    }
-  } catch {
-    // Anchor service not available — blockchain section empty
-  }
+  const blockchainRefs: ProofPacket["blockchain"]["references"] = [];
 
   // Build the manifest
   const manifest: Omit<ProofPacket, "packetHash"> = {

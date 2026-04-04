@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "~/components/nav";
-import { PostSignReveal } from "~/components/post-sign-reveal";
+import { PostSignReveal } from "~/components/post-sign/post-sign-reveal";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export function RevealPageClient({ id }: { id: string }) {

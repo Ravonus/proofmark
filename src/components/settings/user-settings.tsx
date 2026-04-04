@@ -4,18 +4,16 @@ import { useRef, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { trpc } from "~/lib/trpc";
 import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
-import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { Select } from "~/components/ui/select";
-import { useConnectedIdentity } from "~/components/use-connected-identity";
-import { User, ToggleRight, Key, Palette } from "lucide-react";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
+import { User, ToggleRight, Palette } from "lucide-react";
 
-type SettingsTab = "account" | "pdf" | "ai" | "features";
+type SettingsTab = "account" | "pdf" | "features";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "account", label: "Account", icon: User },
   { id: "pdf", label: "PDF", icon: Palette },
-  { id: "ai", label: "AI Keys", icon: Key },
   { id: "features", label: "Features", icon: ToggleRight },
 ];
 
@@ -23,20 +21,10 @@ export function UserSettings() {
   const identity = useConnectedIdentity();
   const statusQuery = trpc.account.operatorStatus.useQuery(undefined, { enabled: identity.isSignedIn });
   const currentWallet = statusQuery.data?.currentWallet ?? identity.currentWallet;
-  const featureAccessQuery = trpc.account.featureAccess.useQuery(undefined, {
-    enabled: identity.isSignedIn && !!currentWallet,
-  });
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
-  const aiEnabled = (featureAccessQuery.data?.featureStates ?? []).some(
-    (f) => f.id === "ai_byok" && f.effectiveEnabled,
-  );
-
-  const visibleTabs = TABS.filter((tab) => {
-    if (tab.id === "ai") return aiEnabled;
-    return true;
-  });
+  const visibleTabs = TABS;
 
   const walletLinkMessage = statusQuery.error?.message ?? "";
   const needsWalletLink = walletLinkMessage.toLowerCase().includes("link a wallet");
@@ -126,7 +114,6 @@ export function UserSettings() {
           <AccountSection address={currentWallet.address} chain={currentWallet.chain} status={statusQuery.data} />
         )}
         {activeTab === "pdf" && <PdfSection />}
-        {activeTab === "ai" && <AiSection />}
         {activeTab === "features" && currentWallet && (
           <FeaturesSection address={currentWallet.address} chain={currentWallet.chain} />
         )}
@@ -179,22 +166,6 @@ function AccountSection({
             detail={status?.isOwner ? "Full admin access" : "Standard user"}
           />
         </div>
-      </GlassCard>
-    </FadeIn>
-  );
-}
-
-function AiSection() {
-  return (
-    <FadeIn>
-      <GlassCard className="space-y-3">
-        <div>
-          <h3 className="text-[14px] font-semibold">AI API Keys</h3>
-          <p className="mt-0.5 text-[11px] text-muted">
-            Add your own API keys to use AI features. Keys are encrypted and session-scoped.
-          </p>
-        </div>
-        <AiProviderSettings />
       </GlassCard>
     </FadeIn>
   );

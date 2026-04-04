@@ -10,7 +10,7 @@ export type {
   DetectedSigner,
   DetectedAddress,
   PdfAnalysisResult,
-} from "~/lib/pdf-types";
+} from "~/lib/document/pdf-types";
 
 import type {
   FieldType,
@@ -19,7 +19,7 @@ import type {
   DetectedSigner,
   DetectedAddress,
   PdfAnalysisResult,
-} from "~/lib/pdf-types";
+} from "~/lib/document/pdf-types";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONSTANTS
@@ -84,7 +84,9 @@ export async function analyzePdf(buffer: Buffer): Promise<PdfAnalysisResult> {
     text = textResult.text;
     pageCount = textResult.total;
   } finally {
-    await parser.destroy().catch(() => {});
+    await parser.destroy().catch(() => {
+      /* ignore destroy errors */
+    });
   }
 
   // Extract AcroForm fields (actual PDF form fields) in parallel
@@ -142,7 +144,7 @@ export async function analyzePdf(buffer: Buffer): Promise<PdfAnalysisResult> {
       });
     } catch (err) {
       clearTimeout(timer);
-      reject(err);
+      reject(err instanceof Error ? err : new Error(String(err)));
     }
   });
 }
