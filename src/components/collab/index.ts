@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 export { useCollabSession } from "./use-collab-session";
 export { CollabSessionPanel } from "./collab-session-panel";
 export { CollabToolbar } from "./collab-toolbar";

@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { ForensicEvidence } from "./types";
 import type { PersistedForensicSessionCapture, ForensicSessionProfile, SignerBaselineProfile } from "./session";
 import type { ReplayTapeVerification } from "~/server/rust-engine";
-import type { GazeBehaviorFeatures } from "./gaze-analysis";
+// GazeBehaviorFeatures is defined inline to avoid hard dependency on premium gaze module
+type GazeBehaviorFeatures = Record<string, unknown>;
 
 export const automationDecisionSchema = z.enum(["ALLOW", "FLAG", "DENY"]);
 export const automationAssessmentSchema = z.enum(["human", "agent", "mixed", "uncertain"]);

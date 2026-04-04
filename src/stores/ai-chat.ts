@@ -5,7 +5,7 @@
  * Separated into two stores since they serve different user contexts.
  */
 
-import { create } from "zustand";
+import { create, type StoreApi } from "zustand";
 import type { AiEditOperation } from "~/server/db/schema";
 
 // ── Shared types ──
@@ -47,7 +47,7 @@ const INITIAL_CHAT: ChatState = {
   error: null,
 };
 
-function chatActions(set: any): ChatActions {
+function chatActions(set: StoreApi<ChatState>["setState"]): ChatActions {
   return {
     setInput: (input) => set({ input }),
     setLoading: (isLoading) => set({ isLoading, error: null }),

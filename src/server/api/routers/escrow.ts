@@ -1,4 +1,5 @@
-// @ts-nocheck
+// @ts-nocheck -- premium escrow module types unresolvable in OSS build; all DB operations use dynamic proxy tables
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call -- premium module proxy tables cascade `any` throughout */
 /**
  * Escrow tRPC router — full CRUD + lifecycle actions.
  *
@@ -11,7 +12,9 @@ import { TRPCError } from "@trpc/server";
 import { type createTRPCContext, createTRPCRouter, authedProcedure, publicProcedure } from "~/server/api/trpc";
 // Dynamic premium imports — loaded once and cached.
 // OSS builds without premium/ will throw FORBIDDEN on first use.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports, @typescript-eslint/no-redundant-type-constituents -- dynamic premium import type
 let _escrowSchema: Awaited<typeof import("~/premium/escrow/schema")> | null = null;
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports, @typescript-eslint/no-redundant-type-constituents -- dynamic premium import type
 let _escrowEngine: Awaited<typeof import("~/premium/escrow/engine")> | null = null;
 
 async function requireEscrow() {
@@ -52,13 +55,13 @@ const esc = {
 };
 
 // Re-export as module-level aliases for minimal code changes below
-const escrowContracts = new Proxy({} as any, { get: (_, p) => esc.escrowContracts[p] });
-const escrowParticipants = new Proxy({} as any, { get: (_, p) => esc.escrowParticipants[p] });
-const escrowSignatures = new Proxy({} as any, { get: (_, p) => esc.escrowSignatures[p] });
-const escrowEvents = new Proxy({} as any, { get: (_, p) => esc.escrowEvents[p] });
-const escrowRwaVerifications = new Proxy({} as any, { get: (_, p) => esc.escrowRwaVerifications[p] });
-const escrowOracleDecisions = new Proxy({} as any, { get: (_, p) => esc.escrowOracleDecisions[p] });
-async function computeTermsHash(args: any) {
+const escrowContracts = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowContracts[p as keyof typeof esc.escrowContracts] });
+const escrowParticipants = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowParticipants[p as keyof typeof esc.escrowParticipants] });
+const escrowSignatures = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowSignatures[p as keyof typeof esc.escrowSignatures] });
+const escrowEvents = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowEvents[p as keyof typeof esc.escrowEvents] });
+const escrowRwaVerifications = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowRwaVerifications[p as keyof typeof esc.escrowRwaVerifications] });
+const escrowOracleDecisions = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowOracleDecisions[p as keyof typeof esc.escrowOracleDecisions] });
+async function computeTermsHash(args: Record<string, unknown>) {
   return esc.computeTermsHash(args);
 }
 

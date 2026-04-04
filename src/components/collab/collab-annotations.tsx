@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 /**
@@ -15,12 +14,31 @@ import { trpc } from "~/lib/trpc";
 
 type AnnotationType = "highlight" | "comment" | "bookmark" | "suggestion";
 
+type AnnotationAnchor = {
+  kind: "doc" | "pdf";
+  tokenIndex?: number;
+  charOffset?: number;
+  length?: number;
+  page?: number;
+  rect?: { x: number; y: number; width: number; height: number };
+};
+
+type Annotation = {
+  id: string;
+  type: AnnotationType;
+  content: string | null;
+  anchor: AnnotationAnchor;
+  resolved: boolean;
+  authorUserId: string;
+  createdAt: string | number | Date;
+};
+
 type Props = {
   sessionId: string;
   isOpen: boolean;
   onClose: () => void;
   /** Called when user clicks an annotation to navigate to its anchor */
-  onNavigate: (anchor: any) => void;
+  onNavigate: (anchor: AnnotationAnchor) => void;
   /** Current user address for author check */
   currentUserId: string;
   isHost: boolean;
@@ -45,12 +63,12 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
 
   const counts = trpc.collab.annotationCounts.useQuery({ sessionId });
   const resolve = trpc.collab.resolveAnnotation.useMutation({
-    onSuccess: () => annotations.refetch(),
+    onSuccess: () => void annotations.refetch(),
   });
   const deleteAnno = trpc.collab.deleteAnnotation.useMutation({
     onSuccess: () => {
-      annotations.refetch();
-      counts.refetch();
+      void annotations.refetch();
+      void counts.refetch();
     },
   });
 
@@ -72,7 +90,7 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
           active={filter === "all"}
           onClick={() => setFilter("all")}
           label="All"
-          count={counts.data ? Object.values(counts.data).reduce((a, b) => a + b, 0) : 0}
+          count={counts.data ? Object.values(counts.data as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0}
         />
         {(Object.keys(TYPE_CONFIG) as AnnotationType[]).map((type) => {
           const { icon: Icon, color } = TYPE_CONFIG[type];
@@ -86,7 +104,7 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
                   <Icon className={`h-3 w-3 ${color}`} />
                 </span>
               }
-              count={counts.data?.[type] ?? 0}
+              count={(counts.data as Record<string, number> | undefined)?.[type] ?? 0}
             />
           );
         })}
@@ -107,13 +125,13 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
 
       {/* Annotations list */}
       <div className="flex-1 overflow-y-auto">
-        {annotations.data?.length === 0 && (
+        {(annotations.data as Annotation[] | undefined)?.length === 0 && (
           <p className="px-4 py-8 text-center text-xs text-zinc-500">
             No annotations yet. Highlight text or add comments to start.
           </p>
         )}
-        {annotations.data?.map((anno: any) => {
-          const config = TYPE_CONFIG[anno.type as AnnotationType];
+        {(annotations.data as Annotation[] | undefined)?.map((anno) => {
+          const config = TYPE_CONFIG[anno.type];
           const Icon = config?.icon ?? MessageSquare;
 
           return (
@@ -152,7 +170,7 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Unresolve - use resolve mutation with different endpoint
+                      /* Unresolve - use resolve mutation with different endpoint */
                     }}
                     className="rounded p-1 text-zinc-500 hover:bg-zinc-700 hover:text-amber-400"
                     title="Reopen"

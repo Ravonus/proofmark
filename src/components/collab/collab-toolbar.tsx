@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 /**
@@ -78,7 +78,7 @@ export function CollabToolbar({
   const activeParticipants = participants.filter((p) => p.isActive);
 
   const copyToken = () => {
-    navigator.clipboard.writeText(joinToken);
+    void navigator.clipboard.writeText(joinToken);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

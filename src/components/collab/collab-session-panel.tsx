@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 /**
@@ -12,6 +11,16 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, LogIn, X, Copy, Check, FileText, Loader2, Clock, Crown } from "lucide-react";
 import { trpc } from "~/lib/trpc";
+
+type SessionListItem = {
+  session: {
+    id: string;
+    title: string;
+    createdAt: string | number | Date;
+    hostUserId: string;
+  };
+  participants: { isActive: boolean }[];
+};
 
 type Props = {
   isOpen: boolean;
@@ -42,27 +51,27 @@ export function CollabSessionPanel({ isOpen, onClose, onJoinSession, documentId,
 
   const handleCreate = async () => {
     if (!title.trim()) return;
-    const result = await createSession.mutateAsync({
+    const result = (await createSession.mutateAsync({
       title: title.trim(),
       documentId: documentId,
       displayName,
       settings: { reviewOnly },
-    });
+    })) as { joinToken: string; sessionId: string };
     setCreatedToken(result.joinToken);
-    sessions.refetch();
+    void sessions.refetch();
   };
 
   const handleJoin = async () => {
     if (!joinToken.trim()) return;
-    const result = await joinSession.mutateAsync({
+    const result = (await joinSession.mutateAsync({
       joinToken: joinToken.trim(),
       displayName,
-    });
+    })) as { sessionId: string };
     onJoinSession(result.sessionId);
   };
 
   const copyToken = (token: string) => {
-    navigator.clipboard.writeText(token);
+    void navigator.clipboard.writeText(token);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -125,12 +134,12 @@ export function CollabSessionPanel({ isOpen, onClose, onJoinSession, documentId,
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
               )}
-              {sessions.data?.length === 0 && (
+              {(sessions.data as SessionListItem[] | undefined)?.length === 0 && (
                 <p className="py-8 text-center text-sm text-zinc-500">
                   No active sessions. Create one or join with a code.
                 </p>
               )}
-              {sessions.data?.map((s) => (
+              {(sessions.data as SessionListItem[] | undefined)?.map((s) => (
                 <button
                   key={s.session.id}
                   onClick={() => onJoinSession(s.session.id)}
@@ -142,7 +151,7 @@ export function CollabSessionPanel({ isOpen, onClose, onJoinSession, documentId,
                     <div className="flex items-center gap-2 text-xs text-zinc-400">
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {s.participants.filter((p: any) => p.isActive).length}
+                        {s.participants.filter((p: { isActive: boolean }) => p.isActive).length}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />

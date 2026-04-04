@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 /**
@@ -41,7 +41,7 @@ export type AwarenessUser = {
 export type CustomWsMessage = {
   type: string;
   sessionId: string;
-  payload: any;
+  payload: unknown;
 };
 
 export type UseCollabSessionOptions = {
@@ -124,7 +124,7 @@ export function useCollabSession(options: UseCollabSessionOptions): UseCollabSes
     });
 
     // Forward local doc updates to server
-    yDoc.on("update", (update: Uint8Array, origin: any) => {
+    yDoc.on("update", (update: Uint8Array, origin: unknown) => {
       if (origin === "remote") return;
       const ws = wsRef.current;
       if (ws) {
@@ -170,7 +170,7 @@ export function useCollabSession(options: UseCollabSessionOptions): UseCollabSes
     const originalOnError = () => {
       if (!hasFallenBack && !options.wsUrl) {
         hasFallenBack = true;
-        console.info("[collab] Rust WS unavailable, falling back to Node WS");
+        console.warn("[collab] Rust WS unavailable, falling back to Node WS");
         ws = new WebSocket(fallbackWsUrl);
         wsRef.current = ws;
         ws.binaryType = "arraybuffer";

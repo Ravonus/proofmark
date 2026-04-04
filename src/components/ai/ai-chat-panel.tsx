@@ -71,7 +71,7 @@ export function AiChatPanel({
         documentId,
         conversationId: store.conversationId ?? undefined,
         documentTitle,
-        tokens: tokens as any[],
+        tokens,
         signerCount,
         signerLabels,
         selectedRange: store.selectedRange,
@@ -79,7 +79,7 @@ export function AiChatPanel({
       });
 
       store.setConversationId(result.conversationId);
-      store.addAssistantMessage(result.text, result.editOperations as AiEditOperation[] | undefined);
+      store.addAssistantMessage(result.text, result.editOperations);
     } catch (e) {
       store.addErrorMessage((e as Error).message);
     }

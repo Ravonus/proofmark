@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 /**
@@ -35,6 +34,81 @@ import {
 import { trpc } from "~/lib/trpc";
 
 // ── Types ──
+
+type RegistryModel = {
+  id: string;
+  name: string;
+  contextWindow: number;
+  inputPricePer1k: number;
+  outputPricePer1k: number;
+};
+
+type RegistryEntry = {
+  name: string;
+  label: string;
+  isAggregator: boolean;
+  models: RegistryModel[];
+};
+
+type ProviderConfig = {
+  id: string;
+  provider: string;
+  label: string | null;
+  keySource: string;
+  isDefault: boolean;
+  hasKey: boolean;
+  defaultModel: string | undefined;
+  enabled: boolean;
+};
+
+type PlatformProvider = {
+  provider: string;
+  label: string;
+  defaultModel: string;
+  available: boolean;
+};
+
+type UsageSummary = {
+  totalRequests: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostCents: number;
+  byFeature: Record<string, { requests: number; costCents: number }>;
+  byProvider: Record<string, { requests: number; costCents: number }>;
+};
+
+type LimitStatus = {
+  mode: string;
+  used: {
+    monthRequests: number;
+    monthTokens: number;
+    hourRequests: number;
+    dayRequests: number;
+  };
+  caps: {
+    monthlyRequests: number;
+    monthlyTokens: number;
+    hourlyRequests?: number | null;
+    dailyRequests?: number | null;
+  };
+};
+
+type ConnectorSession = {
+  id: string;
+  label: string | null;
+  machineId: string | null;
+  connectorVersion: string | null;
+  status: string;
+  capabilities: { supportedTools?: string[] } | null;
+};
+
+type ConnectorToken = {
+  id: string;
+  label: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+};
 
 type ProviderFormState = {
   id?: string;
@@ -75,30 +149,30 @@ export function AiProviderSettings() {
   const providersQuery = trpc.ai.listProviders.useQuery();
   const upsertMut = trpc.ai.upsertProvider.useMutation({
     onSuccess: () => {
-      providersQuery.refetch();
+      void providersQuery.refetch();
       setShowForm(false);
       setForm(INITIAL_FORM);
     },
   });
-  const deleteMut = trpc.ai.deleteProvider.useMutation({ onSuccess: () => providersQuery.refetch() });
+  const deleteMut = trpc.ai.deleteProvider.useMutation({ onSuccess: () => void providersQuery.refetch() });
   const testMut = trpc.ai.testProvider.useMutation();
 
   // Connector queries
   const sessionsQuery = trpc.connector.listSessions.useQuery(undefined, { enabled: activeTab === "connectors" });
   const tokensQuery = trpc.connector.listTokens.useQuery(undefined, { enabled: activeTab === "connectors" });
   const createTokenMut = trpc.connector.createToken.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: { token: string }) => {
       setCreatedToken(data.token);
       setNewTokenLabel("");
-      tokensQuery.refetch();
+      void tokensQuery.refetch();
     },
   });
-  const revokeTokenMut = trpc.connector.revokeToken.useMutation({ onSuccess: () => tokensQuery.refetch() });
-  const removeSessionMut = trpc.connector.removeSession.useMutation({ onSuccess: () => sessionsQuery.refetch() });
+  const revokeTokenMut = trpc.connector.revokeToken.useMutation({ onSuccess: () => void tokensQuery.refetch() });
+  const removeSessionMut = trpc.connector.removeSession.useMutation({ onSuccess: () => void sessionsQuery.refetch() });
 
-  const registry = providersQuery.data?.registry ?? [];
-  const configs = providersQuery.data?.providers ?? [];
-  const platformProviders = providersQuery.data?.platform ?? [];
+  const registry = (providersQuery.data?.registry ?? []) as RegistryEntry[];
+  const configs = (providersQuery.data?.providers ?? []) as ProviderConfig[];
+  const platformProviders = (providersQuery.data?.platform ?? []) as PlatformProvider[];
 
   const handleSave = () => {
     upsertMut.mutate({
@@ -143,14 +217,14 @@ export function AiProviderSettings() {
   };
 
   const handleCopyToken = (token: string) => {
-    navigator.clipboard.writeText(token);
+    void navigator.clipboard.writeText(token);
     setCopiedToken(true);
     setTimeout(() => setCopiedToken(false), 2000);
   };
 
-  const selectedProviderModels = registry.find((r) => r.name === form.provider)?.models ?? [];
-  const sessions = sessionsQuery.data ?? [];
-  const tokens = tokensQuery.data ?? [];
+  const selectedProviderModels: RegistryModel[] = registry.find((r) => r.name === form.provider)?.models ?? [];
+  const sessions = (sessionsQuery.data ?? []) as ConnectorSession[];
+  const tokens = (tokensQuery.data ?? []) as ConnectorToken[];
   const onlineSessions = sessions.filter((s) => s.status === "online");
 
   return (
@@ -628,9 +702,10 @@ export function AiProviderSettings() {
 // ── Usage & Limits Tab ──
 
 function UsageLimitsTab() {
-  const usageQuery = trpc.ai.usageSummary.useQuery({});
+  const { data: _usageData } = trpc.ai.usageSummary.useQuery({});
+  const { data: _usageData } = trpc.ai.usageSummary.useQuery({});
   const defaultLimits = trpc.ai.getUserLimitStatus.useQuery({});
-  const setDefaultMut = trpc.ai.setDefaultLimits.useMutation({ onSuccess: () => defaultLimits.refetch() });
+  const setDefaultMut = trpc.ai.setDefaultLimits.useMutation({ onSuccess: () => void defaultLimits.refetch() });
 
   // Per-user limit editing
   const [editingUser, setEditingUser] = useState<string | null>(null);
@@ -644,7 +719,7 @@ function UsageLimitsTab() {
   const setUserLimitsMut = trpc.ai.setUserLimits.useMutation({
     onSuccess: () => {
       setEditingUser(null);
-      defaultLimits.refetch();
+      void defaultLimits.refetch();
     },
   });
 
@@ -657,21 +732,22 @@ function UsageLimitsTab() {
   });
   const [showDefaultForm, setShowDefaultForm] = useState(false);
 
-  const limits = defaultLimits.data;
+  const usageData = _usageData as UsageSummary | null | undefined;
+  const limits = defaultLimits.data as LimitStatus | null | undefined;
 
   return (
     <div className="space-y-6">
       {/* Usage overview */}
-      {usageQuery.data && (
+      {usageData && (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <UsageCard label="Requests" value={usageQuery.data.totalRequests.toLocaleString()} />
-            <UsageCard label="Input Tokens" value={formatTokens(usageQuery.data.totalInputTokens)} />
-            <UsageCard label="Output Tokens" value={formatTokens(usageQuery.data.totalOutputTokens)} />
-            <UsageCard label="Cost" value={`$${(usageQuery.data.totalCostCents / 100).toFixed(2)}`} />
+            <UsageCard label="Requests" value={usageData.totalRequests.toLocaleString()} />
+            <UsageCard label="Input Tokens" value={formatTokens(usageData.totalInputTokens)} />
+            <UsageCard label="Output Tokens" value={formatTokens(usageData.totalOutputTokens)} />
+            <UsageCard label="Cost" value={`$${(usageData.totalCostCents / 100).toFixed(2)}`} />
           </div>
-          <BreakdownSection title="By Feature" data={usageQuery.data.byFeature} formatKey={formatFeatureName} />
-          <BreakdownSection title="By Provider" data={usageQuery.data.byProvider} />
+          <BreakdownSection title="By Feature" data={usageData.byFeature} formatKey={formatFeatureName} />
+          <BreakdownSection title="By Provider" data={usageData.byProvider} />
         </>
       )}
 
@@ -922,7 +998,7 @@ function UsageLimitsTab() {
         )}
       </div>
 
-      {usageQuery.data?.totalRequests === 0 && !limits && (
+      {usageData?.totalRequests === 0 && !limits && (
         <div className="py-8 text-center text-sm text-zinc-500">
           No AI usage yet. Limits will appear once AI features are used.
         </div>

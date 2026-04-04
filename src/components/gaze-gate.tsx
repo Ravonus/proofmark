@@ -292,8 +292,10 @@ export function GazeGate({
           onClick={(e) => {
             if (!clickReady) return;
             try {
-              (window as any).webgazer?.recordScreenPosition?.(e.clientX, e.clientY, "click");
-            } catch {}
+              const wg = (window as unknown as Record<string, unknown>).webgazer as
+                { recordScreenPosition?: (x: number, y: number, type: string) => void } | undefined;
+              wg?.recordScreenPosition?.(e.clientX, e.clientY, "click");
+            } catch { /* best-effort calibration click */ }
             setTotalTrainingClicks((c) => c + 1);
             setClickIdx((i) => i + 1);
           }}
@@ -334,8 +336,10 @@ export function GazeGate({
 
     const handleWordInteraction = (e: React.MouseEvent) => {
       try {
-        (window as any).webgazer?.recordScreenPosition?.(e.clientX, e.clientY, "click");
-      } catch {}
+        const wg = (window as unknown as Record<string, unknown>).webgazer as
+          { recordScreenPosition?: (x: number, y: number, type: string) => void } | undefined;
+        wg?.recordScreenPosition?.(e.clientX, e.clientY, "click");
+      } catch { /* best-effort calibration click */ }
       setTotalTrainingClicks((c) => c + 1);
       if (task.action === "click") {
         setTextTaskDone(true);

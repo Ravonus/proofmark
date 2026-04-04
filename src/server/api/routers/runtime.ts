@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Server-side AI runtime tRPC router.
  *
@@ -8,17 +7,69 @@
  */
 
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { loadPremiumAi } from "~/lib/premium";
 import { TRPCError } from "@trpc/server";
 import { getOwnedWalletContextFromRequest, requireOwnedWalletActor } from "~/server/owned-wallet-context";
+import { aiRuntimeInstalls } from "~/server/db/schema";
+import type { RuntimeConfig } from "~/server/db/schema";
+
+// ── Runtime tool type ──
+type RuntimeTool = "claude-code" | "codex" | "openclaw";
+
+// ── Types for premium runtime module results ──
+// These mirror the shapes returned by premium/ai/ — only the methods used in this router.
+
+interface RuntimeToolInfo {
+  tool: string;
+  status: string;
+  version: string | null;
+  binaryPath: string | null;
+  authStatus: string;
+  lastHealthCheckAt: Date | null;
+  errorMessage: string | null;
+  config: RuntimeConfig | null;
+}
+
+type RuntimePrereqs = Record<string, unknown>;
+
+interface RuntimeSession {
+  id: string;
+  tool: string;
+  status: string;
+  startedAt: Date;
+  lastActivityAt: Date | null;
+  requestCount: number;
+  errorCount: number;
+}
+
+type RuntimeRoutingStatus = Record<string, unknown>;
+
+type RuntimeHealthResult = Record<string, unknown>;
+
+type RuntimeInstallResult = Record<string, unknown>;
+
+/** Shape of the premium AI module — only the methods used in this router. */
+interface PremiumRuntimeModule {
+  getInstalledTools(): Promise<RuntimeToolInfo[]>;
+  detectSystemPrereqs(): Promise<RuntimePrereqs>;
+  getActiveSessions(): RuntimeSession[];
+  getRoutingStatus(ownerAddress: string): Promise<RuntimeRoutingStatus>;
+  installTool(tool: RuntimeTool): Promise<RuntimeInstallResult>;
+  uninstallTool(tool: RuntimeTool): Promise<void>;
+  authorizeToolWithApiKey(tool: RuntimeTool, apiKey: string): Promise<void>;
+  revokeAuth(tool: RuntimeTool): Promise<void>;
+  checkToolHealth(tool: RuntimeTool): Promise<RuntimeHealthResult>;
+  shutdownAll(): Promise<void>;
+}
 
 const RUNTIME_FORBIDDEN = "Premium feature — upgrade to enable server-side AI runtime";
 
 const zTool = z.enum(["claude-code", "codex", "openclaw"]);
 
 async function requireRuntimeAdmin(ctx: { req?: Request | null | undefined }) {
-  const ai = await loadPremiumAi();
+  const ai = (await loadPremiumAi()) as PremiumRuntimeModule | null;
   if (!ai) throw new TRPCError({ code: "FORBIDDEN", message: RUNTIME_FORBIDDEN });
 
   const ownedWalletContext = await getOwnedWalletContextFromRequest(ctx.req ?? null);
@@ -37,12 +88,12 @@ export const runtimeRouter = createTRPCRouter({
   getStatus: publicProcedure.query(async ({ ctx }) => {
     const { ai, ownerAddress } = await requireRuntimeAdmin(ctx);
 
-    const [tools, prereqs, sessions, routing] = await Promise.all([
+    const [tools, prereqs, routing] = await Promise.all([
       ai.getInstalledTools(),
       ai.detectSystemPrereqs(),
-      ai.getActiveSessions(),
       ai.getRoutingStatus(ownerAddress),
     ]);
+    const sessions = ai.getActiveSessions();
 
     return {
       tools: tools.map((t) => ({
@@ -178,9 +229,6 @@ export const runtimeRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await requireRuntimeAdmin(ctx);
 
-      const { eq } = await import("drizzle-orm");
-      const { aiRuntimeInstalls } = await import("~/server/db/schema");
-
       const [existing] = await ctx.db
         .select()
         .from(aiRuntimeInstalls)
@@ -191,10 +239,12 @@ export const runtimeRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: `${input.tool} is not installed` });
       }
 
+      const mergedConfig: RuntimeConfig = { ...existing.config, ...input.config };
+
       await ctx.db
         .update(aiRuntimeInstalls)
         .set({
-          config: { ...existing.config, ...input.config },
+          config: mergedConfig,
           updatedAt: new Date(),
         })
         .where(eq(aiRuntimeInstalls.id, existing.id));

@@ -80,7 +80,7 @@ export function AiSignerChat({ documentId, claimToken, documentTitle, signerLabe
 
   const handleQuickAction = (prompt: string) => {
     if (prompt === "__SUMMARY__") {
-      handleGetSummary();
+      void handleGetSummary();
     } else {
       store.setInput(prompt);
     }
