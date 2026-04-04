@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildAddressSuggestionFieldUpdates } from "~/lib/address-autocomplete";
-import type { InlineField } from "~/lib/document-tokens";
+import type { InlineField } from "~/lib/document/document-tokens";
 import {
   getFieldLogicState,
   detectCardBrand,
@@ -9,7 +9,7 @@ import {
   resolveFieldAutocomplete,
   resolveFieldOptions,
   validateFieldValue,
-} from "~/lib/field-runtime";
+} from "~/lib/document/field-runtime";
 
 function makeField(overrides: Partial<InlineField>): InlineField {
   return {

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { PdfAnalysisResult, FieldType } from "~/lib/pdf-types";
+import type { PdfAnalysisResult, FieldType } from "~/lib/document/pdf-types";
 import { FadeIn, ScaleIn, GlassCard, AnimatedButton } from "./ui/motion";
 import dynamic from "next/dynamic";
 const AiScraperReview = dynamic(

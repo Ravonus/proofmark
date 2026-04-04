@@ -2,11 +2,11 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getRecipientActionLabel } from "~/lib/recipient-roles";
-import { useWallet } from "./wallet-provider";
+import { getRecipientActionLabel } from "~/lib/signing/recipient-roles";
+import { useWallet } from "../wallet-provider";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { SignaturePad } from "./signature-pad";
-import { isFieldVisible, isFieldLocked, isFieldRequired } from "~/lib/field-runtime";
+import { isFieldVisible, isFieldLocked, isFieldRequired } from "~/lib/document/field-runtime";
 import {
   Check,
   ChevronLeft,
@@ -25,22 +25,28 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { getFieldVisualStyle, getFieldMinWidth, getFieldDisplayText, validateField } from "./sign-document-helpers";
-import { isImageDataUrl } from "~/lib/field-values";
+import { isImageDataUrl } from "~/lib/document/field-values";
 import { InlineFieldInput } from "./sign-document-inline-field";
-import { DocumentPaper } from "./document-paper";
+import { DocumentPaper } from "../document-editor/document-paper";
 import { CenterCard, DocumentHeader, SignerList, CreatorClaimSlot, ChainButtons } from "./sign-document-parts";
 import dynamic from "next/dynamic";
-const AiSignerChat = dynamic(() => import("./ai/ai-signer-chat").then((m) => m.AiSignerChat), {
+const AiSignerChat = dynamic(() => import("../ai/ai-signer-chat").then((m) => m.AiSignerChat), {
   ssr: false,
   loading: () => null,
 });
-import { resolveFieldBadge, resolveFieldLogo, resolveFieldPrefix, resolveFieldSuffix } from "~/lib/field-runtime";
-import { useSigningFlow } from "./hooks/use-signing-flow";
-import { GazeGate } from "./gaze-gate";
-import { GazeGateMobile } from "./gaze-gate-mobile";
+import {
+  resolveFieldBadge,
+  resolveFieldLogo,
+  resolveFieldPrefix,
+  resolveFieldSuffix,
+} from "~/lib/document/field-runtime";
+import { useSigningFlow } from "../hooks/use-signing-flow";
+import { GazeGate } from "../gaze/gaze-gate";
+import { GazeGateMobile } from "../gaze/gaze-gate-mobile";
 import { isGazeLivenessAccepted } from "~/lib/forensic/gaze-liveness";
 import type { GazeLivenessSummary } from "~/lib/forensic/types";
 import { describeSignerTokenGate } from "~/lib/token-gates";
+import type { DeviceProfile } from "~/lib/signing/signing-constants";
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -49,23 +55,11 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   const [showSigningOnlyGazeGate, setShowSigningOnlyGazeGate] = useState(false);
 
   // Detect mobile once for gaze gate routing
-  type MobileDeviceInfo = {
-    isMobile: boolean;
-    isTablet?: boolean;
-    hasCamera: boolean;
-    screenDiag: number;
-    dpr: number;
-    os: string;
-    browser: string;
-    cameraLabel?: string;
-    viewportW: number;
-    viewportH: number;
-  };
-  const [mobileDevice] = useState<MobileDeviceInfo | null>(() => {
+  const [mobileDevice] = useState<DeviceProfile | null>(() => {
     if (typeof window === "undefined") return null;
     try {
       const modPath = "~/premium/eye-tracking/mobile/device";
-      const mod = require(/* webpackIgnore: true */ modPath) as { detectDevice: () => MobileDeviceInfo };
+      const mod = require(/* webpackIgnore: true */ modPath) as { detectDevice: () => DeviceProfile };
       return mod.detectDevice();
     } catch {
       return null;
@@ -182,21 +176,6 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
       : tokenGateBlocked
         ? "failed"
         : "pending";
-
-  // ── REMOVED: All 15 useState declarations (now in useSigningStore)
-  // ── REMOVED: All 9 useEffects (now derived state / event handlers)
-
-  // The rest below is unchanged JSX — it references the same variable names.
-
-  // Old state declarations removed — all in useSigningFlow hook above.
-
-  // tRPC + state logic removed — all in useSigningFlow hook
-
-  // [removed: signMutation — now in useSigningFlow]
-
-  // [removed: tRPC mutations — now in useSigningFlow]
-
-  // All derived state from useSigningFlow hook.
 
   // Re-derive values the JSX needs that aren't in the hook return
   const mySignerIdx = currentSigner ? docSigners.findIndex((s) => s.id === currentSigner.id) : -1;

@@ -8,7 +8,7 @@
 import type { AuditEventType, AuditLogParams } from "~/server/audit";
 import type { ForensicEvidence } from "~/lib/forensic/types";
 import type { AssembleForensicInput } from "~/server/forensic";
-import type { PdfAnalysisResult } from "~/lib/pdf-types";
+import type { PdfAnalysisResult } from "~/lib/document/pdf-types";
 import type { Document, Signer, PdfStyleSettings } from "~/server/db/schema";
 
 const ENGINE_URL = process.env.RUST_ENGINE_URL ?? "http://127.0.0.1:9090";

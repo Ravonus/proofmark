@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { Connection, PublicKey, type ParsedAccountData } from "@solana/web3.js";
 import { CHAIN_META, normalizeAddress, type WalletChain } from "~/lib/chains";
-import { verifySignature as verifyWalletSignature } from "~/lib/verify";
+import { verifySignature as verifyWalletSignature } from "~/lib/signing/verify";
 import {
   buildTokenGateProofMessage,
   describeTokenGateRule,

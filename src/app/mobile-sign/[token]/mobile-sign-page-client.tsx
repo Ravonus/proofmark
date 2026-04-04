@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { trpc } from "~/lib/trpc";
 import { collectFingerprintBestEffort } from "~/lib/forensic";
-import { SignaturePad } from "~/components/signature-pad";
+import { SignaturePad } from "~/components/signing/signature-pad";
 
 export function MobileSignClient({ token, mode = "signature" }: { token: string; mode?: "signature" | "initials" }) {
   const [status, setStatus] = useState<"loading" | "ready" | "signing" | "done" | "error">("loading");

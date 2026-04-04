@@ -2,17 +2,21 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { documents, signers as signersTable, type signers, type PostSignReveal } from "~/server/db/schema";
-import { isActionableRecipientRole } from "~/lib/recipient-roles";
-import { decodeStructuredFieldValue, encodeStructuredFieldValue, type PaymentFieldValue } from "~/lib/field-values";
+import { isActionableRecipientRole } from "~/lib/signing/recipient-roles";
+import {
+  decodeStructuredFieldValue,
+  encodeStructuredFieldValue,
+  type PaymentFieldValue,
+} from "~/lib/document/field-values";
 import { documentAutomationPolicySchema } from "~/lib/forensic/premium";
 import { decryptDocument as decryptContent, hashDocument } from "~/server/rust-engine";
 import { evaluateIdentityVerification } from "~/server/id-verification";
-import type { InlineField } from "~/lib/document-tokens";
+import type { InlineField } from "~/lib/document/document-tokens";
 import { optionalSignerTokenGateSchema } from "~/lib/token-gates";
 import { findSignersByDocumentId, findDocumentsByGroupId } from "~/server/db/compat";
 import { sendCompletionEmail, sendFinalizationEmail } from "~/server/email";
 import { resolveDocumentBranding, sendSignerInvite } from "~/server/delivery";
-import { GROUP_ROLE, getBaseUrl, type SignData } from "~/lib/signing-constants";
+import { GROUP_ROLE, getBaseUrl, type SignData } from "~/lib/signing/signing-constants";
 import type { db as _dbInstance } from "~/server/db";
 import type { AuditLogParams } from "~/server/audit";
 import type { BrandingSettings } from "~/server/db/schema";
@@ -222,7 +226,7 @@ export async function getSignerFieldContext(params: {
   docSigners: Array<typeof signers.$inferSelect>;
   signer: typeof signers.$inferSelect;
 }) {
-  const { tokenizeDocument } = await import("~/lib/document-tokens");
+  const { tokenizeDocument } = await import("~/lib/document/document-tokens");
   const content = await resolveDocumentContent(params.doc);
   const { fields } = tokenizeDocument(content, params.docSigners.length);
   const signerIdx = params.signer.signerOrder ?? params.docSigners.findIndex((entry) => entry.id === params.signer.id);

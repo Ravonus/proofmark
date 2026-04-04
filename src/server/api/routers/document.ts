@@ -26,7 +26,7 @@ import { hashDocument, hashHandSignature, buildSigningMessage, verifySignature }
 import { computeIpfsCid } from "~/lib/ipfs";
 import { normalizeAddress } from "~/lib/chains";
 import { isAddressLikeField } from "~/lib/address-autocomplete";
-import { isActionableRecipientRole } from "~/lib/recipient-roles";
+import { isActionableRecipientRole } from "~/lib/signing/recipient-roles";
 import { sendAutomationAlertEmail, sendSignerConfirmation } from "~/server/email";
 import { sendSignerInvite, resolveDocumentBranding } from "~/server/delivery";
 import { addProxyIp } from "~/server/proxy";
@@ -75,12 +75,12 @@ import {
   processIdentityVerification,
   type PostSignReveal,
 } from "./document-helpers";
-import { VERIFY_FIELD_TYPES, GROUP_ROLE, getBaseUrl } from "~/lib/signing-constants";
+import { VERIFY_FIELD_TYPES, GROUP_ROLE, getBaseUrl } from "~/lib/signing/signing-constants";
 import { logger } from "~/lib/logger";
 import { assembleForensicEvidence } from "~/server/rust-engine";
 import type { ClientFingerprint, BehavioralSignals } from "~/lib/forensic/types";
 import { extractReplaySignatureAnalysis } from "~/lib/forensic/signature-analysis";
-import { deriveSecurityMode } from "~/lib/document-security";
+import { deriveSecurityMode } from "~/lib/signing/document-security";
 import type { PersistedForensicSessionCapture } from "~/lib/forensic/session";
 import {
   normalizeDocumentAutomationPolicy,
@@ -2128,7 +2128,6 @@ export const documentRouter = createTRPCRouter({
       const reveal = doc?.postSignReveal as PostSignReveal | null;
       const proxyDomain = reveal?.testbedAccess?.proxyEndpoint;
 
-      // Remove old IP from proxy
       if (proxyDomain && mySigner.lastIp) {
         void import("~/server/proxy").then((m) => m.removeProxyIp({ domain: proxyDomain, ip: mySigner.lastIp! }));
       }
@@ -2556,7 +2555,6 @@ export const documentRouter = createTRPCRouter({
 
     const docSigners = await findSignersByDocumentId(ctx.db, doc.id);
 
-    // Fetch audit trail for Certificate of Completion
     let auditEvents: Array<{
       eventType: string;
       actor: string;

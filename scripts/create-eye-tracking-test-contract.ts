@@ -22,7 +22,7 @@ import superjson from "superjson";
 import { db } from "~/server/db";
 import { sessions, signers } from "~/server/db/schema";
 import { findSignersByDocumentId } from "~/server/db/compat";
-import { tokensToContent, type DocToken } from "~/lib/document-tokens";
+import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
 import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type { AppRouter } from "~/server/api/root";
@@ -39,13 +39,12 @@ function buildContent(): string {
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "This Independent Consulting Agreement (the \"Agreement\") is entered into as of the date of last signature below, by and between the parties identified herein. This Agreement sets forth the terms and conditions under which consulting services shall be provided.",
+      text: 'This Independent Consulting Agreement (the "Agreement") is entered into as of the date of last signature below, by and between the parties identified herein. This Agreement sets forth the terms and conditions under which consulting services shall be provided.',
     },
     { kind: "break" },
 
     { kind: "heading", text: "1. Parties", sectionNum: 2 },
-    { kind: "text", text: "Client (\"Party A\"): " },
+    { kind: "text", text: 'Client ("Party A"): ' },
     {
       kind: "field",
       field: {
@@ -84,7 +83,7 @@ function buildContent(): string {
     { kind: "text", text: "." },
     { kind: "break" },
 
-    { kind: "text", text: "Consultant (\"Party B\"): " },
+    { kind: "text", text: 'Consultant ("Party B"): ' },
     {
       kind: "field",
       field: {
@@ -126,22 +125,19 @@ function buildContent(): string {
     { kind: "heading", text: "2. Scope of Services", sectionNum: 3 },
     {
       kind: "text",
-      text:
-        "The Consultant agrees to provide professional consulting services in the area of blockchain infrastructure, smart contract auditing, and decentralized application architecture review. The specific deliverables, milestones, and acceptance criteria shall be as described in Schedule A attached hereto and incorporated by reference.",
+      text: "The Consultant agrees to provide professional consulting services in the area of blockchain infrastructure, smart contract auditing, and decentralized application architecture review. The specific deliverables, milestones, and acceptance criteria shall be as described in Schedule A attached hereto and incorporated by reference.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "The Consultant shall perform all services in a professional and workmanlike manner consistent with generally accepted industry standards. The Consultant shall devote sufficient time, attention, and resources to ensure timely completion of all deliverables. All work product shall be original and shall not infringe upon the intellectual property rights of any third party.",
+      text: "The Consultant shall perform all services in a professional and workmanlike manner consistent with generally accepted industry standards. The Consultant shall devote sufficient time, attention, and resources to ensure timely completion of all deliverables. All work product shall be original and shall not infringe upon the intellectual property rights of any third party.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "3. Compensation", sectionNum: 4 },
     {
       kind: "text",
-      text:
-        "In consideration of the services to be performed, the Client shall pay the Consultant a fee of ",
+      text: "In consideration of the services to be performed, the Client shall pay the Consultant a fee of ",
     },
     {
       kind: "field",
@@ -156,80 +152,69 @@ function buildContent(): string {
     },
     {
       kind: "text",
-      text:
-        " payable in accordance with the schedule set forth herein. Payment shall be made within thirty (30) calendar days of receipt of a properly submitted invoice. Late payments shall accrue interest at the rate of 1.5% per month or the maximum rate permitted by applicable law, whichever is less.",
+      text: " payable in accordance with the schedule set forth herein. Payment shall be made within thirty (30) calendar days of receipt of a properly submitted invoice. Late payments shall accrue interest at the rate of 1.5% per month or the maximum rate permitted by applicable law, whichever is less.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "The Consultant shall be responsible for all expenses incurred in connection with the performance of services unless pre-approved in writing by the Client. Pre-approved expenses shall be reimbursed within thirty (30) days of submission of itemized receipts.",
+      text: "The Consultant shall be responsible for all expenses incurred in connection with the performance of services unless pre-approved in writing by the Client. Pre-approved expenses shall be reimbursed within thirty (30) days of submission of itemized receipts.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "4. Term and Termination", sectionNum: 5 },
     {
       kind: "text",
-      text:
-        "This Agreement shall commence on the effective date and shall continue for a period of twelve (12) months unless earlier terminated in accordance with this Section. Either party may terminate this Agreement for convenience upon thirty (30) days' prior written notice to the other party. Either party may terminate this Agreement immediately upon written notice if the other party materially breaches any provision and fails to cure such breach within fifteen (15) days after receipt of written notice thereof.",
+      text: "This Agreement shall commence on the effective date and shall continue for a period of twelve (12) months unless earlier terminated in accordance with this Section. Either party may terminate this Agreement for convenience upon thirty (30) days' prior written notice to the other party. Either party may terminate this Agreement immediately upon written notice if the other party materially breaches any provision and fails to cure such breach within fifteen (15) days after receipt of written notice thereof.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "Upon termination, the Consultant shall deliver to the Client all work product completed to date, and the Client shall pay the Consultant for all services rendered and expenses incurred through the date of termination. Sections 5 through 8 shall survive any termination or expiration of this Agreement.",
+      text: "Upon termination, the Consultant shall deliver to the Client all work product completed to date, and the Client shall pay the Consultant for all services rendered and expenses incurred through the date of termination. Sections 5 through 8 shall survive any termination or expiration of this Agreement.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "5. Confidentiality", sectionNum: 6 },
     {
       kind: "text",
-      text:
-        "Each party acknowledges that in the course of performing under this Agreement, it may receive or have access to Confidential Information of the other party. \"Confidential Information\" means all non-public information disclosed by either party, whether orally, in writing, or by inspection, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure.",
+      text: 'Each party acknowledges that in the course of performing under this Agreement, it may receive or have access to Confidential Information of the other party. "Confidential Information" means all non-public information disclosed by either party, whether orally, in writing, or by inspection, that is designated as confidential or that reasonably should be understood to be confidential given the nature of the information and the circumstances of disclosure.',
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "The receiving party shall: (a) hold Confidential Information in strict confidence using the same degree of care it uses to protect its own confidential information, but in no event less than reasonable care; (b) not disclose Confidential Information to any third party without prior written consent; and (c) use Confidential Information solely for the purposes of this Agreement. These obligations shall continue for three (3) years following termination.",
+      text: "The receiving party shall: (a) hold Confidential Information in strict confidence using the same degree of care it uses to protect its own confidential information, but in no event less than reasonable care; (b) not disclose Confidential Information to any third party without prior written consent; and (c) use Confidential Information solely for the purposes of this Agreement. These obligations shall continue for three (3) years following termination.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "6. Intellectual Property", sectionNum: 7 },
     {
       kind: "text",
-      text:
-        "All work product, inventions, discoveries, and improvements conceived, developed, or reduced to practice by the Consultant in connection with the services (\"Work Product\") shall be the sole and exclusive property of the Client. The Consultant hereby assigns to the Client all right, title, and interest in and to such Work Product, including all intellectual property rights therein. The Consultant agrees to execute any documents and take any actions reasonably requested by the Client to perfect such rights.",
+      text: 'All work product, inventions, discoveries, and improvements conceived, developed, or reduced to practice by the Consultant in connection with the services ("Work Product") shall be the sole and exclusive property of the Client. The Consultant hereby assigns to the Client all right, title, and interest in and to such Work Product, including all intellectual property rights therein. The Consultant agrees to execute any documents and take any actions reasonably requested by the Client to perfect such rights.',
     },
     { kind: "break" },
 
     { kind: "heading", text: "7. Representations and Warranties", sectionNum: 8 },
     {
       kind: "text",
-      text:
-        "The Consultant represents and warrants that: (a) it has the legal right and authority to enter into this Agreement; (b) the services will be performed in a professional manner consistent with industry standards; (c) the Work Product will be original and will not infringe upon the rights of any third party; and (d) the Consultant is not subject to any agreement that would prevent or restrict it from fulfilling its obligations under this Agreement.",
+      text: "The Consultant represents and warrants that: (a) it has the legal right and authority to enter into this Agreement; (b) the services will be performed in a professional manner consistent with industry standards; (c) the Work Product will be original and will not infringe upon the rights of any third party; and (d) the Consultant is not subject to any agreement that would prevent or restrict it from fulfilling its obligations under this Agreement.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "8. Limitation of Liability and Indemnification", sectionNum: 9 },
     {
       kind: "text",
-      text:
-        "IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF WHETHER SUCH DAMAGES ARE BASED ON CONTRACT, TORT, STRICT LIABILITY, OR ANY OTHER THEORY. Each party's total aggregate liability under this Agreement shall not exceed the total fees paid or payable under this Agreement during the twelve (12) month period preceding the event giving rise to such liability.",
+      text: "IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF WHETHER SUCH DAMAGES ARE BASED ON CONTRACT, TORT, STRICT LIABILITY, OR ANY OTHER THEORY. Each party's total aggregate liability under this Agreement shall not exceed the total fees paid or payable under this Agreement during the twelve (12) month period preceding the event giving rise to such liability.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "Each party shall indemnify, defend, and hold harmless the other party from and against any and all claims, damages, losses, costs, and expenses (including reasonable attorneys' fees) arising out of or relating to any breach of this Agreement or any negligent or wrongful act or omission by the indemnifying party or its agents, employees, or subcontractors.",
+      text: "Each party shall indemnify, defend, and hold harmless the other party from and against any and all claims, damages, losses, costs, and expenses (including reasonable attorneys' fees) arising out of or relating to any breach of this Agreement or any negligent or wrongful act or omission by the indemnifying party or its agents, employees, or subcontractors.",
     },
     { kind: "break" },
 
     { kind: "heading", text: "9. Verification", sectionNum: 10 },
     {
       kind: "text",
-      text:
-        "To confirm you have read the agreement above, please copy the verification phrase \"CONSULTING-2026-VERIFIED\" and paste it into the field below. This is required to proceed with signing.",
+      text: 'To confirm you have read the agreement above, please copy the verification phrase "CONSULTING-2026-VERIFIED" and paste it into the field below. This is required to proceed with signing.',
     },
     { kind: "break" },
     { kind: "text", text: "Verification code: " },
@@ -263,14 +248,12 @@ function buildContent(): string {
     { kind: "heading", text: "10. General Provisions", sectionNum: 11 },
     {
       kind: "text",
-      text:
-        "This Agreement constitutes the entire agreement between the parties and supersedes all prior or contemporaneous agreements, representations, warranties, and understandings. This Agreement may not be amended except by a written instrument signed by both parties. The failure of either party to enforce any provision of this Agreement shall not constitute a waiver of that party's right to enforce that provision or any other provision in the future.",
+      text: "This Agreement constitutes the entire agreement between the parties and supersedes all prior or contemporaneous agreements, representations, warranties, and understandings. This Agreement may not be amended except by a written instrument signed by both parties. The failure of either party to enforce any provision of this Agreement shall not constitute a waiver of that party's right to enforce that provision or any other provision in the future.",
     },
     { kind: "break" },
     {
       kind: "text",
-      text:
-        "This Agreement shall be governed by and construed in accordance with the laws of the State of Colorado, without regard to its conflict of laws principles. Any dispute arising under this Agreement shall be resolved by binding arbitration in Denver, Colorado in accordance with the rules of the American Arbitration Association.",
+      text: "This Agreement shall be governed by and construed in accordance with the laws of the State of Colorado, without regard to its conflict of laws principles. Any dispute arising under this Agreement shall be resolved by binding arbitration in Denver, Colorado in accordance with the rules of the American Arbitration Association.",
     },
     { kind: "break" },
 
@@ -388,11 +371,7 @@ function createClient(baseUrl: string, headers: HeadersInit) {
   });
 }
 
-async function presignPartyA(params: {
-  baseUrl: string;
-  documentId: string;
-  claimToken: string;
-}) {
+async function presignPartyA(params: { baseUrl: string; documentId: string; claimToken: string }) {
   const wallet = Wallet.createRandom();
   const client = createClient(params.baseUrl, {
     "user-agent": "Proofmark Automation Seed/1.0",

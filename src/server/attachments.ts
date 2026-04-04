@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
-import type { AttachmentFieldValue } from "~/lib/field-values";
+import type { AttachmentFieldValue } from "~/lib/document/field-values";
 
 const ATTACHMENT_ROOT = path.resolve(process.cwd(), "private", "signer-attachments");
 

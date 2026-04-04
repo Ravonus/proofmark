@@ -5,7 +5,7 @@
 
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
-import { tokensToContent, type DocToken } from "~/lib/document-tokens";
+import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
 import type { AppRouter } from "~/server/api/root";
 
 const text = (t: string): DocToken => ({ kind: "text", text: t });
@@ -20,23 +20,39 @@ const sig = (label: string, idx: number): DocToken => ({ kind: "signatureBlock",
 // signerIdx 0 = contractor (recipient), signerIdx 1 = discloser
 // (createGroup puts recipient at idx 0, discloser at idx 1)
 const tokens: DocToken[] = [
-  heading("TEST CONTRACT", 1), br(),
-  text("Effective Date: April 2, 2026"), br(), br(),
-  text("This is a test contract between the Discloser and Contractor."), br(), br(),
+  heading("TEST CONTRACT", 1),
+  br(),
+  text("Effective Date: April 2, 2026"),
+  br(),
+  br(),
+  text("This is a test contract between the Discloser and Contractor."),
+  br(),
+  br(),
 
-  heading("PARTIES", 2), br(),
+  heading("PARTIES", 2),
+  br(),
   text("Contractor Full Name: "),
-  field("name-contractor", "full-name", "Contractor Name", 0, { placeholder: "Your full name" }), br(), br(),
+  field("name-contractor", "full-name", "Contractor Name", 0, { placeholder: "Your full name" }),
+  br(),
+  br(),
 
   text("Discloser Full Name: "),
-  field("name-discloser", "full-name", "Discloser Name", 1, { placeholder: "Your full name" }), br(), br(),
+  field("name-discloser", "full-name", "Discloser Name", 1, { placeholder: "Your full name" }),
+  br(),
+  br(),
 
-  heading("SIGNATURES", 2), br(),
-  text("Contractor:"), br(),
-  sig("Contractor Signature", 0), br(), br(),
+  heading("SIGNATURES", 2),
+  br(),
+  text("Contractor:"),
+  br(),
+  sig("Contractor Signature", 0),
+  br(),
+  br(),
 
-  text("Discloser:"), br(),
-  sig("Discloser Signature", 1), br(),
+  text("Discloser:"),
+  br(),
+  sig("Discloser Signature", 1),
+  br(),
 ];
 
 const content = tokensToContent(tokens);
@@ -47,15 +63,17 @@ const baseUrl = process.argv.includes("--base-url")
 
 async function main() {
   const trpc = createTRPCProxyClient<AppRouter>({
-    links: [httpBatchLink({
-      url: `${baseUrl}/api/trpc`,
-      transformer: superjson,
-      headers: {
-        "x-api-key": process.env.AUTOMATION_SECRET ?? "",
-        "x-wallet-address": "0x0000000000000000000000000000000000000001",
-        "x-wallet-chain": "ETH",
-      },
-    })],
+    links: [
+      httpBatchLink({
+        url: `${baseUrl}/api/trpc`,
+        transformer: superjson,
+        headers: {
+          "x-api-key": process.env.AUTOMATION_SECRET ?? "",
+          "x-wallet-address": "0x0000000000000000000000000000000000000001",
+          "x-wallet-chain": "ETH",
+        },
+      }),
+    ],
   });
 
   const result = await trpc.document.createGroup.mutate({

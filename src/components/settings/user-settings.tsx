@@ -7,7 +7,7 @@ import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
 import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { Select } from "~/components/ui/select";
-import { useConnectedIdentity } from "~/components/use-connected-identity";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import { User, ToggleRight, Key, Palette } from "lucide-react";
 
 type SettingsTab = "account" | "pdf" | "ai" | "features";

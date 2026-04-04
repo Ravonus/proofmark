@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { verifyMessage as verifyEvmMessage, hexToBytes, recoverPublicKey } from "viem";
-import type { WalletChain } from "./chains";
-import { normalizeAddress } from "./chains";
+import type { WalletChain } from "../chains";
+import { normalizeAddress } from "../chains";
 
 // ── Debug log collector — attaches to every verification attempt ─────────────
 type VerifyResult = { ok: boolean; scheme: string; debug: string[] };

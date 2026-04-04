@@ -2,10 +2,10 @@
 
 import { useState, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Select } from "./ui/select";
+import { Select } from "../ui/select";
 import type { AddressSuggestion } from "~/lib/address-autocomplete";
 import { isAddressLikeField } from "~/lib/address-autocomplete";
-import type { DocToken, InlineField } from "~/lib/document-tokens";
+import type { DocToken, InlineField } from "~/lib/document/document-tokens";
 import {
   formatEditableFieldValue,
   getFieldLogicState,
@@ -22,11 +22,11 @@ import {
   resolveFieldSuffix,
   type RuntimeInputType,
   type VisibilityOperator,
-} from "~/lib/field-runtime";
-import { getField, getSignerColor } from "./fields";
-import { AddressAutocompleteInput } from "./fields/address-autocomplete-input";
-import { getFieldIcon } from "./fields/field-picker";
-import { SearchDropdown } from "./ui/search-dropdown";
+} from "~/lib/document/field-runtime";
+import { getField, getSignerColor } from "../fields";
+import { AddressAutocompleteInput } from "../fields/address-autocomplete-input";
+import { getFieldIcon } from "../fields/field-picker";
+import { SearchDropdown } from "../ui/search-dropdown";
 import { GripVertical, Trash2, X, PenTool } from "lucide-react";
 import type { SignerDef, PreviewValueMap } from "./document-editor-types";
 import {
@@ -35,8 +35,8 @@ import {
   VALIDATION_KIND_OPTIONS,
   VISIBILITY_OPERATOR_OPTIONS,
   LOGIC_EFFECT_OPTIONS,
-  formatPreviewCurrency,
 } from "./document-editor-types";
+import { formatCurrency } from "../signing/sign-document-helpers";
 
 // -- Preview Field --
 
@@ -179,7 +179,7 @@ export function PreviewField({
   if (inputType === "payment") {
     const amount = Number(runtimeSettings.amount ?? 0);
     const currency = runtimeSettings.currency ?? "usd";
-    const paidLabel = amount > 0 ? `${formatPreviewCurrency(amount, currency)} paid` : "Marked paid";
+    const paidLabel = amount > 0 ? `${formatCurrency(amount, currency)} paid` : "Marked paid";
     return (
       <button
         type="button"

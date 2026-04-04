@@ -23,13 +23,19 @@ import { useWalletStore } from "~/stores/wallet";
 import { getWalletActions } from "~/components/wallet-provider";
 import { generateQrDataUrl } from "~/lib/qr-svg";
 import { useSigningStore } from "~/stores/signing";
-import { encodeStructuredFieldValue } from "~/lib/field-values";
-import type { AttachmentFieldValue } from "~/lib/field-values";
-import { formatEditableFieldValue, getFieldLogicState, isFieldVisible, isFieldRequired } from "~/lib/field-runtime";
-import { VERIFY_FIELD_TYPES } from "~/lib/signing-constants";
-import { tokenizeDocument, validateField } from "~/components/sign-document-helpers";
-import type { InlineField, DocToken } from "~/components/sign-document-helpers";
-import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/recipient-roles";
+import { encodeStructuredFieldValue } from "~/lib/document/field-values";
+import type { AttachmentFieldValue } from "~/lib/document/field-values";
+import {
+  formatEditableFieldValue,
+  getFieldLogicState,
+  isFieldVisible,
+  isFieldRequired,
+} from "~/lib/document/field-runtime";
+import { VERIFY_FIELD_TYPES } from "~/lib/signing/signing-constants";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
+import type { InlineField, DocToken } from "~/lib/document/document-tokens";
+import { validateField } from "~/components/signing/sign-document-helpers";
+import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/signing/recipient-roles";
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
 import { collectFingerprintBestEffort, BehavioralTracker, warmForensicReplayCore } from "~/lib/forensic";
 import type { BehavioralSignals } from "~/lib/forensic";
@@ -229,7 +235,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     [documentId, claimToken],
   );
 
-  // Load draft once on mount
   useEffect(() => {
     store.setDraftStorageKey(draftKey);
     store.loadDraft();
@@ -934,7 +939,6 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     fieldsByTypeLabel,
     confirmSigningMessage,
 
-    // Store state (forwarded)
     signing: store.phase === "signing",
     done: store.phase === "done",
     declined: store.phase === "declined",

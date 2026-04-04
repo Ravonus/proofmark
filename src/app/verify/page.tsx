@@ -26,7 +26,7 @@ import {
 import { trpc } from "~/lib/trpc";
 import { Nav } from "~/components/nav";
 import { CHAIN_META, type WalletChain } from "~/lib/chains";
-import { SECURITY_MODE_LABELS } from "~/lib/document-security";
+import { SECURITY_MODE_LABELS } from "~/lib/signing/document-security";
 
 async function sha256Hex(data: string | ArrayBuffer): Promise<string> {
   const buf = typeof data === "string" ? new TextEncoder().encode(data) : data;

@@ -5,7 +5,7 @@ import { trpc } from "~/lib/trpc";
 import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
-import { useConnectedIdentity } from "~/components/use-connected-identity";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import {
   Users,
   ToggleRight,

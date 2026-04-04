@@ -15,18 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, Camera, Loader2 } from "lucide-react";
 import { buildGazeLivenessSummary } from "~/lib/forensic/gaze-liveness";
 import type { GazeLivenessStepResult, GazeLivenessSummary } from "~/lib/forensic/types";
-// DeviceProfile type inlined to avoid hard import from premium/
-type DeviceProfile = {
-  isMobile: boolean;
-  hasCamera: boolean;
-  screenDiag: number;
-  dpr: number;
-  os: string;
-  browser: string;
-  cameraLabel?: string;
-  viewportW: number;
-  viewportH: number;
-};
+import type { DeviceProfile } from "~/lib/signing/signing-constants";
 
 type Props = {
   mode: "full" | "signing_only";

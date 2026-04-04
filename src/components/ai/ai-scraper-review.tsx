@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { trpc } from "~/lib/trpc";
 import { W3SButton } from "~/components/ui/motion";
-import type { PdfAnalysisResult } from "~/lib/pdf-types";
+import type { PdfAnalysisResult } from "~/lib/document/pdf-types";
 
 type ScraperFixChange = {
   type: string;

@@ -4,8 +4,12 @@ import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { Wallet } from "ethers";
 import superjson from "superjson";
 import type { AppRouter } from "~/server/api/root";
-import { tokensToContent, type DocToken } from "~/lib/document-tokens";
-import { encodeReplayEventsSync, encodeTimedSignatureSync, type ForensicReplayEncodedEvent } from "~/lib/forensic/replay-codec";
+import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
+import {
+  encodeReplayEventsSync,
+  encodeTimedSignatureSync,
+  type ForensicReplayEncodedEvent,
+} from "~/lib/forensic/replay-codec";
 import { REPLAY_FORMAT_LIMITS } from "~/lib/forensic/replay-format";
 import { signatureStrokesToDataUrl } from "~/lib/signature-svg";
 
@@ -34,10 +38,16 @@ async function main() {
     { kind: "text", text: "This Mutual NDA is entered into by ProofMark Labs, Inc. and the Counterparty below." },
     { kind: "break" },
     { kind: "heading", text: "1. CONFIDENTIAL INFORMATION", sectionNum: 2 },
-    { kind: "text", text: "Confidential Information means any non-public information disclosed by either party, including technical data, trade secrets, business plans, source code, smart contract architectures, wallet addresses, and token economics." },
+    {
+      kind: "text",
+      text: "Confidential Information means any non-public information disclosed by either party, including technical data, trade secrets, business plans, source code, smart contract architectures, wallet addresses, and token economics.",
+    },
     { kind: "break" },
     { kind: "heading", text: "2. OBLIGATIONS", sectionNum: 3 },
-    { kind: "text", text: "The Receiving Party shall hold all Confidential Information in strict confidence, not disclose to third parties, use reasonable care, and limit access to need-to-know personnel." },
+    {
+      kind: "text",
+      text: "The Receiving Party shall hold all Confidential Information in strict confidence, not disclose to third parties, use reasonable care, and limit access to need-to-know personnel.",
+    },
     { kind: "break" },
     { kind: "heading", text: "3. TERM", sectionNum: 4 },
     { kind: "text", text: "Effective for 24 months. Confidentiality survives 3 additional years." },
@@ -45,27 +55,97 @@ async function main() {
     { kind: "heading", text: "4. PARTY A (PROOFMARK) DETAILS", sectionNum: 5 },
     { kind: "break" },
     { kind: "text", text: "Company name: " },
-    { kind: "field", field: { id: "pm-company", type: "name", label: "Company Name", placeholder: "Company legal name", signerIdx: 0, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "pm-company",
+        type: "name",
+        label: "Company Name",
+        placeholder: "Company legal name",
+        signerIdx: 0,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "text", text: "Representative: " },
-    { kind: "field", field: { id: "pm-rep", type: "name", label: "Representative", placeholder: "Full name", signerIdx: 0, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "pm-rep",
+        type: "name",
+        label: "Representative",
+        placeholder: "Full name",
+        signerIdx: 0,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "text", text: "Email: " },
-    { kind: "field", field: { id: "pm-email", type: "email", label: "Email", placeholder: "email@company.com", signerIdx: 0, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "pm-email",
+        type: "email",
+        label: "Email",
+        placeholder: "email@company.com",
+        signerIdx: 0,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "heading", text: "5. PARTY B (COUNTERPARTY) DETAILS", sectionNum: 6 },
     { kind: "break" },
     { kind: "text", text: "Full name: " },
-    { kind: "field", field: { id: "cp-name", type: "name", label: "Your Full Name", placeholder: "Full legal name", signerIdx: 1, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "cp-name",
+        type: "name",
+        label: "Your Full Name",
+        placeholder: "Full legal name",
+        signerIdx: 1,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "text", text: "Email: " },
-    { kind: "field", field: { id: "cp-email", type: "email", label: "Your Email", placeholder: "email@example.com", signerIdx: 1, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "cp-email",
+        type: "email",
+        label: "Your Email",
+        placeholder: "email@example.com",
+        signerIdx: 1,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "text", text: "Title: " },
-    { kind: "field", field: { id: "cp-title", type: "title", label: "Your Title", placeholder: "Job title", signerIdx: 1, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "cp-title",
+        type: "title",
+        label: "Your Title",
+        placeholder: "Job title",
+        signerIdx: 1,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "text", text: "Date: " },
-    { kind: "field", field: { id: "cp-date", type: "date", label: "Effective Date", placeholder: "MM/DD/YYYY", signerIdx: 1, required: true } },
+    {
+      kind: "field",
+      field: {
+        id: "cp-date",
+        type: "date",
+        label: "Effective Date",
+        placeholder: "MM/DD/YYYY",
+        signerIdx: 1,
+        required: true,
+      },
+    },
     { kind: "break" },
     { kind: "heading", text: "6. SIGNATURES", sectionNum: 7 },
     { kind: "signatureBlock", label: "ProofMark Labs", signerIdx: 0 },
@@ -120,54 +200,116 @@ async function main() {
     },
     forensic: {
       fingerprint: {
-        visitorId: "bot", canvasHash: "b", webglHash: "b", audioHash: "b",
-        screen: "1920x1080x24x2", timezone: "UTC", languages: ["en"],
-        cpuCores: 8, deviceMemory: 16, platform: "Linux", touchPoints: 0,
-        webdriver: true, fontsHash: "b", pluginsHash: "b", doNotTrack: null,
-        cookieEnabled: true, persistentId: "b", firstSeen: now.toISOString(),
-        visitCount: 1, batteryLevel: null, batteryCharging: null,
-        connectionType: "ethernet", connectionDownlink: 100, colorGamut: "srgb",
-        hdr: false, reducedMotion: false, darkMode: true, devicePixelRatio: 1,
-        gpuVendor: "Bot", gpuRenderer: "Bot", browserMajor: "Chrome/134",
-        mathFingerprint: "b", webRtcLocalIps: [],
+        visitorId: "bot",
+        canvasHash: "b",
+        webglHash: "b",
+        audioHash: "b",
+        screen: "1920x1080x24x2",
+        timezone: "UTC",
+        languages: ["en"],
+        cpuCores: 8,
+        deviceMemory: 16,
+        platform: "Linux",
+        touchPoints: 0,
+        webdriver: true,
+        fontsHash: "b",
+        pluginsHash: "b",
+        doNotTrack: null,
+        cookieEnabled: true,
+        persistentId: "b",
+        firstSeen: now.toISOString(),
+        visitCount: 1,
+        batteryLevel: null,
+        batteryCharging: null,
+        connectionType: "ethernet",
+        connectionDownlink: 100,
+        colorGamut: "srgb",
+        hdr: false,
+        reducedMotion: false,
+        darkMode: true,
+        devicePixelRatio: 1,
+        gpuVendor: "Bot",
+        gpuRenderer: "Bot",
+        browserMajor: "Chrome/134",
+        mathFingerprint: "b",
+        webRtcLocalIps: [],
       },
       behavioral: (() => {
         const TQ = REPLAY_FORMAT_LIMITS.timeQuantumMs;
-        const fnv = (s: string) => { let h=0xcbf29ce484222325n; for(let i=0;i<s.length;i++){h^=BigInt(s.charCodeAt(i));h=BigInt.asUintN(64,h*0x100000001b3n)} return h.toString(16).padStart(16,"0") };
+        const fnv = (s: string) => {
+          let h = 0xcbf29ce484222325n;
+          for (let i = 0; i < s.length; i++) {
+            h ^= BigInt(s.charCodeAt(i));
+            h = BigInt.asUintN(64, h * 0x100000001b3n);
+          }
+          return h.toString(16).padStart(16, "0");
+        };
 
         // Bot replay: fast uniform scrolling, robotic keystrokes, straight-line signature
         const ev: ForensicReplayEncodedEvent[] = [];
         // Scroll through document — uniform 200ms gaps
-        for (let i = 0; i < 6; i++) ev.push({ type: "scroll", delta: Math.round(200/TQ), scrollY: i*600, scrollMax: 3500 });
+        for (let i = 0; i < 6; i++)
+          ev.push({ type: "scroll", delta: Math.round(200 / TQ), scrollY: i * 600, scrollMax: 3500 });
         // Click name field, focus, type "Bot LLC" at uniform 30ms
-        ev.push({ type: "click", delta: Math.round(100/TQ), targetId: 1, x: 400, y: 300, button: 0 });
+        ev.push({ type: "click", delta: Math.round(100 / TQ), targetId: 1, x: 400, y: 300, button: 0 });
         ev.push({ type: "focus", delta: 1, targetId: 1 });
         const botName = "Bot LLC";
-        for (let i = 0; i < botName.length; i++) ev.push({ type: "key", delta: Math.round(30/TQ), targetId: 1, keyId: i+1, modifiers: 0 });
+        for (let i = 0; i < botName.length; i++)
+          ev.push({ type: "key", delta: Math.round(30 / TQ), targetId: 1, keyId: i + 1, modifiers: 0 });
         ev.push({ type: "fieldCommit", delta: 1, targetId: 1, valueId: 1 });
-        ev.push({ type: "blur", delta: Math.round(50/TQ), targetId: 1 });
+        ev.push({ type: "blur", delta: Math.round(50 / TQ), targetId: 1 });
         // Click email, type "bot@proofmark.io" at same cadence
-        ev.push({ type: "click", delta: Math.round(80/TQ), targetId: 2, x: 400, y: 350, button: 0 });
+        ev.push({ type: "click", delta: Math.round(80 / TQ), targetId: 2, x: 400, y: 350, button: 0 });
         ev.push({ type: "focus", delta: 1, targetId: 2 });
         const botEmail = "bot@proofmark.io";
-        for (let i = 0; i < botEmail.length; i++) ev.push({ type: "key", delta: Math.round(30/TQ), targetId: 2, keyId: 10+i, modifiers: 0 });
+        for (let i = 0; i < botEmail.length; i++)
+          ev.push({ type: "key", delta: Math.round(30 / TQ), targetId: 2, keyId: 10 + i, modifiers: 0 });
         ev.push({ type: "fieldCommit", delta: 1, targetId: 2, valueId: 2 });
-        ev.push({ type: "blur", delta: Math.round(50/TQ), targetId: 2 });
+        ev.push({ type: "blur", delta: Math.round(50 / TQ), targetId: 2 });
         // Signature: perfectly straight horizontal line, uniform pressure
-        ev.push({ type: "click", delta: Math.round(100/TQ), targetId: 3, x: 200, y: 500, button: 0 });
-        ev.push({ type: "signatureStart", delta: Math.round(30/TQ), targetId: 3, strokeId: 1, x: 30, y: 50, pressure: 128 });
-        for (let i = 1; i <= 25; i++) ev.push({ type: "signaturePoint", delta: 1, strokeId: 1, x: 30+i*6, y: 50, pressure: 128 });
+        ev.push({ type: "click", delta: Math.round(100 / TQ), targetId: 3, x: 200, y: 500, button: 0 });
+        ev.push({
+          type: "signatureStart",
+          delta: Math.round(30 / TQ),
+          targetId: 3,
+          strokeId: 1,
+          x: 30,
+          y: 50,
+          pressure: 128,
+        });
+        for (let i = 1; i <= 25; i++)
+          ev.push({ type: "signaturePoint", delta: 1, strokeId: 1, x: 30 + i * 6, y: 50, pressure: 128 });
         ev.push({ type: "signatureEnd", delta: 1, strokeId: 1 });
         // Second stroke: diagonal, still uniform
-        ev.push({ type: "signatureStart", delta: Math.round(20/TQ), targetId: 3, strokeId: 2, x: 30, y: 60, pressure: 128 });
-        for (let i = 1; i <= 15; i++) ev.push({ type: "signaturePoint", delta: 1, strokeId: 2, x: 30+i*8, y: 60-i*2, pressure: 128 });
+        ev.push({
+          type: "signatureStart",
+          delta: Math.round(20 / TQ),
+          targetId: 3,
+          strokeId: 2,
+          x: 30,
+          y: 60,
+          pressure: 128,
+        });
+        for (let i = 1; i <= 15; i++)
+          ev.push({ type: "signaturePoint", delta: 1, strokeId: 2, x: 30 + i * 8, y: 60 - i * 2, pressure: 128 });
         ev.push({ type: "signatureEnd", delta: 1, strokeId: 2 });
         const sigStrokes = [
-          [{x:30,y:50,t:0,force:0.5},...Array.from({length:25},(_,i)=>({x:30+(i+1)*6,y:50,t:(i+1)*8,force:0.5}))],
-          [{x:30,y:60,t:300,force:0.5},...Array.from({length:15},(_,i)=>({x:30+(i+1)*8,y:60-(i+1)*2,t:300+(i+1)*8,force:0.5}))],
+          [
+            { x: 30, y: 50, t: 0, force: 0.5 },
+            ...Array.from({ length: 25 }, (_, i) => ({ x: 30 + (i + 1) * 6, y: 50, t: (i + 1) * 8, force: 0.5 })),
+          ],
+          [
+            { x: 30, y: 60, t: 300, force: 0.5 },
+            ...Array.from({ length: 15 }, (_, i) => ({
+              x: 30 + (i + 1) * 8,
+              y: 60 - (i + 1) * 2,
+              t: 300 + (i + 1) * 8,
+              force: 0.5,
+            })),
+          ],
         ];
         const encodedSig = encodeTimedSignatureSync(sigStrokes);
-        ev.push({ type: "signatureCommit", delta: Math.round(20/TQ), targetId: 3, signatureId: 3 });
+        ev.push({ type: "signatureCommit", delta: Math.round(20 / TQ), targetId: 3, signatureId: 3 });
 
         const tape = encodeReplayEventsSync(ev);
         const targets = [
@@ -176,28 +318,55 @@ async function main() {
           { id: 3, hash: fnv("bot-sig"), descriptor: "synthetic|signature:signature-pad" },
         ];
         const strings = [
-          { id: 1, kind: "value" as const, hash: fnv("Bot LLC"), value: "Bot LLC" },  // pm-company commit
-          { id: 2, kind: "value" as const, hash: fnv("bot@proofmark.io"), value: "bot@proofmark.io" },  // pm-email commit
+          { id: 1, kind: "value" as const, hash: fnv("Bot LLC"), value: "Bot LLC" }, // pm-company commit
+          { id: 2, kind: "value" as const, hash: fnv("bot@proofmark.io"), value: "bot@proofmark.io" }, // pm-email commit
           { id: 3, kind: "signature" as const, hash: fnv(encodedSig), value: encodedSig },
-          ...botName.split("").map((c, i) => ({ id: i+4, kind: "key" as const, hash: fnv(c), value: c })),
-          ...botEmail.split("").map((c, i) => ({ id: i+4+botName.length, kind: "key" as const, hash: fnv(c), value: c })),
+          ...botName.split("").map((c, i) => ({ id: i + 4, kind: "key" as const, hash: fnv(c), value: c })),
+          ...botEmail
+            .split("")
+            .map((c, i) => ({ id: i + 4 + botName.length, kind: "key" as const, hash: fnv(c), value: c })),
         ];
 
         return {
-          timeOnPage: 3200, scrolledToBottom: false, maxScrollDepth: 100,
-          mouseMoveCount: 0, clickCount: 3, keyPressCount: botName.length + botEmail.length,
-          pageWasHidden: false, hiddenDuration: 0, interactionTimeline: [],
+          timeOnPage: 3200,
+          scrolledToBottom: false,
+          maxScrollDepth: 100,
+          mouseMoveCount: 0,
+          clickCount: 3,
+          keyPressCount: botName.length + botEmail.length,
+          pageWasHidden: false,
+          hiddenDuration: 0,
+          interactionTimeline: [],
           typingCadence: Array(botName.length + botEmail.length - 1).fill(30),
-          mouseVelocityAvg: 0, mouseAccelerationPattern: "flat",
-          touchPressureAvg: null, scrollPattern: [], focusChanges: 2,
-          pasteEvents: 0, copyEvents: 0, cutEvents: 0, rightClicks: 0,
+          mouseVelocityAvg: 0,
+          mouseAccelerationPattern: "flat",
+          touchPressureAvg: null,
+          scrollPattern: [],
+          focusChanges: 2,
+          pasteEvents: 0,
+          copyEvents: 0,
+          cutEvents: 0,
+          rightClicks: 0,
           replay: {
-            version: 1, encoding: "pm-replay-v1" as const, timeQuantumMs: TQ,
+            version: 1,
+            encoding: "pm-replay-v1" as const,
+            timeQuantumMs: TQ,
             viewport: { width: 1920, height: 1080, devicePixelRatio: 1, scrollWidth: 1920, scrollHeight: 3500 },
-            targets, strings,
-            tapeBase64: tape.tapeBase64, tapeHash: fnv(tape.tapeBase64),
+            targets,
+            strings,
+            tapeBase64: tape.tapeBase64,
+            tapeHash: fnv(tape.tapeBase64),
             capabilities: ["scroll", "click", "key", "focus", "blur", "field", "signature"] as any,
-            metrics: { eventCount: ev.length, byteLength: tape.byteLength, targetCount: targets.length, stringCount: strings.length, signatureStrokeCount: 2, signaturePointCount: 42, clipboardEventCount: 0, maxTimestampMs: 3200 },
+            metrics: {
+              eventCount: ev.length,
+              byteLength: tape.byteLength,
+              targetCount: targets.length,
+              stringCount: strings.length,
+              signatureStrokeCount: 2,
+              signaturePointCount: 42,
+              clipboardEventCount: 0,
+              maxTimestampMs: 3200,
+            },
           },
         };
       })(),

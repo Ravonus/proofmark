@@ -20,7 +20,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { trpc } from "~/lib/trpc";
-import { tokenizeDocument } from "~/lib/document-tokens";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
 import { decodeReplayEventsSync, type ForensicReplayEncodedEvent } from "~/lib/forensic/replay-codec";
 import { REPLAY_FORMAT_LIMITS } from "~/lib/forensic/replay-format";
 import type { BehavioralSignals, ForensicReplayTape } from "~/lib/forensic/types";
@@ -30,12 +30,12 @@ import {
   type InteractionClassification,
   type SessionClassification,
 } from "~/lib/forensic/session";
-import { isImageDataUrl } from "~/lib/field-values";
-import { isFieldRequired, isFieldVisible } from "~/lib/field-runtime";
-import { DocumentPaper } from "../document-paper";
-import { InlineFieldInput } from "../sign-document-inline-field";
-import { DocumentHeader, SignerList } from "../sign-document-parts";
-import { validateField, type SignerInfo } from "../sign-document-helpers";
+import { isImageDataUrl } from "~/lib/document/field-values";
+import { isFieldRequired, isFieldVisible } from "~/lib/document/field-runtime";
+import { DocumentPaper } from "../document-editor/document-paper";
+import { InlineFieldInput } from "../signing/sign-document-inline-field";
+import { DocumentHeader, SignerList } from "../signing/sign-document-parts";
+import { validateField, type SignerInfo } from "../signing/sign-document-helpers";
 
 type Props = { documentId?: string; shareToken?: string };
 

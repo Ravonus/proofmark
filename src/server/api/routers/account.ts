@@ -197,7 +197,6 @@ export const accountRouter = createTRPCRouter({
 
       const actor = resolveWalletIdentity(ctx.session.address, ctx.session.chain);
 
-      // Store in DB
       try {
         await ctx.db
           .insert(platformConfig)

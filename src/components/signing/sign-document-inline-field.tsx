@@ -9,7 +9,7 @@ import {
   type IdentityVerificationFieldValue,
   type PaymentFieldValue,
   type SocialVerificationFieldValue,
-} from "~/lib/field-values";
+} from "~/lib/document/field-values";
 import {
   getRuntimeFieldSettings,
   resolveFieldAutocomplete,
@@ -21,8 +21,8 @@ import {
   resolveFieldPlaceholder,
   resolveFieldPrefix,
   resolveFieldSuffix,
-} from "~/lib/field-runtime";
-import { AddressAutocompleteInput } from "./fields/address-autocomplete-input";
+} from "~/lib/document/field-runtime";
+import { AddressAutocompleteInput } from "../fields/address-autocomplete-input";
 import { AlertCircle, CheckCircle, Copy } from "lucide-react";
 import type { InlineField } from "./sign-document-helpers";
 import {

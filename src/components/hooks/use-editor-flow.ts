@@ -10,7 +10,7 @@
 
 import { useCallback } from "react";
 import { useEditorStore } from "~/stores/editor";
-import type { DocToken, InlineField } from "~/lib/document-tokens";
+import type { DocToken, InlineField } from "~/lib/document/document-tokens";
 
 export function useEditorFlow() {
   const store = useEditorStore();
@@ -128,7 +128,6 @@ export function useEditorFlow() {
   );
 
   return {
-    // Store state (direct passthrough)
     ...store,
 
     // Token ops

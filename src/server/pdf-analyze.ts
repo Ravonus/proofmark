@@ -10,7 +10,7 @@ export type {
   DetectedSigner,
   DetectedAddress,
   PdfAnalysisResult,
-} from "~/lib/pdf-types";
+} from "~/lib/document/pdf-types";
 
 import type {
   FieldType,
@@ -19,7 +19,7 @@ import type {
   DetectedSigner,
   DetectedAddress,
   PdfAnalysisResult,
-} from "~/lib/pdf-types";
+} from "~/lib/document/pdf-types";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONSTANTS

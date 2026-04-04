@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "~/components/wallet-provider";
-import { isImageDataUrl } from "~/lib/field-values";
-import { tokenizeDocument, type DocToken } from "~/lib/document-tokens";
-import { getFieldDisplayText, getFieldVisualStyle } from "~/components/sign-document-helpers";
+import { isImageDataUrl } from "~/lib/document/field-values";
+import { tokenizeDocument, type DocToken } from "~/lib/document/document-tokens";
+import { getFieldDisplayText, getFieldVisualStyle } from "~/components/signing/sign-document-helpers";
 import {
   FileDown,
   ShieldCheck,

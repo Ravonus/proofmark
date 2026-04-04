@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "~/components/nav";
-import { UserSettings } from "~/components/user-settings";
+import { UserSettings } from "~/components/settings/user-settings";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export default function SettingsPage() {

@@ -1,8 +1,8 @@
-import type { InlineField } from "~/lib/document-tokens";
-import type { LogicEffect, RuntimeInputType, ValidationKind, VisibilityOperator } from "~/lib/field-runtime";
+import type { InlineField } from "~/lib/document/document-tokens";
+import type { LogicEffect, RuntimeInputType, ValidationKind, VisibilityOperator } from "~/lib/document/field-runtime";
 import type { SignerTokenGate } from "~/lib/token-gates";
-import { FIELD_REGISTRY, FIELD_CATEGORIES } from "./fields";
-import type { DropdownItem } from "./ui/search-dropdown";
+import { FIELD_REGISTRY, FIELD_CATEGORIES } from "../fields";
+import type { DropdownItem } from "../ui/search-dropdown";
 
 export const SIGNER_BORDER_COLORS = ["#60a5fa", "#fb923c", "#c084fc", "#34d399", "#f472b6", "#22d3ee"];
 
@@ -102,11 +102,3 @@ export const LOGIC_EFFECT_OPTIONS: Array<{ value: LogicEffect; label: string }> 
   { value: "show", label: "Show on match" },
   { value: "hide", label: "Hide on match" },
 ];
-
-export function formatPreviewCurrency(amount: number, currency: string) {
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
-  } catch {
-    return `${currency.toUpperCase()} ${amount.toFixed(2)}`;
-  }
-}

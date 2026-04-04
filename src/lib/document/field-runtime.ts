@@ -1,11 +1,11 @@
-import type { InlineField } from "~/lib/document-tokens";
+import type { InlineField } from "~/lib/document/document-tokens";
 import {
   decodeStructuredFieldValue,
   type AttachmentFieldValue,
   type IdentityVerificationFieldValue,
   type PaymentFieldValue,
   type SocialVerificationFieldValue,
-} from "~/lib/field-values";
+} from "~/lib/document/field-values";
 import { getField, type FieldConfig } from "~/components/fields/field-registry";
 
 export type RuntimeInputType = FieldConfig["inputType"] | "url" | "time" | "datetime-local" | "radio";

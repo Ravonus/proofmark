@@ -14,8 +14,8 @@ import { randomBytes, createHash } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db } from "~/server/db";
 import { signers } from "~/server/db/schema";
-import { encodeStructuredFieldValue } from "~/lib/field-values";
-import type { SocialVerificationFieldValue } from "~/lib/field-values";
+import { encodeStructuredFieldValue } from "~/lib/document/field-values";
+import type { SocialVerificationFieldValue } from "~/lib/document/field-values";
 
 export const dynamic = "force-dynamic";
 

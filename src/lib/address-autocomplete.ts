@@ -1,4 +1,4 @@
-import type { InlineField } from "~/lib/document-tokens";
+import type { InlineField } from "~/lib/document/document-tokens";
 
 export type AddressSuggestion = {
   id: string;

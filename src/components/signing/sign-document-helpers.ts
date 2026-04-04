@@ -6,16 +6,12 @@ import {
   type PaymentFieldValue,
   type SocialVerificationFieldValue,
   isImageDataUrl,
-} from "~/lib/field-values";
-import { resolveFieldInputType, resolveFieldPlaceholder, validateFieldValue } from "~/lib/field-runtime";
+} from "~/lib/document/field-values";
+import { resolveFieldInputType, resolveFieldPlaceholder, validateFieldValue } from "~/lib/document/field-runtime";
 import { normalizeAddress, type WalletChain } from "~/lib/chains";
 import type { SignerTokenGate, TokenGateEvaluation } from "~/lib/token-gates";
-import {
-  tokenizeDocument as sharedTokenize,
-  type InlineField as SharedInlineField,
-  type DocToken as SharedDocToken,
-} from "~/lib/document-tokens";
-import { getField } from "./fields";
+import { type InlineField as SharedInlineField, type DocToken as SharedDocToken } from "~/lib/document/document-tokens";
+import { getField } from "../fields";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -63,12 +59,6 @@ export function buildSigningMessageClient(p: {
   const parts = [`proofmark:${p.contentHash}`, addr, p.signerLabel];
   if (p.handSignatureHash) parts.push(p.handSignatureHash);
   return parts.join(":");
-}
-
-// ─── Tokenizer wrapper ───────────────────────────────────────────────────────
-
-export function tokenizeDocument(content: string, signerCount: number) {
-  return sharedTokenize(content, signerCount);
 }
 
 // ─── Field visual styles ─────────────────────────────────────────────────────

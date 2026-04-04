@@ -3,27 +3,15 @@
 import { useEffect, useState } from "react";
 import { Loader2, PackageOpen, Save, Trash2, Upload } from "lucide-react";
 import { trpc } from "~/lib/trpc";
+import type { PostSignReveal } from "~/server/db/schema";
 
-type PostSignDownload = {
-  label: string;
-  filename: string;
-  description?: string;
-  icon?: string;
-  uploadedByAddress?: string;
-  uploadedByLabel?: string;
-  uploadedAt?: string;
-};
-
-type PostSignReveal = {
-  enabled: boolean;
-  downloads?: PostSignDownload[];
-};
+type PostSignDownload = NonNullable<PostSignReveal["downloads"]>[number];
 
 type EditableDownload = PostSignDownload & {
   replacementFile: File | null;
 };
 
-function deriveLabel(name: string): string {
+export function deriveLabel(name: string): string {
   const withoutExtension = name.replace(/\.[^.]+$/, "");
   return withoutExtension.replace(/[-_]+/g, " ").trim() || name;
 }

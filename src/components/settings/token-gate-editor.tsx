@@ -7,8 +7,8 @@ import {
   type TokenGateRule,
   TOKEN_GATE_TYPE_OPTIONS,
 } from "~/lib/token-gates";
-import { Select } from "./ui/select";
-import { W3SButton } from "./ui/motion";
+import { Select } from "../ui/select";
+import { W3SButton } from "../ui/motion";
 
 type Props = {
   value: SignerTokenGate | null | undefined;

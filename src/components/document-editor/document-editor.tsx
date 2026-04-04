@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "~/lib/trpc";
-import { Select } from "./ui/select";
+import { Select } from "../ui/select";
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
 import {
   tokenizeDocument,
@@ -11,10 +11,10 @@ import {
   PLACEHOLDERS,
   type DocToken,
   type InlineField,
-} from "~/lib/document-tokens";
-import { formatEditableFieldValue, getFieldLogicState } from "~/lib/field-runtime";
-import { EditorHistory, type EditorSnapshot } from "~/lib/editor-history";
-import { FieldPicker, getField, SIGNER_COLORS } from "./fields";
+} from "~/lib/document/document-tokens";
+import { formatEditableFieldValue, getFieldLogicState } from "~/lib/document/field-runtime";
+import { EditorHistory, type EditorSnapshot } from "~/lib/document/editor-history";
+import { FieldPicker, getField, SIGNER_COLORS } from "../fields";
 import {
   GripVertical,
   Trash2,
@@ -45,16 +45,16 @@ import {
   Redo2,
   Sparkles,
 } from "lucide-react";
-import { W3SButton, W3SIconButton } from "./ui/motion";
+import { W3SButton, W3SIconButton } from "../ui/motion";
 import type { SignerDef, EditorResult, PreviewValueMap } from "./document-editor-types";
 import { SIGNER_BORDER_COLORS } from "./document-editor-types";
 import { EditorField, EditorSignatureBlock, type SignatureBlockToken } from "./document-editor-fields";
 import dynamic from "next/dynamic";
-const AiChatPanel = dynamic(() => import("./ai/ai-chat-panel").then((m) => m.AiChatPanel).catch(() => () => null), {
+const AiChatPanel = dynamic(() => import("../ai/ai-chat-panel").then((m) => m.AiChatPanel).catch(() => () => null), {
   ssr: false,
   loading: () => null,
 });
-import { TokenGateEditor } from "./token-gate-editor";
+import { TokenGateEditor } from "../settings/token-gate-editor";
 
 export type { EditorResult, SignerDef } from "./document-editor-types";
 

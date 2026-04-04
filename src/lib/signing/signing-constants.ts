@@ -19,6 +19,20 @@ export function getBaseUrl(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3100";
 }
 
+/** Device profile collected for forensic / gaze-gate purposes. */
+export type DeviceProfile = {
+  isMobile: boolean;
+  isTablet?: boolean;
+  hasCamera: boolean;
+  screenDiag: number;
+  dpr: number;
+  os: string;
+  browser: string;
+  cameraLabel?: string;
+  viewportW: number;
+  viewportH: number;
+};
+
 /** Data propagated when a signer completes signing. */
 export interface SignData {
   address: string | null;
