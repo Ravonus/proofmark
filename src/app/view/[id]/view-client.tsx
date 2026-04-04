@@ -123,12 +123,18 @@ export function ViewDocumentClient({ documentId }: Props) {
     );
   }
 
+  const reveal = doc?.postSignReveal as import("~/server/db/schema").PostSignReveal | null | undefined;
+  const hasDownloads = (reveal?.downloads?.length ?? 0) > 0;
+
   const tocItems = [
     { id: "content", label: "Document", icon: <FileSignature className="h-3.5 w-3.5" /> },
     ...(fieldSummary.length > 0
       ? [{ id: "fields", label: "Field Index", icon: <List className="h-3.5 w-3.5" /> }]
       : []),
     { id: "signatures", label: "Signatures", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+    ...(isCreatorViewer && hasDownloads
+      ? [{ id: "downloads", label: "Downloads", icon: <FileDown className="h-3.5 w-3.5" /> }]
+      : []),
     ...(isCreatorViewer
       ? [{ id: "forensic-replay", label: "Forensic Replay", icon: <Play className="h-3.5 w-3.5" /> }]
       : []),
@@ -444,6 +450,41 @@ export function ViewDocumentClient({ documentId }: Props) {
               })}
             </div>
           </section>
+
+          {isCreatorViewer && hasDownloads && reveal?.downloads && (
+            <section
+              id="downloads"
+              ref={(el) => {
+                sectionRefs.current["downloads"] = el;
+              }}
+              className="mt-12"
+            >
+              <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-primary">
+                <FileDown className="h-5 w-5 text-accent" /> Post-Sign Downloads
+              </h2>
+              <div className="space-y-3">
+                {reveal.downloads.map((dl) => (
+                  <a
+                    key={dl.filename}
+                    href={`/api/download/${encodeURIComponent(dl.filename)}?documentId=${documentId}`}
+                    className="flex items-center gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition-colors hover:bg-card/80"
+                    download
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                      <FileDown className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-primary">{dl.label}</p>
+                      {dl.description && (
+                        <p className="truncate text-xs text-muted">{dl.description}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-xs text-muted">{dl.filename.split(".").pop()?.toUpperCase()}</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
 
           {isCreatorViewer && (
             <section
