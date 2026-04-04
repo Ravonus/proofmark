@@ -1709,7 +1709,7 @@ function AiLimitsSection() {
                 {/* Per-tool routing */}
                 <div className="space-y-2">
                   <h5 className="text-xs font-semibold text-muted">CLI Tool Status</h5>
-                  {runtimeQuery.data.routing.serverCli.map((cli) => (
+                  {runtimeQuery.data.routing.serverCli.map((cli: any) => (
                     <div key={cli.tool} className="flex items-center justify-between rounded-lg bg-surface/20 px-3 py-2 text-xs">
                       <span className="font-medium">{cli.tool}</span>
                       <div className="flex items-center gap-2">
@@ -1731,7 +1731,7 @@ function AiLimitsSection() {
                 <p className="text-xs text-muted">Persistent CLI processes for low-latency AI execution.</p>
 
                 <div className="space-y-2">
-                  {runtimeQuery.data.sessions.map((session) => (
+                  {runtimeQuery.data.sessions.map((session: any) => (
                     <div key={session.id} className="flex items-center justify-between rounded-xl border border-border bg-surface/30 p-3">
                       <div className="flex items-center gap-3">
                         <Activity className="h-4 w-4 text-emerald-400" />
