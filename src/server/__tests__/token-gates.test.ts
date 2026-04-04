@@ -43,8 +43,8 @@ describe("BTC token gates", () => {
     if (ORIGINAL_ORDINALS_BASE_URL) process.env.ORDINALS_BASE_URL = ORIGINAL_ORDINALS_BASE_URL;
     else delete process.env.ORDINALS_BASE_URL;
 
-    if (ORIGINAL_NODE_ENV) process.env.NODE_ENV = ORIGINAL_NODE_ENV;
-    else delete process.env.NODE_ENV;
+    if (ORIGINAL_NODE_ENV) (process.env as Record<string, string | undefined>).NODE_ENV = ORIGINAL_NODE_ENV;
+    else delete (process.env as Record<string, string | undefined>).NODE_ENV;
   });
 
   it("uses ORD_RPC_URL for inscription ownership when configured", async () => {
@@ -66,6 +66,7 @@ describe("BTC token gates", () => {
     const evaluation = await evaluateSignerTokenGate({
       gate: {
         mode: "ALL",
+        devBypass: false,
         rules: [
           {
             chain: "BTC",
@@ -105,6 +106,7 @@ describe("BTC token gates", () => {
     const evaluation = await evaluateSignerTokenGate({
       gate: {
         mode: "ALL",
+        devBypass: false,
         rules: [
           {
             chain: "BTC",
@@ -150,6 +152,7 @@ describe("BTC token gates", () => {
     const evaluation = await evaluateSignerTokenGate({
       gate: {
         mode: "ALL",
+        devBypass: false,
         rules: [
           {
             chain: "BTC",
@@ -201,6 +204,7 @@ describe("BTC token gates", () => {
     const evaluation = await evaluateSignerTokenGate({
       gate: {
         mode: "ALL",
+        devBypass: false,
         rules: [
           {
             chain: "BTC",
@@ -223,6 +227,7 @@ describe("BTC token gates", () => {
     const evaluation = await evaluateSignerTokenGate({
       gate: {
         mode: "ALL",
+        devBypass: false,
         rules: [
           {
             chain: "BTC",
@@ -242,7 +247,7 @@ describe("BTC token gates", () => {
   });
 
   it("requires every chain wallet proof before a mixed-chain dev-bypass gate can pass", async () => {
-    process.env.NODE_ENV = "development";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
 
     vi.spyOn(verifyLib, "verifySignature").mockResolvedValue({
       ok: true,
@@ -287,7 +292,7 @@ describe("BTC token gates", () => {
   });
 
   it("runs the live check and only then applies dev bypass when a verified wallet fails ownership", async () => {
-    process.env.NODE_ENV = "development";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "development";
 
     vi.spyOn(verifyLib, "verifySignature").mockResolvedValue({
       ok: true,

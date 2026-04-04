@@ -257,7 +257,9 @@ export function GazeGateMobile({
         tracker={(globalThis as Record<string, unknown>).__gazeTracker}
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         device={device}
-        onGazeSample={() => { /* noop */ }}
+        onGazeSample={() => {
+          /* noop */
+        }}
         onComplete={(result: { pointCount: number }) => handleCalibrationDone(result.pointCount)}
         onSkip={() => handleCalibrationDone(0)}
       />

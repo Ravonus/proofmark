@@ -82,7 +82,16 @@ const typedTsRules = {
 
 export default tseslint.config(
   {
-    ignores: [".next", "node_modules", "coverage", "src/lib/forensic/generated", "scripts", "premium"],
+    ignores: [
+      ".next", "node_modules", "coverage", "src/lib/forensic/generated", "scripts", "premium",
+      // Premium components kept in src/ for premium builds — excluded from OSS lint
+      "src/components/ai", "src/components/collab", "src/components/escrow",
+      "src/components/gaze-gate.tsx", "src/components/gaze-gate-mobile.tsx",
+      "src/stores/ai-chat.ts", "src/lib/gaze-loader.ts",
+      "src/lib/forensic/gaze-analysis.ts", "src/lib/forensic/gaze-liveness.ts",
+      "src/server/api/routers/ai.ts", "src/server/api/routers/collab.ts",
+      "src/server/api/routers/escrow.ts", "src/server/api/routers/runtime.ts",
+    ],
   },
   ...compat.extends("next/core-web-vitals"),
   {

@@ -90,7 +90,11 @@ export function CollabAnnotationSidebar({ sessionId, isOpen, onClose, onNavigate
           active={filter === "all"}
           onClick={() => setFilter("all")}
           label="All"
-          count={counts.data ? Object.values(counts.data as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0}
+          count={
+            counts.data
+              ? Object.values(counts.data as Record<string, number>).reduce((a: number, b: number) => a + b, 0)
+              : 0
+          }
         />
         {(Object.keys(TYPE_CONFIG) as AnnotationType[]).map((type) => {
           const { icon: Icon, color } = TYPE_CONFIG[type];

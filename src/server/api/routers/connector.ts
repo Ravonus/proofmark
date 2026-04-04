@@ -281,7 +281,7 @@ export const connectorRouter = createTRPCRouter({
           connectorSessionId: input.connectorSessionId,
           ownerAddress: session.ownerAddress,
           taskType: input.taskType,
-          payload: input.payload,
+          payload: input.payload as Record<string, unknown>,
         })
         .returning();
 
@@ -303,7 +303,7 @@ export const connectorRouter = createTRPCRouter({
         .update(connectorTasks)
         .set({
           status: input.status,
-          result: input.result,
+          result: input.result as Record<string, unknown>,
           completedAt: new Date(),
         })
         .where(

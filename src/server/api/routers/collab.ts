@@ -195,7 +195,9 @@ export const collabRouter = createTRPCRouter({
     const result = await collab.getSession(ctx.db, input.sessionId);
     if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Session not found" });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const myParticipant = result.participants.find((p: { userId: string; role: string }) => p.userId === ctx.session.address);
+    const myParticipant = result.participants.find(
+      (p: { userId: string; role: string }) => p.userId === ctx.session.address,
+    );
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return {
       ...result,
@@ -443,7 +445,8 @@ export const collabRouter = createTRPCRouter({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const session = await getSession(ctx.db, input.sessionId);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      const threadId = input.threadId ?? (await getOrCreateDefaultPrivateThread(ctx.db, input.sessionId, ctx.session.address)).id;
+      const threadId =
+        input.threadId ?? (await getOrCreateDefaultPrivateThread(ctx.db, input.sessionId, ctx.session.address)).id;
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const result = await sendPrivateMessage(ctx.db, {

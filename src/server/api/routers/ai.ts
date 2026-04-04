@@ -187,12 +187,7 @@ interface PremiumAiModule {
     },
     key: { apiKey: string; source: string; provider: AiProviderName; baseUrl?: string },
   ): Promise<AiCompleteResponse>;
-  getUsageSummary(
-    ownerAddress: string,
-    from: Date,
-    to: Date,
-    userId?: string,
-  ): Promise<unknown>;
+  getUsageSummary(ownerAddress: string, from: Date, to: Date, userId?: string): Promise<unknown>;
   setAdminLimits(params: Record<string, unknown>): Promise<void>;
   getLimitStatus(ownerAddress: string, feature: AiFeature, userId?: string): Promise<unknown>;
 }
@@ -229,11 +224,7 @@ async function getAiAccountContext(ctx: { req?: Request | null | undefined }) {
   };
 }
 
-async function resolveOwnedDocumentOwnerAddress(
-  db: DbClient,
-  documentId: string,
-  ownedAddresses: string[],
-) {
+async function resolveOwnedDocumentOwnerAddress(db: DbClient, documentId: string, ownedAddresses: string[]) {
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
   if (!doc) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -416,12 +407,7 @@ function mapSignerFields(signer: SignerRow) {
   return (signer.fields ?? []).map((f: SignerField) => ({ type: f.type, label: f.label, required: f.required }));
 }
 
-async function loadCreatorSignerEvidence(
-  db: DbClient,
-  documentId: string,
-  signerId: string,
-  ownedAddresses: string[],
-) {
+async function loadCreatorSignerEvidence(db: DbClient, documentId: string, signerId: string, ownedAddresses: string[]) {
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
   if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
   const ownerAddress = normalizeOwnerAddress(doc.createdBy);
@@ -786,7 +772,10 @@ export const aiRouter = createTRPCRouter({
         label: c.label,
         keySource: c.keySource,
         isDefault: c.isDefault,
-        hasKey: c.keySource === "platform" ? ai.isPlatformProviderAvailable(c.provider as AiProviderName) : !!c.config?.apiKey,
+        hasKey:
+          c.keySource === "platform"
+            ? ai.isPlatformProviderAvailable(c.provider as AiProviderName)
+            : !!c.config?.apiKey,
         defaultModel: c.config?.defaultModel,
         enabled: c.config?.enabled !== false,
       })),

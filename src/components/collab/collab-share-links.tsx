@@ -151,7 +151,9 @@ export function CollabShareLinks({ sessionId, isOpen, onClose, pendingAnchor, on
 
             {/* Anchor description */}
             <p className="mb-1 text-[10px] text-zinc-500">
-              {link.anchor?.kind === "doc" ? `Token ${String(link.anchor.tokenIndex)}` : `Page ${String(link.anchor?.page)}`}
+              {link.anchor?.kind === "doc"
+                ? `Token ${String(link.anchor.tokenIndex)}`
+                : `Page ${String(link.anchor?.page)}`}
             </p>
 
             {/* AI breakdown badge */}

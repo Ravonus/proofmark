@@ -55,12 +55,24 @@ const esc = {
 };
 
 // Re-export as module-level aliases for minimal code changes below
-const escrowContracts = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowContracts[p as keyof typeof esc.escrowContracts] });
-const escrowParticipants = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowParticipants[p as keyof typeof esc.escrowParticipants] });
-const escrowSignatures = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowSignatures[p as keyof typeof esc.escrowSignatures] });
-const escrowEvents = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowEvents[p as keyof typeof esc.escrowEvents] });
-const escrowRwaVerifications = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowRwaVerifications[p as keyof typeof esc.escrowRwaVerifications] });
-const escrowOracleDecisions = new Proxy({} as Record<string, unknown>, { get: (_, p) => esc.escrowOracleDecisions[p as keyof typeof esc.escrowOracleDecisions] });
+const escrowContracts = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowContracts[p as keyof typeof esc.escrowContracts],
+});
+const escrowParticipants = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowParticipants[p as keyof typeof esc.escrowParticipants],
+});
+const escrowSignatures = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowSignatures[p as keyof typeof esc.escrowSignatures],
+});
+const escrowEvents = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowEvents[p as keyof typeof esc.escrowEvents],
+});
+const escrowRwaVerifications = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowRwaVerifications[p as keyof typeof esc.escrowRwaVerifications],
+});
+const escrowOracleDecisions = new Proxy({} as Record<string, unknown>, {
+  get: (_, p) => esc.escrowOracleDecisions[p as keyof typeof esc.escrowOracleDecisions],
+});
 async function computeTermsHash(args: Record<string, unknown>) {
   return esc.computeTermsHash(args);
 }
