@@ -4,11 +4,6 @@ import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PdfAnalysisResult, FieldType } from "~/lib/document/pdf-types";
 import { FadeIn, ScaleIn, GlassCard, AnimatedButton } from "./ui/motion";
-import dynamic from "next/dynamic";
-const AiScraperReview = dynamic(
-  () => import("./ai/ai-scraper-review").then((m) => m.AiScraperReview).catch(() => () => null),
-  { ssr: false, loading: () => null },
-);
 
 // ─── Result type for the parent ───────────────────────────────────────────────
 
@@ -433,21 +428,9 @@ function PdfReview({
     });
   }, []);
 
-  const [activeAnalysis, setActiveAnalysis] = useState(analysis);
-
   return (
     <div className="space-y-6">
-      <AnalysisSummary analysis={activeAnalysis} />
-
-      {/* AI Smart Fix */}
-      <AiScraperReview
-        analysisResult={activeAnalysis}
-        rawContent={activeAnalysis.content}
-        onAccept={(corrected) => setActiveAnalysis(corrected)}
-        onReject={() => {
-          /* keep original */
-        }}
-      />
+      <AnalysisSummary analysis={analysis} />
 
       {/* Signer legend */}
       {signers.length > 1 && (

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "~/lib/trpc";
 import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
-import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 
@@ -513,19 +512,6 @@ export function WorkspaceSettings() {
               <p className="text-sm text-muted">No saved templates yet.</p>
             )}
           </div>
-        </GlassCard>
-      </FadeIn>
-
-      {/* AI Provider Settings */}
-      <FadeIn delay={0.36}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">AI Settings</h3>
-            <p className="mt-1 text-sm text-muted">
-              Configure AI providers, manage API keys, and monitor usage. Premium feature.
-            </p>
-          </div>
-          <AiProviderSettings />
         </GlassCard>
       </FadeIn>
     </div>

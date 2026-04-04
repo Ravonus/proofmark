@@ -19,7 +19,7 @@ import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
 import { getAuditTrail, verifyAuditChainByDocId as verifyAuditChain, generateSignedPDF } from "~/server/rust-engine";
 import { deriveSecurityMode } from "~/lib/signing/document-security";
-import type { EnhancedForensicEvidence, EyeTrackingSessionSummary } from "~/lib/forensic/premium";
+import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type {
   ForensicSessionLivenessProfile,
   ForensicSessionProfile,
@@ -128,7 +128,7 @@ export interface ProofPacket {
         mode: string;
         lines: string[];
       } | null;
-      eyeTracking: EyeTrackingSessionSummary | null;
+      eyeTracking: Record<string, unknown> | null;
       sessionProfile: ForensicSessionProfile | null;
       liveness: ForensicSessionLivenessProfile | null;
       signerBaseline: SignerBaselineProfile | null;
@@ -256,7 +256,7 @@ export function buildProofPacketForensicSection(
           lines: fe.pdfSummary.lines,
         }
       : null,
-    eyeTracking: fe.eyeTracking ?? null,
+    eyeTracking: ((fe as Record<string, unknown>).eyeTracking as Record<string, unknown> | undefined) ?? null,
     sessionProfile: fe.sessionProfile ?? null,
     liveness: fe.sessionProfile?.liveness ?? null,
     signerBaseline: fe.signerBaseline ?? null,

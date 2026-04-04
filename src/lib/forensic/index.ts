@@ -86,9 +86,6 @@ export type {
   SignerForensicSessions,
 } from "./session";
 
-export { extractGazeBehaviorFeatures } from "./gaze-analysis";
-export type { GazeBehaviorFeatures } from "./gaze-analysis";
-
 // Sub-modules (for advanced usage / testing)
 export { sha256, generateId } from "./hash";
 export { getOrCreatePersistentId } from "./persistence";

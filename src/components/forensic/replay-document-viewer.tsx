@@ -484,25 +484,6 @@ type ServerForensicSession = {
   classification?: { verdict: string; automationScore: number; flags: string[] } | null;
 };
 
-type AiForensicReview = {
-  verdict: string;
-  confidence: number;
-  automationScore: number;
-  rationale: string;
-  chunks: Array<{
-    chunk: string;
-    verdict: string;
-    score: number;
-    rationale: string;
-    thresholdSuggestions?: Array<{
-      field: string;
-      currentValue: number;
-      suggestedValue: number;
-      reason: string;
-    }>;
-  }>;
-};
-
 type SignerData = {
   id: string;
   label: string;
@@ -1648,82 +1629,6 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                                   Agent: {Math.round(signer.sessionProfile.automationEvidenceScore * 100)}%
                                 </span>
                               </div>
-                            </div>
-                          );
-                        })()}
-
-                      {/* AI Forensic Review (async) */}
-                      {(signer as SignerData & { aiForensicReview?: AiForensicReview }).aiForensicReview &&
-                        (() => {
-                          const air = (signer as SignerData & { aiForensicReview?: AiForensicReview })
-                            .aiForensicReview as {
-                            verdict: string;
-                            confidence: number;
-                            automationScore: number;
-                            rationale: string;
-                            chunks: Array<{
-                              chunk: string;
-                              verdict: string;
-                              score: number;
-                              rationale: string;
-                              thresholdSuggestions?: Array<{
-                                field: string;
-                                currentValue: number;
-                                suggestedValue: number;
-                                reason: string;
-                              }>;
-                            }>;
-                          };
-                          const airColor =
-                            air.verdict === "agent" ? "#f87171" : air.verdict === "human" ? "#34d399" : "#fbbf24";
-                          return (
-                            <div className="mt-3 space-y-2 border-t border-border pt-3">
-                              <p className="text-muted/70 text-[10px] font-semibold uppercase tracking-[0.18em]">
-                                AI Forensic Review
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg">
-                                  {air.verdict === "agent" ? "🤖" : air.verdict === "human" ? "👤" : "❓"}
-                                </span>
-                                <div>
-                                  <span className="text-[11px] font-bold uppercase" style={{ color: airColor }}>
-                                    {air.verdict}
-                                  </span>
-                                  <span className="ml-2 text-[10px] text-muted">
-                                    ({Math.round(air.confidence * 100)}% confidence)
-                                  </span>
-                                </div>
-                              </div>
-                              <p className="text-[10px] text-muted">{air.rationale}</p>
-                              {/* Per-chunk results */}
-                              <div className="space-y-1">
-                                {air.chunks.map((c, ci) => (
-                                  <div key={ci} className="flex items-center gap-1.5 text-[10px]">
-                                    <span
-                                      className={`font-semibold ${c.verdict === "agent" ? "text-red-400" : c.verdict === "human" ? "text-emerald-400" : "text-amber-400"}`}
-                                    >
-                                      {c.verdict === "agent" ? "🤖" : c.verdict === "human" ? "👤" : "❓"}
-                                    </span>
-                                    <span className="text-muted/70">
-                                      {c.chunk.replace("replay_", "").replace("meta_", "")}
-                                    </span>
-                                    <span className="text-muted/40 flex-1 truncate">{c.rationale.slice(0, 60)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                              {/* Threshold suggestions from feedback */}
-                              {air.chunks.some((c) => c.thresholdSuggestions?.length) && (
-                                <div className="mt-1 text-[9px] text-amber-400/60">
-                                  <p className="font-semibold">AI Threshold Suggestions:</p>
-                                  {air.chunks
-                                    .flatMap((c) => c.thresholdSuggestions ?? [])
-                                    .map((s, si) => (
-                                      <p key={si}>
-                                        • {s.field}: {s.currentValue} → {s.suggestedValue} ({s.reason})
-                                      </p>
-                                    ))}
-                                </div>
-                              )}
                             </div>
                           );
                         })()}

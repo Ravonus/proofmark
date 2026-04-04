@@ -43,17 +43,11 @@ import {
   Minimize2,
   Undo2,
   Redo2,
-  Sparkles,
 } from "lucide-react";
 import { W3SButton, W3SIconButton } from "../ui/motion";
 import type { SignerDef, EditorResult, PreviewValueMap } from "./document-editor-types";
 import { SIGNER_BORDER_COLORS } from "./document-editor-types";
 import { EditorField, EditorSignatureBlock, type SignatureBlockToken } from "./document-editor-fields";
-import dynamic from "next/dynamic";
-const AiChatPanel = dynamic(() => import("../ai/ai-chat-panel").then((m) => m.AiChatPanel).catch(() => () => null), {
-  ssr: false,
-  loading: () => null,
-});
 import { TokenGateEditor } from "../settings/token-gate-editor";
 
 export type { EditorResult, SignerDef } from "./document-editor-types";
@@ -115,21 +109,6 @@ export function DocumentEditor({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
-  const pushSnapshot = useCallback(
-    (label?: string) => {
-      historyRef.current.push({
-        title,
-        tokens: tokens as unknown[],
-        fields: fields as unknown[],
-        label,
-        timestamp: Date.now(),
-      });
-      setCanUndo(historyRef.current.canUndo);
-      setCanRedo(historyRef.current.canRedo);
-    },
-    [title, tokens, fields],
-  );
-
   const handleUndo = useCallback(() => {
     const current: EditorSnapshot = {
       title,
@@ -163,72 +142,6 @@ export function DocumentEditor({
     setCanUndo(historyRef.current.canUndo);
     setCanRedo(historyRef.current.canRedo);
   }, [title, tokens, fields]);
-
-  // ── AI panel ──
-  const [showAiPanel, setShowAiPanel] = useState(false);
-
-  const handleAiApplyEdits = useCallback(
-    (
-      operations: Array<{
-        op: string;
-        index?: number;
-        fieldId?: string;
-        token?: Record<string, unknown>;
-        updates?: Record<string, unknown>;
-        field?: Record<string, unknown>;
-        afterTokenIndex?: number;
-      }>,
-    ) => {
-      // Snapshot before AI edits for undo
-      pushSnapshot("AI edit");
-
-      let newTokens = [...tokens];
-      let newFields = [...fields];
-
-      // Apply operations in reverse index order for insertions/deletions
-      const sorted = [...operations].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
-
-      for (const op of sorted) {
-        switch (op.op) {
-          case "update_token":
-            if (op.index != null && op.updates) {
-              const t = newTokens[op.index];
-              if (t) newTokens[op.index] = { ...t, ...op.updates } as DocToken;
-            }
-            break;
-          case "insert_token":
-            if (op.index != null && op.token) {
-              newTokens.splice(op.index, 0, op.token as unknown as DocToken);
-            }
-            break;
-          case "delete_token":
-            if (op.index != null) {
-              const removed = newTokens[op.index];
-              if (removed?.kind === "field") {
-                newFields = newFields.filter((f) => f.id !== removed.field.id);
-              }
-              newTokens.splice(op.index, 1);
-            }
-            break;
-          case "update_field":
-            if (op.fieldId && op.updates) {
-              newFields = newFields.map((f) => (f.id === op.fieldId ? ({ ...f, ...op.updates } as InlineField) : f));
-            }
-            break;
-          case "remove_field":
-            if (op.fieldId) {
-              newFields = newFields.filter((f) => f.id !== op.fieldId);
-              newTokens = newTokens.filter((t) => !(t.kind === "field" && t.field.id === op.fieldId));
-            }
-            break;
-        }
-      }
-
-      setTokens(newTokens);
-      setFields(newFields);
-    },
-    [tokens, fields, pushSnapshot],
-  );
 
   const [dragFieldId, setDragFieldId] = useState<string | null>(null);
   const [dragNewType, setDragNewType] = useState<InlineField["type"] | null>(null);
@@ -1137,15 +1050,6 @@ export function DocumentEditor({
           <Redo2 className="h-3.5 w-3.5" />
         </W3SIconButton>
 
-        {/* AI Assistant */}
-        <W3SButton
-          variant={showAiPanel ? "accent-outline" : "ghost"}
-          size="xs"
-          onClick={() => setShowAiPanel(!showAiPanel)}
-        >
-          <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI</span>
-        </W3SButton>
-
         <div className="h-5 w-px bg-[var(--border)]" />
 
         <W3SButton variant={previewMode ? "primary" : "ghost"} size="xs" onClick={() => setPreviewMode(!previewMode)}>
@@ -1457,18 +1361,6 @@ export function DocumentEditor({
           </div>
         </div>
       )}
-
-      {/* AI Chat Panel */}
-      <AiChatPanel
-        isOpen={showAiPanel}
-        onClose={() => setShowAiPanel(false)}
-        documentId=""
-        documentTitle={title}
-        tokens={tokens}
-        signerCount={signers.length}
-        signerLabels={signers.map((s) => s.label)}
-        onApplyEdits={handleAiApplyEdits}
-      />
     </div>
   );
 }

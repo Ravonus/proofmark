@@ -120,55 +120,11 @@ export interface ForensicPdfSummary {
   lines: string[];
 }
 
-/* ── Eye tracking policy (premium) ─────────────────────────── */
-
-export const eyeTrackingModeSchema = z.enum(["off", "optional", "required"]);
-export type EyeTrackingMode = z.infer<typeof eyeTrackingModeSchema>;
-
-export const documentEyeTrackingPolicySchema = z.object({
-  mode: eyeTrackingModeSchema.default("off"),
-  minTrackingCoverage: z.number().min(0).max(1).default(0.6),
-  showGazeFeedback: z.boolean().default(true),
-  storeCalibrationData: z.boolean().default(false),
-  blockWithoutCamera: z.boolean().default(true),
-});
-
-export type DocumentEyeTrackingPolicy = z.infer<typeof documentEyeTrackingPolicySchema>;
-
-export const DEFAULT_EYE_TRACKING_POLICY: DocumentEyeTrackingPolicy = {
-  mode: "off",
-  minTrackingCoverage: 0.6,
-  showGazeFeedback: true,
-  storeCalibrationData: false,
-  blockWithoutCamera: true,
-};
-
-export function normalizeEyeTrackingPolicy(
-  input?: Partial<DocumentEyeTrackingPolicy> | null,
-): DocumentEyeTrackingPolicy {
-  return documentEyeTrackingPolicySchema.parse({ ...DEFAULT_EYE_TRACKING_POLICY, ...(input ?? {}) });
-}
-
-export interface EyeTrackingSessionSummary {
-  active: boolean;
-  pointCount: number;
-  fixationCount: number;
-  avgFixationMs: number;
-  blinkCount: number;
-  blinkRate: number;
-  trackingCoverage: number;
-  passedCoverageThreshold: boolean;
-  calibrationAccuracy: number | null;
-  livenessPassRatio?: number | null;
-  livenessSuspicious?: boolean | null;
-}
-
 export type EnhancedForensicEvidence = ForensicEvidence & {
   storage?: ForensicStorageMetadata;
   automationReview?: AutomationReview;
   policyOutcome?: AutomationPolicyOutcome;
   pdfSummary?: ForensicPdfSummary;
-  eyeTracking?: EyeTrackingSessionSummary;
   sessionProfile?: ForensicSessionProfile;
   signerBaseline?: SignerBaselineProfile | null;
   forensicSessions?: PersistedForensicSessionCapture[];

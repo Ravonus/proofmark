@@ -82,7 +82,7 @@ const typedTsRules = {
 
 export default tseslint.config(
   {
-    ignores: [".next", "node_modules", "coverage", "src/lib/forensic/generated", "scripts"],
+    ignores: [".next", "node_modules", "coverage", "src/lib/forensic/generated", "scripts", "premium"],
   },
   ...compat.extends("next/core-web-vitals"),
   {

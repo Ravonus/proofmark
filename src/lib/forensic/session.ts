@@ -1,5 +1,40 @@
-import { extractGazeBehaviorFeatures, type GazeBehaviorFeatures } from "./gaze-analysis";
 import { decodeForensicReplay } from "./replay";
+
+/** Gaze behavior features extracted from a forensic replay tape. */
+export interface GazeBehaviorFeatures {
+  active: boolean;
+  pointCount: number;
+  fixationCount: number;
+  avgFixationMs: number;
+  maxFixationMs: number;
+  minFixationMs: number;
+  fixationStdDev: number;
+  fixationCoefficientOfVariation: number;
+  saccadeCount: number;
+  avgSaccadeVelocity: number;
+  maxSaccadeVelocity: number;
+  blinkCount: number;
+  blinkRate: number;
+  avgBlinkDurationMs: number;
+  confidenceAvg: number;
+  trackingCoverage: number;
+  trackingLostCount: number;
+  totalTrackingLostMs: number;
+  calibrationAccuracy: number | null;
+  gazeDispersion: number;
+  contentFocusRatio: number;
+  readingPatternScore: number;
+  horizontalProgressionRatio: number;
+  returnSweepCount: number;
+  anchorHitRatio: number;
+  uniqueAnchorCount: number;
+  anchorTransitionCount: number;
+}
+
+/** Stub — gaze feature extraction requires the premium eye-tracking module. */
+function extractGazeBehaviorFeatures(_replay: ForensicReplayTape): GazeBehaviorFeatures | null {
+  return null;
+}
 import { extractReplaySignatureAnalysis } from "./signature-analysis";
 import { FORENSIC_PROFILE_THRESHOLDS } from "./thresholds";
 import type { BehavioralSignals, ForensicReplayTape } from "./types";
