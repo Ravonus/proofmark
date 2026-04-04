@@ -8,7 +8,7 @@ import { Lock, Unlock } from "lucide-react";
 type FieldMode = "edit" | "fill" | "view";
 
 type Props = {
-  fieldTypeId: FieldTypeId | string;
+  fieldTypeId: FieldTypeId;
   fieldId: string;
   mode: FieldMode;
   signerIndex?: number;
@@ -473,6 +473,7 @@ function SignatureFieldPill({
     <span className="mx-0.5 my-1 inline-block">
       {value ? (
         <span className={`inline-block rounded-lg border px-3 py-1.5 ${c.border} ${c.bg}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature preview, not a remote image */}
           <img src={value} alt="Signature" className="h-8" />
         </span>
       ) : (

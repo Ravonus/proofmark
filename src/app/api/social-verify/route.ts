@@ -52,7 +52,7 @@ const PROVIDERS: Record<
     clientSecretEnv: "AUTH_GITHUB_CLIENT_SECRET",
     parseUser: (data) => ({
       username: (data.login as string) ?? "",
-      profileId: String(data.id ?? ""),
+      profileId: typeof data.id === "number" ? String(data.id) : ((data.id as string) ?? ""),
     }),
   },
   discord: {
@@ -211,9 +211,9 @@ export async function GET(req: NextRequest) {
     });
 
     const authUrl = `${config.authorizeUrl}?${params.toString()}`;
-    console.log(`[social-verify] Detected origin: ${origin}`);
-    console.log(`[social-verify] Redirecting to ${provider}:`, authUrl);
-    console.log(`[social-verify] redirect_uri:`, redirectUri);
+    console.warn(`[social-verify] Detected origin: ${origin}`);
+    console.warn(`[social-verify] Redirecting to ${provider}:`, authUrl);
+    console.warn(`[social-verify] redirect_uri:`, redirectUri);
     return NextResponse.redirect(authUrl);
   }
 
@@ -355,10 +355,10 @@ export async function GET(req: NextRequest) {
       [pending.fieldId]: encodeStructuredFieldValue(fieldValue),
     };
 
-    console.log(
+    console.warn(
       `[social-verify] Saving verification for signer ${signer.id}, field ${pending.fieldId}, username: ${username}`,
     );
-    console.log(`[social-verify] fieldValues being saved:`, JSON.stringify(updatedFieldValues));
+    console.warn(`[social-verify] fieldValues being saved:`, JSON.stringify(updatedFieldValues));
 
     await db
       .update(signers)
@@ -368,7 +368,7 @@ export async function GET(req: NextRequest) {
       })
       .where(eq(signers.id, signer.id));
 
-    console.log(`[social-verify] DB update complete for signer ${signer.id}`);
+    console.warn(`[social-verify] DB update complete for signer ${signer.id}`);
 
     // Store verification session for reuse across contracts
     try {

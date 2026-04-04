@@ -588,7 +588,7 @@ export class ForensicCaptureAdapter {
       "touchstart",
       (e) => {
         const touch = (e as TouchEvent).touches[0];
-        if (touch) this.recordTouchStart(touch.clientX, touch.clientY, (touch as any).radiusX, touch.force);
+        if (touch) this.recordTouchStart(touch.clientX, touch.clientY, touch.radiusX, touch.force);
       },
       opts,
     );
@@ -601,7 +601,7 @@ export class ForensicCaptureAdapter {
           const dy = touch.clientY - this.lastMouseY;
           this.lastMouseX = touch.clientX;
           this.lastMouseY = touch.clientY;
-          this.recordTouchMove(dx, dy, (touch as any).radiusX, touch.force);
+          this.recordTouchMove(dx, dy, touch.radiusX, touch.force);
         }
       },
       opts,

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- dynamic premium module loading; modules may not exist in OSS builds
 /**
  * Premium module loader.
  *
@@ -46,9 +46,10 @@ export function getPremiumFeatures() {
  * Load the premium chains module. Returns null if premium not available.
  * Uses a non-analyzable dynamic import so webpack doesn't try to bundle it.
  */
-export async function loadPremiumChains(): Promise<typeof import("~/premium/chains/index") | null> {
+export async function loadPremiumChains() {
   if (!isPremiumAvailable()) return null;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await import(/* webpackIgnore: true */ "../../premium/chains/index");
   } catch (e) {
     console.warn("[premium] chains not available:", (e as Error).message);
@@ -59,9 +60,10 @@ export async function loadPremiumChains(): Promise<typeof import("~/premium/chai
 /**
  * Load the premium lib module. Returns null if premium not available.
  */
-export async function loadPremiumLib(): Promise<typeof import("~/premium/lib/index") | null> {
+export async function loadPremiumLib() {
   if (!isPremiumAvailable()) return null;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await import(/* webpackIgnore: true */ "../../premium/lib/index");
   } catch (e) {
     console.warn("[premium] lib not available:", (e as Error).message);
@@ -72,9 +74,10 @@ export async function loadPremiumLib(): Promise<typeof import("~/premium/lib/ind
 /**
  * Load the premium AI module. Returns null if premium not available.
  */
-export async function loadPremiumAi(): Promise<typeof import("~/premium/ai/index") | null> {
+export async function loadPremiumAi() {
   if (!isPremiumAvailable()) return null;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await import(/* webpackIgnore: true */ "../../premium/ai/index");
   } catch (e) {
     console.warn("[premium] ai not available:", (e as Error).message);
@@ -85,9 +88,10 @@ export async function loadPremiumAi(): Promise<typeof import("~/premium/ai/index
 /**
  * Load the premium collaboration module. Returns null if premium not available.
  */
-export async function loadPremiumCollab(): Promise<typeof import("~/premium/collaboration/index") | null> {
+export async function loadPremiumCollab() {
   if (!isPremiumAvailable()) return null;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return await import(/* webpackIgnore: true */ "../../premium/collaboration/index");
   } catch (e) {
     console.warn("[premium] collaboration not available:", (e as Error).message);

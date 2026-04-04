@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- tRPC context types break type inference across 2500+ line router; typed helpers extracted to document-helpers.ts
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import { eq, and, gt } from "drizzle-orm";
@@ -1545,7 +1545,9 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking, runs in background)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);
       } catch {}
 
@@ -2451,7 +2453,9 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking)
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);
       } catch {}
 

@@ -584,6 +584,7 @@ function renderToken(
               {token.field.label}
             </span>
             <span className="inline-block border-b-2 border-emerald-400/30 pb-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
               <img
                 src={val}
                 alt={`${token.field.label} signature`}
@@ -626,6 +627,7 @@ function renderToken(
           <p className="mb-3 text-xs uppercase tracking-wider text-muted">{token.label} Signature</p>
           {hasSigned && sigImage && isImageDataUrl(sigImage) ? (
             <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg,#fefce8)] px-4 py-3 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
               <img
                 src={sigImage}
                 alt={`${signer.label} signature`}

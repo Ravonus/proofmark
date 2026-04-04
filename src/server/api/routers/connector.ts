@@ -13,6 +13,9 @@ import { eq, and, lt, desc, inArray } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import { connectorSessions, connectorAccessTokens, connectorTasks } from "~/server/db/schema";
 import { getOwnedWalletContextFromRequest, requireOwnedWalletActor } from "~/server/owned-wallet-context";
+import type { db as _dbInstance } from "~/server/db";
+
+type Db = typeof _dbInstance;
 
 const CONNECTOR_FORBIDDEN = "Premium feature — upgrade to enable the OpenClaw connector";
 
@@ -30,11 +33,7 @@ async function getConnectorAccountContext(ctx: { req?: Request | null | undefine
   };
 }
 
-async function findOwnedConnectorSession(
-  db: typeof import("~/server/db").db,
-  sessionId: string,
-  ownedAddresses: string[],
-) {
+async function findOwnedConnectorSession(db: Db, sessionId: string, ownedAddresses: string[]) {
   const [session] = await db
     .select()
     .from(connectorSessions)
@@ -73,6 +72,7 @@ export const connectorRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { ownerAddress, userId } = await getConnectorAccountContext(ctx);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
       const ai = await loadPremiumAi();
       if (!ai) throw new TRPCError({ code: "FORBIDDEN", message: CONNECTOR_FORBIDDEN });
 
@@ -115,7 +115,7 @@ export const connectorRouter = createTRPCRouter({
       await ctx.db
         .update(connectorSessions)
         .set({
-          status: (input.status as any) ?? "online",
+          status: input.status ?? "online",
           lastHeartbeatAt: new Date(),
           ...(input.capabilities ? { capabilities: input.capabilities } : {}),
           updatedAt: new Date(),
@@ -188,6 +188,7 @@ export const connectorRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { ownerAddress, userId } = await getConnectorAccountContext(ctx);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
       const ai = await loadPremiumAi();
       if (!ai) throw new TRPCError({ code: "FORBIDDEN", message: CONNECTOR_FORBIDDEN });
 
@@ -263,7 +264,7 @@ export const connectorRouter = createTRPCRouter({
       z.object({
         connectorSessionId: z.string(),
         taskType: z.string(),
-        payload: z.any(),
+        payload: z.unknown(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -292,7 +293,7 @@ export const connectorRouter = createTRPCRouter({
     .input(
       z.object({
         taskId: z.string(),
-        result: z.any(),
+        result: z.unknown(),
         status: z.enum(["completed", "failed"]),
       }),
     )

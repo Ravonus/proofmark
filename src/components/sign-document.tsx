@@ -49,12 +49,24 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   const [showSigningOnlyGazeGate, setShowSigningOnlyGazeGate] = useState(false);
 
   // Detect mobile once for gaze gate routing
-  const [mobileDevice] = useState(() => {
+  type MobileDeviceInfo = {
+    isMobile: boolean;
+    isTablet?: boolean;
+    hasCamera: boolean;
+    screenDiag: number;
+    dpr: number;
+    os: string;
+    browser: string;
+    cameraLabel?: string;
+    viewportW: number;
+    viewportH: number;
+  };
+  const [mobileDevice] = useState<MobileDeviceInfo | null>(() => {
     if (typeof window === "undefined") return null;
     try {
       const modPath = "~/premium/eye-tracking/mobile/device";
-      const { detectDevice } = require(/* webpackIgnore: true */ modPath);
-      return detectDevice();
+      const mod = require(/* webpackIgnore: true */ modPath) as { detectDevice: () => MobileDeviceInfo };
+      return mod.detectDevice();
     } catch {
       return null;
     }
@@ -196,9 +208,11 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
       }
     }
   }
-  const mobileSignPoll = { data: null as any };
-  const signMutation = { isPending: false, error: null as any };
-  const setQrToken = (_: any) => {};
+  const mobileSignPoll = { data: null as { status?: string; signatureData?: string } | null };
+  const signMutation = { isPending: false, error: null as { message: string } | null };
+  const setQrToken = (_: string | null) => {
+    /* noop — legacy compat stub */
+  };
 
   if (!claimToken && !connected) {
     return (
@@ -422,6 +436,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                             {token.field.label}
                           </span>
                           <span className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                             <img
                               src={val}
                               alt={`${token.field.label} signature`}
@@ -479,6 +494,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                         <p className="mb-3 text-xs uppercase tracking-wider text-muted">{token.label} Signature</p>
                         {hasSigned && signatureImage && isImageDataUrl(signatureImage) ? (
                           <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                             <img
                               src={signatureImage}
                               alt={`${signerForBlock.label} signature`}
@@ -554,7 +570,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   const confirmAndSign = () => {
     if (requireCriticalGazeGate()) return;
     setShowConfirmModal(false);
-    handleSign();
+    void handleSign();
   };
 
   return (
@@ -763,6 +779,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                   className="inline-flex items-center gap-2 rounded-xl border border-dashed border-emerald-400/30 bg-emerald-400/5 px-4 py-2 text-sm text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.08)] transition-all hover:bg-emerald-400/10"
                 >
                   {handSignature ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image
                     <img src={handSignature} alt="Your signature" className="sig-theme-img h-8" />
                   ) : (
                     <>
@@ -791,6 +808,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
           if (blockSigned && blockSigImg && isImageDataUrl(blockSigImg)) {
             return (
               <div className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                 <img
                   src={blockSigImg}
                   alt={`${blockSigner.label} signature`}
@@ -1180,6 +1198,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
               {handSignature && (
                 <div className="rounded-lg bg-[var(--sig-bg)] p-3">
                   <p className="mb-2 text-xs text-muted">Preview</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                   <img src={handSignature} alt="Signature" className="mx-auto max-h-16" />
                 </div>
               )}
@@ -1231,6 +1250,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
 
               <div className="mx-auto overflow-hidden rounded-xl">
                 {qrImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data URL QR code, not a remote image
                   <img src={qrImage} alt="Scan to sign" className="h-56 w-56" />
                 ) : (
                   <div className="flex h-56 w-56 items-center justify-center rounded-xl bg-surface-elevated">

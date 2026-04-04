@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 /**
@@ -88,14 +88,21 @@ export function CollabPdfReview({
         method: "POST",
         body: formData,
       });
-      const uploadData = await uploadRes.json();
+      const uploadData = (await uploadRes.json()) as {
+        error?: string;
+        url?: string;
+        id?: string;
+        rawText?: string;
+        pageCount?: number;
+        sections?: { title: string; pageStart: number; pageEnd: number; textPreview: string }[];
+      };
 
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+      if (!uploadRes.ok) throw new Error(uploadData.error ?? "Upload failed");
 
       // Import into the collaboration session
       await importPdf.mutateAsync({
         sessionId,
-        pdfBlobUrl: uploadData.url || `/api/pdf/${uploadData.id}`,
+        pdfBlobUrl: uploadData.url ?? `/api/pdf/${uploadData.id ?? ""}`,
         title: file.name.replace(/\.pdf$/i, ""),
         rawText: uploadData.rawText ?? "",
         pageCount: uploadData.pageCount ?? 0,
@@ -103,7 +110,7 @@ export function CollabPdfReview({
       });
 
       onPdfImported();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("PDF import failed:", err);
     } finally {
       setIsUploading(false);
@@ -129,7 +136,7 @@ export function CollabPdfReview({
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleUpload(file);
+                if (file) void handleUpload(file);
               }}
             />
             <button

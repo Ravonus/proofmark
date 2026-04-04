@@ -3,7 +3,7 @@ export function markdownToHtml(md: string): string {
   let html = md;
 
   // Code blocks (``` ... ```)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_: string, lang: string, code: string) => {
     const escaped = code.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     return `<pre><code class="language-${lang}">${escaped}</code></pre>`;
   });
@@ -17,7 +17,7 @@ export function markdownToHtml(md: string): string {
   html = html.replace(/^## (.+)$/gm, '<h2 id="$slug">$1</h2>');
 
   // Fix slugs
-  html = html.replace(/id="\$slug">(.+?)<\/h[234]>/g, (match, text) => {
+  html = html.replace(/id="\$slug">(.+?)<\/h[234]>/g, (match: string, text: string) => {
     const slug = text
       .replace(/<[^>]+>/g, "")
       .toLowerCase()

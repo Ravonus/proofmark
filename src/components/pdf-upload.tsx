@@ -117,10 +117,10 @@ export function PdfUpload({ onComplete, onCancel }: Props) {
         throw new Error("Server error — please try again.");
       }
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const data = (await res.json()) as PdfAnalysisResult & { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
 
-      const result = data as PdfAnalysisResult;
+      const result = data;
       setAnalysis(result);
       setReviewTitle(result.title);
 
@@ -183,14 +183,14 @@ export function PdfUpload({ onComplete, onCancel }: Props) {
       e.preventDefault();
       setDragging(false);
       const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      if (file) void handleFile(file);
     },
     [handleFile],
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) void handleFile(file);
   };
 
   // ─── Upload step ──────────────────────────────────────────────────────────

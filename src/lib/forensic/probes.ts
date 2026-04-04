@@ -283,7 +283,7 @@ export async function getWebRtcLocalIps(): Promise<string[]> {
     try {
       const pc = new RTCPeerConnection({ iceServers: [] });
       pc.createDataChannel("");
-      pc.createOffer().then((o) => pc.setLocalDescription(o));
+      void pc.createOffer().then((o) => pc.setLocalDescription(o));
       pc.onicecandidate = (e) => {
         if (!e.candidate) {
           pc.close();

@@ -34,7 +34,7 @@ export function PostSignReveal({ documentId }: { documentId: string }) {
   const refreshMutation = trpc.document.refreshAccess.useMutation({
     onSuccess: (data) => {
       setRefreshResult(data.ip);
-      revealQuery.refetch();
+      void revealQuery.refetch();
     },
   });
 

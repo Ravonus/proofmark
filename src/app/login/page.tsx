@@ -560,6 +560,7 @@ function WalletConnectInline() {
                   disabled={connecting}
                   className="flex items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--bg-inset)] px-2.5 py-1.5 text-[10px] text-primary transition-colors hover:border-[var(--border-accent)] disabled:opacity-50"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- wallet icon from injected provider, not optimizable */}
                   {w.iconUrl && <img src={w.iconUrl} alt="" className="h-3.5 w-3.5 rounded-xs" />}
                   {w.label}
                 </button>

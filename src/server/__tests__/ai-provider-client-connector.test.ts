@@ -26,9 +26,31 @@ vi.mock("../../../premium/ai/connector-client", () => ({
   completeViaConnector,
 }));
 
+// Response shape returned by the provider-client complete() function
+type CompletionResponse = {
+  content: string;
+  model: string;
+  provider: string;
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  finishReason: string;
+  latencyMs: number;
+  execution: {
+    source: string;
+    requestedProvider: string;
+    requestedModel: string;
+    actualProvider: string;
+    actualModel: string;
+    tool: string;
+    connectorSessionId: string;
+  };
+};
+
+type CompleteFn = (request: unknown, key: unknown) => Promise<CompletionResponse>;
+
 describe("AI provider client connector fallback", () => {
   it("routes connector-sourced completions through the local connector bridge", async () => {
-    const { complete } = await import("../../../premium/ai/provider-client");
+    const mod = (await import("../../../premium/ai/provider-client")) as { complete: CompleteFn };
+    const { complete } = mod;
 
     const request = {
       provider: "openai" as const,

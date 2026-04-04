@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 /**
@@ -11,6 +11,18 @@
 import { useState } from "react";
 import { Link2, Plus, Copy, Check, Sparkles, Clock, X } from "lucide-react";
 import { trpc } from "~/lib/trpc";
+
+type ShareLink = {
+  id: string;
+  token: string;
+  anchor: {
+    kind: "doc" | "pdf";
+    tokenIndex?: number;
+    page?: number;
+  } | null;
+  aiBreakdown: string | null;
+  expiresAt: string | number | Date | null;
+};
 
 type Props = {
   sessionId: string;
@@ -36,14 +48,14 @@ export function CollabShareLinks({ sessionId, isOpen, onClose, pendingAnchor, on
   const links = trpc.collab.sessionLinks.useQuery({ sessionId });
   const createLink = trpc.collab.createLink.useMutation({
     onSuccess: () => {
-      links.refetch();
+      void links.refetch();
       onClearPendingAnchor();
     },
   });
 
   const copyLink = (token: string, id: string) => {
     const url = `${window.location.origin}/collab/link/${token}`;
-    navigator.clipboard.writeText(url);
+    void navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -52,7 +64,7 @@ export function CollabShareLinks({ sessionId, isOpen, onClose, pendingAnchor, on
     if (!pendingAnchor) return;
     await createLink.mutateAsync({
       sessionId,
-      anchor: pendingAnchor as any,
+      anchor: pendingAnchor,
       generateBreakdown,
       expiresInHours: expiresInHours ?? undefined,
     });
@@ -117,12 +129,12 @@ export function CollabShareLinks({ sessionId, isOpen, onClose, pendingAnchor, on
 
       {/* Links list */}
       <div className="flex-1 overflow-y-auto">
-        {links.data?.length === 0 && !pendingAnchor && (
+        {(links.data as ShareLink[] | undefined)?.length === 0 && !pendingAnchor && (
           <p className="px-4 py-8 text-center text-xs text-zinc-500">
             No shared links yet. Select a section in the document to create one.
           </p>
         )}
-        {links.data?.map((link: any) => (
+        {(links.data as ShareLink[] | undefined)?.map((link) => (
           <div key={link.id} className="border-b border-white/5 px-4 py-3">
             <div className="mb-1 flex items-center justify-between">
               <span className="font-mono text-xs text-zinc-300">{link.token}</span>
@@ -139,7 +151,9 @@ export function CollabShareLinks({ sessionId, isOpen, onClose, pendingAnchor, on
 
             {/* Anchor description */}
             <p className="mb-1 text-[10px] text-zinc-500">
-              {link.anchor?.kind === "doc" ? `Token ${link.anchor.tokenIndex}` : `Page ${link.anchor?.page}`}
+              {link.anchor?.kind === "doc"
+                ? `Token ${String(link.anchor.tokenIndex)}`
+                : `Page ${String(link.anchor?.page)}`}
             </p>
 
             {/* AI breakdown badge */}

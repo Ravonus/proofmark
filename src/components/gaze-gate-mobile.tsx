@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 /**
@@ -66,8 +65,8 @@ const DWELL_REQUIRED_MS = 800; // vs 500ms desktop
 const SECTION_TIMEOUT_MS = 12_000; // vs 8s desktop
 
 export function GazeGateMobile({
-  mode,
-  gazeReady,
+  mode: _mode,
+  gazeReady: _gazeReady,
   gazeError,
   gazePoint,
   device,
@@ -82,7 +81,7 @@ export function GazeGateMobile({
 }: Props) {
   const [phase, setPhase] = useState<"prompt" | "calibrating" | "liveness" | "done">("prompt");
   const [starting, setStarting] = useState(false);
-  const [calibrationClicks, setCalibrationClicks] = useState(0);
+  const [, setCalibrationClicks] = useState(0);
 
   // Liveness state
   const [sections] = useState(() => createMobileSections());
@@ -141,10 +140,17 @@ export function GazeGateMobile({
     if (dwellAccum.current >= DWELL_REQUIRED_MS) {
       // Section passed
       stepResults.current.push({
-        section: section.id,
-        passed: true,
-        dwellMs: dwellAccum.current,
+        id: section.id,
+        kind: "look_target",
+        prompt: section.prompt,
+        targetX: (section.x1 + section.x2) / 2,
+        targetY: (section.y1 + section.y2) / 2,
+        radius: (section.x2 - section.x1) / 2,
+        holdMs: DWELL_REQUIRED_MS,
         timeoutMs: 0,
+        passed: true,
+        reactionMs: dwellAccum.current,
+        observedConfidence: null,
       });
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -171,11 +177,19 @@ export function GazeGateMobile({
     if (phase !== "liveness") return;
 
     timeoutRef.current = setTimeout(() => {
+      const timedOutSection = sections[sectionIdx];
       stepResults.current.push({
-        section: sections[sectionIdx]?.id ?? "unknown",
-        passed: false,
-        dwellMs: dwellAccum.current,
+        id: timedOutSection?.id ?? "unknown",
+        kind: "look_target",
+        prompt: timedOutSection?.prompt ?? "Look at the screen section",
+        targetX: timedOutSection ? (timedOutSection.x1 + timedOutSection.x2) / 2 : null,
+        targetY: timedOutSection ? (timedOutSection.y1 + timedOutSection.y2) / 2 : null,
+        radius: timedOutSection ? (timedOutSection.x2 - timedOutSection.x1) / 2 : null,
+        holdMs: DWELL_REQUIRED_MS,
         timeoutMs: SECTION_TIMEOUT_MS,
+        passed: false,
+        reactionMs: dwellAccum.current,
+        observedConfidence: null,
       });
       setSectionFailed(true);
 
@@ -236,11 +250,15 @@ export function GazeGateMobile({
 
   if (phase === "calibrating") {
     // Dynamic import of mobile calibration overlay
-    let CalibrationOverlay: React.ComponentType<any>;
+    let CalibrationOverlay: React.ComponentType<Record<string, unknown>>;
     try {
       const modPath = "~/premium/eye-tracking/mobile/calibration-overlay";
-      CalibrationOverlay = require(/* webpackIgnore: true */ modPath).MobileCalibrationOverlay;
+      const mod = require(/* webpackIgnore: true */ modPath) as {
+        MobileCalibrationOverlay: React.ComponentType<Record<string, unknown>>;
+      };
+      CalibrationOverlay = mod.MobileCalibrationOverlay;
     } catch {
+      /* premium module not available */
       return (
         <div className="p-8 text-center text-sm text-muted">Eye tracking calibration requires premium features.</div>
       );
@@ -249,7 +267,9 @@ export function GazeGateMobile({
       <CalibrationOverlay
         tracker={(globalThis as Record<string, unknown>).__gazeTracker}
         device={device}
-        onGazeSample={() => {}}
+        onGazeSample={() => {
+          /* noop */
+        }}
         onComplete={(result: { pointCount: number }) => handleCalibrationDone(result.pointCount)}
         onSkip={() => handleCalibrationDone(0)}
       />

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- dynamic import of premium module with no static type info
 // Lazy loader for premium GazeTracker.
 // The tracker loads WebGazer from CDN at runtime — no npm/webpack dependency.
 
@@ -36,7 +36,7 @@ type GazeTrackerCallbacks = {
 
 export type GazeTrackerLike = {
   start: () => Promise<boolean>;
-  stop: () => any;
+  stop: () => void;
   getStats: () => { pointCount: number; fixationCount: number; blinkCount: number; trackingCoverage: number };
   recordCalibrationClick?: (screenX: number, screenY: number) => void;
   saveCalibrationToDevice?: (trainingClicks: number) => void;
@@ -80,10 +80,10 @@ export async function createGazeTracker(
 ): Promise<GazeTrackerLike> {
   if (typeof window === "undefined") throw new Error("Browser only");
 
-  const { GazeTracker } = await import(
+  const mod = (await import(
     /* webpackIgnore: true */
     "~/premium/eye-tracking/gaze-tracker"
-  );
+  )) as { GazeTracker: new (cfg: typeof config, cb: GazeTrackerCallbacks) => GazeTrackerLike };
   const adaptedCallbacks: GazeTrackerCallbacks = {
     onGazePoint: callbacks.onGazePoint,
     onFixation: callbacks.onFixation,
@@ -105,9 +105,9 @@ export async function createGazeTracker(
     onGazeAway: callbacks.onGazeAway,
     onGazeReturn: callbacks.onGazeReturn,
   };
-  const tracker = new GazeTracker(config, adaptedCallbacks);
+  const tracker = new mod.GazeTracker(config, adaptedCallbacks);
   if (config.smoothingMode) {
-    tracker.setSmoothingMode(config.smoothingMode);
+    tracker.setSmoothingMode?.(config.smoothingMode);
   }
-  return tracker as unknown as GazeTrackerLike;
+  return tracker;
 }

@@ -20,6 +20,7 @@ import {
   resolveFieldPlaceholder,
   resolveFieldPrefix,
   resolveFieldSuffix,
+  type RuntimeInputType,
   type VisibilityOperator,
 } from "~/lib/field-runtime";
 import { getField, getSignerColor } from "./fields";
@@ -478,9 +479,7 @@ export const EditorField = memo(
                     <label className="text-[11px] font-medium text-muted">Input Mode</label>
                     <Select
                       value={inputType}
-                      onChange={(v) =>
-                        updateSettings({ inputType: v as import("~/lib/field-runtime").RuntimeInputType })
-                      }
+                      onChange={(v) => updateSettings({ inputType: v as RuntimeInputType })}
                       size="sm"
                       options={INPUT_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                     />

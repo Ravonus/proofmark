@@ -45,10 +45,14 @@ const GAZE_SCALE = 1000;
 const GAZE_TRAIL_LENGTH = 20;
 const LANE_COLORS = ["#60a5fa", "#f87171", "#34d399", "#fbbf24", "#a78bfa", "#38bdf8", "#fb923c", "#e879f9"];
 
-const noop = () => {};
-const noopUpload = async () => "";
-const noopSuggestions = async () => [];
-const noopPayment = async () => {};
+const noop = () => {
+  /* noop */
+};
+const noopUpload = async () => "" as string;
+const noopSuggestions = async () => [] as never[];
+const noopPayment = async () => {
+  /* noop */
+};
 
 function formatTime(ms: number) {
   const seconds = Math.max(0, Math.round(ms / 1000));
@@ -108,18 +112,16 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
       case "focus":
         focusChanges++;
         break;
-      case "scroll":
-        if ("scrollY" in event && "scrollMax" in event) {
-          const depth = (event as any).scrollMax > 0 ? (event as any).scrollY / (event as any).scrollMax : 0;
-          if (depth > maxScrollDepth) maxScrollDepth = depth;
-        }
+      case "scroll": {
+        const depth = event.scrollMax > 0 ? event.scrollY / event.scrollMax : 0;
+        if (depth > maxScrollDepth) maxScrollDepth = depth;
         mouseMoveCount += 2; // scrolling implies pointer activity
         break;
+      }
       case "clipboard": {
-        const action = (event as any).action;
-        if (action === "paste") pasteEvents++;
-        else if (action === "copy") copyEvents++;
-        else if (action === "cut") cutEvents++;
+        if (event.action === "paste") pasteEvents++;
+        else if (event.action === "copy") copyEvents++;
+        else if (event.action === "cut") cutEvents++;
         break;
       }
       case "gazePoint":
@@ -129,10 +131,11 @@ function classifyFromTape(tape: ForensicReplayTape, events: ForensicReplayEncode
           gazeLastLostAt = null;
         }
         break;
-      case "gazeFixation":
+      case "gazeFixation": {
         gazeFixationCount++;
-        gazeFixTotalMs += (event as any).durationMs ?? 0;
+        gazeFixTotalMs += event.durationMs ?? 0;
         break;
+      }
       case "gazeBlink":
         gazeBlinkCount++;
         break;
@@ -481,6 +484,25 @@ type ServerForensicSession = {
   classification?: { verdict: string; automationScore: number; flags: string[] } | null;
 };
 
+type AiForensicReview = {
+  verdict: string;
+  confidence: number;
+  automationScore: number;
+  rationale: string;
+  chunks: Array<{
+    chunk: string;
+    verdict: string;
+    score: number;
+    rationale: string;
+    thresholdSuggestions?: Array<{
+      field: string;
+      currentValue: number;
+      suggestedValue: number;
+      reason: string;
+    }>;
+  }>;
+};
+
 type SignerData = {
   id: string;
   label: string;
@@ -719,16 +741,17 @@ function buildTimelineEvents(
           timeline.push({ atMs, type: "scroll", label: "Scroll", icon: "📜", source, critical: false });
         }
         break;
-      case "clipboard":
+      case "clipboard": {
         timeline.push({
           atMs,
           type: "clipboard",
-          label: (ev as any).action ?? "clipboard",
+          label: ev.action ?? "clipboard",
           icon: "📋",
           source,
           critical: false,
         });
         break;
+      }
       case "gazeBlink":
         // Only show blinks if they're interesting
         break;
@@ -910,9 +933,15 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
       const { classification, interactions } = tape
         ? classifyFromTape(tape, events)
         : { classification: null, interactions: [] as InteractionClassification[] };
-      const serverReview = ((signer as any).automationReview as ServerAutomationReview) ?? null;
-      const sessionProfile = ((signer as any).sessionProfile as ServerSessionProfile) ?? null;
-      const forensicSessions = ((signer as any).forensicSessions ?? []) as ServerForensicSession[];
+      const signerExt = signer as typeof signer & {
+        automationReview?: ServerAutomationReview;
+        sessionProfile?: ServerSessionProfile;
+        forensicSessions?: ServerForensicSession[];
+        documentViewingStartedMs?: number;
+      };
+      const serverReview = signerExt.automationReview ?? null;
+      const sessionProfile = signerExt.sessionProfile ?? null;
+      const forensicSessions = signerExt.forensicSessions ?? [];
       return {
         id: signer.id,
         label: signer.label,
@@ -934,7 +963,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
         email: signer.email ?? null,
         role: signer.role ?? "SIGNER",
         canSign: signer.canSign ?? false,
-        documentViewingStartedMs: (signer as any).documentViewingStartedMs ?? 0,
+        documentViewingStartedMs: signerExt.documentViewingStartedMs ?? 0,
       };
     });
   }, [data]);
@@ -1351,6 +1380,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   className="inline-block rounded-md border border-black/10 bg-[var(--sig-bg)] px-3 py-2 shadow-sm"
                   data-forensic-id={`signature-${signer.label?.toLowerCase().split(" ")[0] ?? signerIdx}`}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data URL signature, not a remote image */}
                   <img
                     src={signer.handSignatureData}
                     alt={`${signer.label} signature`}
@@ -1446,7 +1476,11 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                     onClick={() =>
                       setExpandedSigners((prev) => {
                         const next = new Set(prev);
-                        next.has(signer.index) ? next.delete(signer.index) : next.add(signer.index);
+                        if (next.has(signer.index)) {
+                          next.delete(signer.index);
+                        } else {
+                          next.add(signer.index);
+                        }
                         return next;
                       })
                     }
@@ -1619,9 +1653,10 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                         })()}
 
                       {/* AI Forensic Review (async) */}
-                      {(signer as any).aiForensicReview &&
+                      {(signer as SignerData & { aiForensicReview?: AiForensicReview }).aiForensicReview &&
                         (() => {
-                          const air = (signer as any).aiForensicReview as {
+                          const air = (signer as SignerData & { aiForensicReview?: AiForensicReview })
+                            .aiForensicReview as {
                             verdict: string;
                             confidence: number;
                             automationScore: number;

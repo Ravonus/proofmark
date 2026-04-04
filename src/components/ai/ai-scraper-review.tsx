@@ -55,9 +55,9 @@ export function AiScraperReview({ analysisResult, rawContent, onAccept, onReject
         analysisResult,
         rawContent,
       });
-      setCorrected(result.corrected);
+      setCorrected(result.corrected as PdfAnalysisResult);
       setChanges(result.changes as ScraperFixChange[]);
-      setLatencyMs(result.latencyMs);
+      setLatencyMs(result.latencyMs!);
     } catch (e) {
       setError((e as Error).message);
     } finally {

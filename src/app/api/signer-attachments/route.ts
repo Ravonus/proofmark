@@ -10,9 +10,12 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const documentId = String(formData.get("documentId") || "");
-  const claimToken = String(formData.get("claimToken") || "");
-  const fieldId = String(formData.get("fieldId") || "");
+  const _docId = formData.get("documentId");
+  const documentId = typeof _docId === "string" ? _docId : "";
+  const _claim = formData.get("claimToken");
+  const claimToken = typeof _claim === "string" ? _claim : "";
+  const _field = formData.get("fieldId");
+  const fieldId = typeof _field === "string" ? _field : "";
   const file = formData.get("file");
 
   if (!documentId || !claimToken || !fieldId || !(file instanceof File)) {

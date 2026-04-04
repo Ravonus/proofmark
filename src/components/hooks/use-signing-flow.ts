@@ -24,6 +24,7 @@ import { getWalletActions } from "~/components/wallet-provider";
 import { generateQrDataUrl } from "~/lib/qr-svg";
 import { useSigningStore } from "~/stores/signing";
 import { encodeStructuredFieldValue } from "~/lib/field-values";
+import type { AttachmentFieldValue } from "~/lib/field-values";
 import { formatEditableFieldValue, getFieldLogicState, isFieldVisible, isFieldRequired } from "~/lib/field-runtime";
 import { VERIFY_FIELD_TYPES } from "~/lib/signing-constants";
 import { tokenizeDocument, validateField } from "~/components/sign-document-helpers";
@@ -219,6 +220,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
         })();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: tracker init + cleanup must not re-run
   }, []);
 
   // ── Draft storage key ──────────────────────────────────────────────────────
@@ -249,7 +251,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       cleanupGazeTracker(gazeTrackerRef);
       store.completeSigning();
       store.clearDraft();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
 
@@ -264,14 +266,14 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
   const finalizeMut = trpc.document.finalize.useMutation({
     onSuccess: () => {
       store.completeSigning();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
   const getBulkFinalizationMessageMut = trpc.document.getBulkFinalizationMessage.useMutation();
   const bulkFinalizeMut = trpc.document.bulkFinalize.useMutation({
     onSuccess: () => {
       store.completeSigning();
-      docQuery.refetch();
+      void docQuery.refetch();
     },
   });
   const addressSuggestionsMutation = trpc.document.addressSuggestions.useMutation();
@@ -311,15 +313,17 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     }
   }, [mobileSignPoll.data?.status, mobileSignPoll.data?.signatureData]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const currentSignerId = docQuery.data?.signers?.find((signer) => signer.isYou)?.id;
+
   useEffect(() => {
     setTokenGateProofs({} as Record<WalletChain, TokenGateWalletProof>);
     setProofAwareEvaluation(null);
     setVerifyingTokenGateChain(null);
-  }, [documentId, claimToken, docQuery.data?.signers?.find((signer) => signer.isYou)?.id]);
+  }, [documentId, claimToken, currentSignerId]);
 
   // ── Derived document state (all useMemo, no useEffect) ─────────────────────
   const doc = docQuery.data ?? null;
-  const docSigners = doc?.signers ?? [];
+  const docSigners = useMemo(() => doc?.signers ?? [], [doc?.signers]);
 
   /** Whether the wallet session is fully connected with address + chain. */
   const walletReady = wallet.connected && !!wallet.address && !!wallet.chain;
@@ -375,7 +379,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       signedCount,
       totalRecipients,
     };
-  }, [docSigners, wallet.connected, wallet.address, wallet.chain, doc]);
+  }, [docSigners, wallet.connected, wallet.address, doc]);
 
   // ── Token gate evaluation ─────────────────────────────────────────────────
   // Two modes: "simple" uses server-side evaluation on the signer row;
@@ -1128,7 +1132,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
           return;
         }
 
-        docQuery.refetch().then((res) => {
+        void docQuery.refetch().then((res) => {
           if (!res.data) return;
           const signer = res.data.signers?.find((s: { isYou?: boolean }) => s.isYou);
           const serverVal = signer?.fieldValues?.[field.id];
@@ -1187,7 +1191,7 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
       formData.set("file", file);
       const response = await fetch("/api/signer-attachments", { method: "POST", body: formData });
       const payload = (await response.json()) as {
-        attachment?: import("~/lib/field-values").AttachmentFieldValue;
+        attachment?: AttachmentFieldValue;
         error?: string;
       };
       if (!response.ok || !payload.attachment) throw new Error(payload.error || "Attachment upload failed");

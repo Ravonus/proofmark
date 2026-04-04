@@ -11,6 +11,7 @@ declare module "geoip-lite" {
     area: number;
   }
   function lookup(ip: string): GeoLookup | null;
-  export default { lookup };
+  const geoip: { lookup: typeof lookup };
+  export default geoip;
   export { lookup };
 }

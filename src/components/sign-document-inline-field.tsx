@@ -451,6 +451,7 @@ export function InlineFieldInput({
                     {field.type === "initials" ? (
                       <>
                         <span className="truncate">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- data URL initials preview, not a remote image */}
                           {value ? <img src={value} alt="Initials" className="inline-block max-h-5" /> : placeholder}
                         </span>
                         <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted">

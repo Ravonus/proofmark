@@ -43,6 +43,56 @@ import {
 
 // ── Types ──
 
+type RuntimeToolInstall = {
+  tool: string;
+  status: string;
+  version?: string | null;
+  binaryPath?: string | null;
+  authStatus: string;
+  lastHealthCheck?: string | null;
+  errorMessage?: string | null;
+  config?: Record<string, unknown> | null;
+};
+
+type RuntimePrereqInfo = {
+  available: boolean;
+  version?: string | null;
+};
+
+type RuntimeCliStatus = {
+  tool: string;
+  ready: boolean;
+  installed: boolean;
+  authorized: boolean;
+  rateLimited: boolean;
+  rateLimitReason?: string | null;
+};
+
+type RuntimeRouting = {
+  activeRoute: string;
+  hasConnector: boolean;
+  hasByok: boolean;
+  hasPlatformKeys: boolean;
+  serverCli: RuntimeCliStatus[];
+};
+
+type RuntimeSession = {
+  id: string;
+  tool: string;
+  status: string;
+  startedAt?: string | null;
+  lastActivityAt?: string | null;
+  requestCount: number;
+  errorCount: number;
+};
+
+type RuntimeStatus = {
+  tools: RuntimeToolInstall[];
+  prereqs: Record<string, RuntimePrereqInfo>;
+  sessions: RuntimeSession[];
+  routing: RuntimeRouting;
+};
+
 type OperatorStatus = {
   deploymentMode: string;
   pdfUploadMaxMb: number;
@@ -365,7 +415,7 @@ function UsersSection({
   currentChain,
 }: {
   currentAddress?: string | null;
-  currentChain?: WalletChain | string | null;
+  currentChain?: string | null;
 }) {
   const utils = trpc.useUtils();
   const knownWalletsQuery = trpc.account.knownWallets.useQuery();
@@ -896,6 +946,7 @@ function BrandingSection() {
             <div className="rounded-xl border border-border p-4">
               <div className="flex items-center gap-3">
                 {form.logoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element -- brand logo preview from user-provided URL, not a static asset */
                   <img src={form.logoUrl} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
                 ) : (
                   <div
@@ -994,7 +1045,7 @@ function IntegrationsSection() {
     let parsedHeaders: Record<string, string> | undefined;
     if (addressProvider === "CUSTOM" && addressHeaders.trim()) {
       try {
-        parsedHeaders = JSON.parse(addressHeaders);
+        parsedHeaders = JSON.parse(addressHeaders) as Record<string, string>;
       } catch {
         return;
       }
@@ -1268,14 +1319,14 @@ function WebhooksSection() {
   const workspaceQuery = trpc.account.workspace.useQuery();
   const upsertWebhook = trpc.account.upsertWebhook.useMutation({
     onSuccess: () => {
-      utils.account.workspace.invalidate();
+      void utils.account.workspace.invalidate();
       setLabel("");
       setUrl("");
       setSecret("");
     },
   });
   const deleteWebhook = trpc.account.deleteWebhook.useMutation({
-    onSuccess: () => utils.account.workspace.invalidate(),
+    onSuccess: () => void utils.account.workspace.invalidate(),
   });
 
   const [label, setLabel] = useState("");
@@ -1426,8 +1477,8 @@ function TemplatesSection() {
   const templatesQuery = trpc.account.listTemplates.useQuery();
   const deleteTemplate = trpc.account.deleteTemplate.useMutation({
     onSuccess: () => {
-      utils.account.listTemplates.invalidate();
-      utils.account.workspace.invalidate();
+      void utils.account.listTemplates.invalidate();
+      void utils.account.workspace.invalidate();
     },
   });
 
@@ -1534,11 +1585,11 @@ function AiLimitsSection() {
   const usageQuery = trpc.account.adminAiUsage.useQuery();
   const toolsQuery = trpc.account.detectAiTools.useQuery(undefined, { staleTime: 60000 });
   const deleteLimitMut = trpc.account.adminDeleteAiLimit.useMutation({
-    onSuccess: () => utils.account.adminListAiLimits.invalidate(),
+    onSuccess: () => void utils.account.adminListAiLimits.invalidate(),
   });
   const setLimitMut = trpc.account.adminSetAiLimits.useMutation({
     onSuccess: () => {
-      utils.account.adminListAiLimits.invalidate();
+      void utils.account.adminListAiLimits.invalidate();
       setShowForm(false);
     },
   });
@@ -1553,7 +1604,11 @@ function AiLimitsSection() {
   const [formAdminReqPerMonth, setFormAdminReqPerMonth] = useState("1000");
   const [formAdminTokPerMonth, setFormAdminTokPerMonth] = useState("2000000");
 
-  const runtimeQuery = trpc.runtime.getStatus.useQuery(undefined, { staleTime: 30000 });
+  const runtimeQueryRaw = trpc.runtime.getStatus.useQuery(undefined, { staleTime: 30000 });
+  const runtimeQuery = {
+    ...runtimeQueryRaw,
+    data: runtimeQueryRaw.data as RuntimeStatus | undefined,
+  };
   const runtimeInstallMut = trpc.runtime.install.useMutation({
     onSuccess: () => runtimeQuery.refetch(),
   });
@@ -1740,7 +1795,8 @@ function AiLimitsSection() {
               {runtimeQuery.data?.prereqs && (
                 <div className="flex flex-wrap gap-3">
                   {(["npm", "node", "cargo"] as const).map((dep) => {
-                    const info = runtimeQuery.data.prereqs[dep];
+                    const info = runtimeQuery.data!.prereqs[dep];
+                    if (!info) return null;
                     return (
                       <div key={dep} className="bg-surface/20 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs">
                         <div className={`h-2 w-2 rounded-full ${info.available ? "bg-emerald-400" : "bg-red-400"}`} />
@@ -1757,7 +1813,7 @@ function AiLimitsSection() {
               ) : (
                 <div className="space-y-3">
                   {(["claude-code", "codex", "openclaw"] as const).map((tool) => {
-                    const install = runtimeQuery.data?.tools?.find((t: any) => t.tool === tool);
+                    const install = runtimeQuery.data?.tools?.find((t) => t.tool === tool);
                     const status = install?.status ?? "not_installed";
                     const authStatus = install?.authStatus ?? "none";
                     const isReady = status === "ready";
@@ -1964,7 +2020,7 @@ function AiLimitsSection() {
                 {/* Per-tool routing */}
                 <div className="space-y-2">
                   <h5 className="text-xs font-semibold text-muted">CLI Tool Status</h5>
-                  {runtimeQuery.data.routing.serverCli.map((cli: any) => (
+                  {runtimeQuery.data.routing.serverCli.map((cli) => (
                     <div
                       key={cli.tool}
                       className="bg-surface/20 flex items-center justify-between rounded-lg px-3 py-2 text-xs"
@@ -1991,7 +2047,7 @@ function AiLimitsSection() {
                 <p className="text-xs text-muted">Persistent CLI processes for low-latency AI execution.</p>
 
                 <div className="space-y-2">
-                  {runtimeQuery.data.sessions.map((session: any) => (
+                  {runtimeQuery.data.sessions.map((session) => (
                     <div
                       key={session.id}
                       className="bg-surface/30 flex items-center justify-between rounded-xl border border-border p-3"

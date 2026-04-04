@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import { useState } from "react";
@@ -49,8 +48,51 @@ type EscrowMode =
   | "CASUAL"
   | "PLATFORM_ESCROW"
   | "DESIGNATED_ORACLE";
-type EscrowContract = Record<string, any>;
-type EscrowParticipant = Record<string, any>;
+type EscrowAsset = {
+  displayAmount: string;
+  chain: string;
+  kind: string;
+};
+type EscrowOutcome = {
+  index: number;
+  description: string;
+  payouts: Record<string, unknown>;
+};
+type EscrowOracleConfig = {
+  provider: string;
+  marketQuestion?: string;
+  marketId?: string;
+  marketUrl?: string;
+};
+type EscrowContract = {
+  id: string;
+  title: string;
+  description: string;
+  mode: EscrowMode;
+  status: EscrowStatus;
+  assets: EscrowAsset[];
+  participants: EscrowParticipant[];
+  outcomes: EscrowOutcome[];
+  resolutionMethod: string;
+  acknowledgedWarnings: string[];
+  termsHash: string;
+  termSignatures: string[];
+  createdAt: string;
+  updatedAt: string;
+  resolvedOutcomeIndex?: number;
+  oracleConfig?: EscrowOracleConfig;
+  onChainAddress?: string;
+  onChainNetwork?: string;
+  deployTxHash?: string;
+};
+type EscrowParticipant = {
+  id: string;
+  label: string;
+  role: string;
+  address?: string;
+  accepted?: boolean;
+  deposited?: boolean;
+};
 
 /* ------------------------------------------------------------------ */
 /*  Status & mode config (shared with dashboard)                       */
@@ -105,7 +147,7 @@ function shortenAddress(addr: string): string {
 }
 
 function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
+  void navigator.clipboard.writeText(text);
 }
 
 /* ------------------------------------------------------------------ */
@@ -139,7 +181,7 @@ function ParticipantCard({ participant }: { participant: EscrowParticipant }) {
         {participant.address && (
           <button
             className="mt-0.5 flex items-center gap-1 text-xs text-muted hover:text-[var(--accent)]"
-            onClick={() => copyToClipboard(participant.address)}
+            onClick={() => copyToClipboard(participant.address!)}
           >
             {shortenAddress(participant.address)} <Copy className="h-3 w-3" />
           </button>
@@ -417,7 +459,7 @@ export function EscrowDetail({ escrowId }: { escrowId: string }) {
                 <dt className="text-muted">Contract</dt>
                 <dd className="flex items-center gap-1 font-mono text-xs">
                   {shortenAddress(escrow.onChainAddress)}
-                  <button onClick={() => copyToClipboard(escrow.onChainAddress)}>
+                  <button onClick={() => copyToClipboard(escrow.onChainAddress!)}>
                     <Copy className="h-3 w-3 text-muted" />
                   </button>
                 </dd>

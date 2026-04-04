@@ -63,7 +63,7 @@ export function CreateDocument() {
   const [creatorEmail, setCreatorEmail] = useState("");
   const [signers, setSigners] = useState<SignerRow[]>([emptySigner(), emptySigner()]);
   const [created, setCreated] = useState<CreatedResult | null>(null);
-  const [_selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
+  const [, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState<string | null>(null);
   const [expiresInDays, setExpiresInDays] = useState("30");
   const [reminderCadence, setReminderCadence] = useState<"NONE" | "DAILY" | "EVERY_2_DAYS" | "EVERY_3_DAYS" | "WEEKLY">(
@@ -71,7 +71,7 @@ export function CreateDocument() {
   );
   const [automationReviewMode, setAutomationReviewMode] = useState<"FLAG" | "DENY" | "DISABLED">("FLAG");
   const [prepAutomationMode, setPrepAutomationMode] = useState<"ALLOW" | "FLAG">("ALLOW");
-  const [term, _setTerm] = useState("2 years");
+  const [term] = useState("2 years");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [showEditor, setShowEditor] = useState(false);

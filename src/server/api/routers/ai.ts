@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AI tRPC router.
  *
@@ -14,9 +13,17 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { loadPremiumAi, getPremiumFeatures } from "~/lib/premium";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, inArray } from "drizzle-orm";
-import { documents, signers, aiProviderConfigs, aiConversations, type AiChatMessage } from "~/server/db/schema";
+import type { InferSelectModel } from "drizzle-orm";
+import { documents, signers, aiProviderConfigs, aiConversations } from "~/server/db/schema";
+import type { AiChatMessage, AiEditOperation, SignerField } from "~/server/db/schema";
 import { requireFeatureForWallet, resolveWalletIdentity } from "~/server/operator-access";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
+import { getOwnedWalletContextFromRequest, requireOwnedWalletActor } from "~/server/owned-wallet-context";
+import { normalizeOwnerAddress } from "~/server/workspace";
+import type { db as _dbType } from "~/server/db";
+
+type DbClient = typeof _dbType;
+
 // Inline types to avoid hard import from premium/ — these match premium/ai/types.ts
 type AiProviderName =
   | "anthropic"
@@ -42,8 +49,148 @@ type ResolvedKey = {
   connectorTool?: string;
   connectorLabel?: string;
 };
-import { getOwnedWalletContextFromRequest, requireOwnedWalletActor } from "~/server/owned-wallet-context";
-import { normalizeOwnerAddress } from "~/server/workspace";
+
+type AiFeature = "scraper_fix" | "editor_assistant" | "signer_qa" | "general";
+
+// ── Types for document/signer DB rows ──
+type DocumentRow = InferSelectModel<typeof documents>;
+type SignerRow = InferSelectModel<typeof signers>;
+
+// ── Types for premium AI module results ──
+// These mirror the shapes returned by premium/ai/ — kept minimal to what this router uses.
+interface AiRawResponse {
+  usage?: unknown;
+  latencyMs?: number;
+  execution: {
+    source?: string;
+    requestedProvider?: string;
+    requestedModel?: string;
+    actualProvider?: string;
+    actualModel?: string;
+    tool?: string;
+    connectorSessionId?: string;
+    connectorLabel?: string;
+  };
+  [key: string]: unknown;
+}
+
+interface AiCompleteResponse {
+  content: string;
+  latencyMs: number;
+  [key: string]: unknown;
+}
+
+interface AiReviewResult {
+  review: {
+    verdict: string;
+    [key: string]: unknown;
+  };
+  raw: AiRawResponse;
+}
+
+interface AiScraperResult {
+  corrected: unknown;
+  changes: unknown[];
+  response: AiRawResponse;
+}
+
+interface AiChatResult {
+  response: {
+    text: string;
+    editOperations?: AiEditOperation[];
+    [key: string]: unknown;
+  };
+  raw: AiRawResponse;
+}
+
+interface AiAnswerResult {
+  answer: string;
+  raw: AiRawResponse;
+}
+
+interface AiSummaryResult {
+  summary: string;
+  raw: AiRawResponse;
+}
+
+interface AiConversationData {
+  messages: AiChatMessage[];
+  id: string | undefined;
+}
+
+interface AiProviderInfo {
+  name: string;
+  label: string;
+  isAggregator: boolean;
+  models: Array<{
+    id: string;
+    name: string;
+    contextWindow: number;
+    inputPricePer1k: number;
+    outputPricePer1k: number;
+  }>;
+}
+
+interface AiPlatformProvider {
+  available: boolean;
+  [key: string]: unknown;
+}
+
+interface AiRequestContext {
+  ownerAddress: string;
+  provider: AiProviderName;
+  model: string;
+  key: ResolvedKey;
+  documentId?: string;
+  userId?: string;
+}
+
+/** Shape of the premium AI module — only the methods used in this router. */
+interface PremiumAiModule {
+  resolveKeyWithFallback(
+    ownerAddress: string,
+    provider: AiProviderName,
+  ): Promise<{ key: ResolvedKey; model: string } | null>;
+  resolveKey(ownerAddress: string, provider: AiProviderName): Promise<ResolvedKey | null>;
+  enforceRateLimit(ownerAddress: string, feature: AiFeature): Promise<void>;
+  trackUsage(
+    rCtx: AiRequestContext,
+    feature: AiFeature,
+    raw: AiRawResponse,
+    meta?: Record<string, unknown>,
+  ): Promise<void>;
+  fixScraperOutput(rCtx: AiRequestContext, analysisResult: unknown, rawContent?: string): Promise<AiScraperResult>;
+  chat(params: AiRequestContext & Record<string, unknown>): Promise<AiChatResult>;
+  answerQuestion(params: AiRequestContext & Record<string, unknown>): Promise<AiAnswerResult>;
+  generateSummary(params: AiRequestContext & Record<string, unknown>): Promise<AiSummaryResult>;
+  reviewAutomationEvidence(params: AiRequestContext & Record<string, unknown>): Promise<AiReviewResult>;
+  loadConversation(conversationId: string | undefined, ownerAddress: string): Promise<AiConversationData>;
+  saveConversation(params: {
+    conversationId: string | undefined;
+    ownerAddress: string;
+    documentId: string;
+    feature: string;
+    messages: AiChatMessage[];
+    title: string;
+  }): Promise<string>;
+  syncPlatformProviderConfigs(ownerAddress: string): Promise<void>;
+  getPlatformProviders(): AiPlatformProvider[];
+  isPlatformProviderAvailable(provider: AiProviderName): boolean;
+  getProviders(): AiProviderInfo[];
+  complete(
+    params: {
+      provider: AiProviderName;
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      maxTokens: number;
+      temperature: number;
+    },
+    key: { apiKey: string; source: string; provider: AiProviderName; baseUrl?: string },
+  ): Promise<AiCompleteResponse>;
+  getUsageSummary(ownerAddress: string, from: Date, to: Date, userId?: string): Promise<unknown>;
+  setAdminLimits(params: Record<string, unknown>): Promise<void>;
+  getLimitStatus(ownerAddress: string, feature: AiFeature, userId?: string): Promise<unknown>;
+}
 
 const AI_FORBIDDEN = "Premium feature — upgrade to enable AI features";
 
@@ -51,17 +198,17 @@ const zAiFeature = z.enum(["scraper_fix", "editor_assistant", "signer_qa", "gene
 
 // ── Shared helpers ──
 
-async function requireAi() {
-  const ai = await loadPremiumAi();
+async function requireAi(): Promise<PremiumAiModule> {
+  const ai = (await loadPremiumAi()) as PremiumAiModule | null;
   if (!ai) throw new TRPCError({ code: "FORBIDDEN", message: AI_FORBIDDEN });
   return ai;
 }
 
 async function requireAiFeature(
-  db: typeof import("~/server/db").db,
+  db: DbClient,
   ownerAddress: string,
   featureId: "ai_scraper_fix" | "ai_editor_assistant" | "ai_signer_qa" | "ai_automation_review",
-) {
+): Promise<PremiumAiModule> {
   await requireFeatureForWallet(db, resolveWalletIdentity(ownerAddress), featureId, AI_FORBIDDEN);
   return requireAi();
 }
@@ -77,11 +224,7 @@ async function getAiAccountContext(ctx: { req?: Request | null | undefined }) {
   };
 }
 
-async function resolveOwnedDocumentOwnerAddress(
-  db: typeof import("~/server/db").db,
-  documentId: string,
-  ownedAddresses: string[],
-) {
+async function resolveOwnedDocumentOwnerAddress(db: DbClient, documentId: string, ownedAddresses: string[]) {
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
   if (!doc) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
@@ -95,8 +238,8 @@ async function resolveOwnedDocumentOwnerAddress(
   return ownerAddress;
 }
 
-async function resolveProvider(ai: Awaited<ReturnType<typeof requireAi>>, ownerAddress: string, provider?: string) {
-  const resolved = await ai.resolveKeyWithFallback(ownerAddress, (provider as any) ?? "anthropic");
+async function resolveProvider(ai: PremiumAiModule, ownerAddress: string, provider?: string) {
+  const resolved = await ai.resolveKeyWithFallback(ownerAddress, (provider ?? "anthropic") as AiProviderName);
   if (!resolved) {
     throw new TRPCError({
       code: "BAD_REQUEST",
@@ -109,11 +252,11 @@ async function resolveProvider(ai: Awaited<ReturnType<typeof requireAi>>, ownerA
 
 function toRequestContext(
   ownerAddress: string,
-  resolved: { key: any; model: string },
+  resolved: { key: ResolvedKey; model: string },
   modelOverride?: string,
   documentId?: string,
   userId?: string,
-) {
+): AiRequestContext {
   return {
     ownerAddress,
     provider: resolved.key.provider,
@@ -135,7 +278,7 @@ function isRetryableAutomationReviewError(error: unknown, key: ResolvedKey | nul
 }
 
 async function runAutomationReviewTarget(params: {
-  ai: Awaited<ReturnType<typeof requireAi>>;
+  ai: PremiumAiModule;
   ownerAddress: string;
   documentId: string;
   signerId: string;
@@ -240,7 +383,11 @@ async function runAutomationReviewTarget(params: {
   };
 }
 
-async function loadSignerContext(db: any, documentId: string, claimToken: string) {
+async function loadSignerContext(
+  db: DbClient,
+  documentId: string,
+  claimToken: string,
+): Promise<{ signer: SignerRow; doc: DocumentRow; allSigners: SignerRow[] }> {
   const [signer] = await db
     .select()
     .from(signers)
@@ -256,16 +403,11 @@ async function loadSignerContext(db: any, documentId: string, claimToken: string
   return { signer, doc, allSigners };
 }
 
-function mapSignerFields(signer: any) {
-  return (signer.fields ?? []).map((f: any) => ({ type: f.type, label: f.label, required: f.required }));
+function mapSignerFields(signer: SignerRow) {
+  return (signer.fields ?? []).map((f: SignerField) => ({ type: f.type, label: f.label, required: f.required }));
 }
 
-async function loadCreatorSignerEvidence(
-  db: typeof import("~/server/db").db,
-  documentId: string,
-  signerId: string,
-  ownedAddresses: string[],
-) {
+async function loadCreatorSignerEvidence(db: DbClient, documentId: string, signerId: string, ownedAddresses: string[]) {
   const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
   if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
   const ownerAddress = normalizeOwnerAddress(doc.createdBy);
@@ -445,7 +587,7 @@ export const aiRouter = createTRPCRouter({
         signerLabel: signer.label,
         signerRole: signer.role,
         signerFields: mapSignerFields(signer),
-        allSignerLabels: allSigners.map((s: any) => s.label),
+        allSignerLabels: allSigners.map((s: SignerRow) => s.label),
         question: input.question,
         conversationHistory: history,
       });
@@ -489,7 +631,7 @@ export const aiRouter = createTRPCRouter({
         signerLabel: signer.label,
         signerRole: signer.role,
         signerFields: mapSignerFields(signer),
-        allSignerLabels: allSigners.map((s: any) => s.label),
+        allSignerLabels: allSigners.map((s: SignerRow) => s.label),
         conversationHistory: [],
       });
 
@@ -604,8 +746,8 @@ export const aiRouter = createTRPCRouter({
 
   listProviders: publicProcedure.query(async ({ ctx }) => {
     const { ownedWalletContext, ownerAddress } = await getAiAccountContext(ctx);
-    const ai = await loadPremiumAi();
-    if (!ai) return { available: false, providers: [], registry: [], platform: [] };
+    const ai = (await loadPremiumAi()) as PremiumAiModule | null;
+    if (!ai) return { available: false, providers: [], registry: [], platform: [] } as const;
 
     await ai.syncPlatformProviderConfigs(ownerAddress);
 
@@ -630,7 +772,10 @@ export const aiRouter = createTRPCRouter({
         label: c.label,
         keySource: c.keySource,
         isDefault: c.isDefault,
-        hasKey: c.keySource === "platform" ? ai.isPlatformProviderAvailable(c.provider as any) : !!c.config?.apiKey,
+        hasKey:
+          c.keySource === "platform"
+            ? ai.isPlatformProviderAvailable(c.provider as AiProviderName)
+            : !!c.config?.apiKey,
         defaultModel: c.config?.defaultModel,
         enabled: c.config?.enabled !== false,
       })),
@@ -723,7 +868,7 @@ export const aiRouter = createTRPCRouter({
         .insert(aiProviderConfigs)
         .values({
           ownerAddress,
-          provider: input.provider as any,
+          provider: input.provider as AiProviderName,
           label: input.label,
           keySource: "byok",
           config,
@@ -758,13 +903,13 @@ export const aiRouter = createTRPCRouter({
       try {
         const response = await ai.complete(
           {
-            provider: input.provider as any,
+            provider: input.provider as AiProviderName,
             model: input.model,
             messages: [{ role: "user", content: "Say 'Hello from Proofmark!' — nothing else." }],
             maxTokens: 20,
             temperature: 0,
           },
-          { apiKey: input.apiKey, source: "byok", provider: input.provider as any, baseUrl: input.baseUrl },
+          { apiKey: input.apiKey, source: "byok", provider: input.provider as AiProviderName, baseUrl: input.baseUrl },
         );
         return { success: true, response: response.content, latencyMs: response.latencyMs };
       } catch (e) {
@@ -778,7 +923,7 @@ export const aiRouter = createTRPCRouter({
     .input(z.object({ from: z.date().optional(), to: z.date().optional(), userId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       const { ownerAddress } = await getAiAccountContext(ctx);
-      const ai = await loadPremiumAi();
+      const ai = (await loadPremiumAi()) as PremiumAiModule | null;
       if (!ai) return null;
       return ai.getUsageSummary(
         ownerAddress,
@@ -829,7 +974,7 @@ export const aiRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { ownerAddress } = await getAiAccountContext(ctx);
       const ai = await requireAi();
-      await ai.setAdminLimits({ ownerAddress, ...input, feature: input.feature as any });
+      await ai.setAdminLimits({ ownerAddress, ...input, feature: (input.feature ?? "general") as AiFeature });
       return { ok: true };
     }),
 
@@ -838,9 +983,9 @@ export const aiRouter = createTRPCRouter({
     .input(z.object({ userId: z.string().optional(), feature: zAiFeature.optional() }))
     .query(async ({ ctx, input }) => {
       const { ownerAddress } = await getAiAccountContext(ctx);
-      const ai = await loadPremiumAi();
+      const ai = (await loadPremiumAi()) as PremiumAiModule | null;
       if (!ai) return null;
-      return ai.getLimitStatus(ownerAddress, (input.feature as any) ?? "general", input.userId);
+      return ai.getLimitStatus(ownerAddress, (input.feature ?? "general") as AiFeature, input.userId);
     }),
 
   // ── Conversations ──

@@ -47,12 +47,15 @@ export const anchorRouter = createTRPCRouter({
       "blockchain_anchoring",
       "Premium feature — upgrade to enable blockchain anchoring",
     );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
     const chains = await loadPremiumChains();
     if (!chains) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Premium feature — upgrade to enable blockchain anchoring" });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
     const result = await chains.autoAnchorToAllChains(doc.contentHash);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- premium module
     return result;
   }),
 
@@ -80,6 +83,7 @@ export const anchorRouter = createTRPCRouter({
       "blockchain_anchoring",
       "Premium feature — upgrade to enable blockchain anchoring",
     );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
     const chains = await loadPremiumChains();
     if (!chains) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Premium feature" });
@@ -88,7 +92,9 @@ export const anchorRouter = createTRPCRouter({
     try {
       const { computeAuditTrailHash } = await import("~/server/audit");
       const auditHash = await computeAuditTrailHash(input.documentId);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
       const result = await chains.autoAnchorToAllChains(auditHash);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- premium module
       return { auditHash, ...result };
     } catch (e) {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (e as Error).message });
@@ -111,26 +117,33 @@ export const anchorRouter = createTRPCRouter({
         "blockchain_anchoring",
         "Premium feature — upgrade to enable blockchain anchoring",
       );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
       const chains = await loadPremiumChains();
       if (!chains) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Premium feature" });
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
       const result = await chains.storeDocumentKeyOnBase(input.contentHash, input.recipientAddress, input.encryptedKey);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- premium module
       return result;
     }),
 
   /** Verify a hash on Base. */
   verifyOnBase: publicProcedure.input(z.object({ contentHash: z.string() })).query(async ({ input }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
     const chains = await loadPremiumChains();
     if (!chains) return { anchored: false, timestamp: 0 };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
     return chains.verifyHashOnBase(input.contentHash);
   }),
 
   /** Verify a hash on Solana. */
   verifyOnSol: publicProcedure.input(z.object({ contentHash: z.string() })).query(async ({ input }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
     const chains = await loadPremiumChains();
     if (!chains) return { anchored: false };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
     return chains.verifyHashOnSol(input.contentHash);
   }),
 });

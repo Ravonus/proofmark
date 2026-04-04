@@ -62,15 +62,25 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
   useEffect(() => {
     if (status !== "ready" || mode === "initials") return;
     try {
-      const lockOrientation = (screen.orientation as any)?.lock;
-      if (lockOrientation) {
-        (screen.orientation as any).lock("landscape").catch(() => {});
+      const orientation = screen.orientation as ScreenOrientation & {
+        lock?: (type: string) => Promise<void>;
+        unlock?: () => void;
+      };
+      if (orientation.lock) {
+        orientation.lock("landscape").catch(() => {
+          /* best-effort orientation lock */
+        });
       }
-    } catch {}
+    } catch {
+      /* orientation API not supported */
+    }
     return () => {
       try {
-        (screen.orientation as any)?.unlock?.();
-      } catch {}
+        const orientation = screen.orientation as ScreenOrientation & { unlock?: () => void };
+        orientation.unlock?.();
+      } catch {
+        /* best-effort unlock */
+      }
     };
   }, [status, mode]);
 
@@ -89,7 +99,9 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
     let fingerprint: Record<string, unknown> = {};
     try {
       fingerprint = (await collectFingerprintBestEffort()) as unknown as Record<string, unknown>;
-    } catch {}
+    } catch {
+      /* best-effort fingerprint collection */
+    }
 
     const mobileForensic = {
       sessionDurationMs: Date.now() - sessionStartRef.current,
@@ -104,8 +116,9 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
         userAgent: navigator.userAgent,
         maxTouchPoints: navigator.maxTouchPoints,
         hardwareConcurrency: navigator.hardwareConcurrency ?? null,
-        deviceMemory: (navigator as any).deviceMemory ?? null,
-        connectionType: (navigator as any).connection?.effectiveType ?? null,
+        deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
+        connectionType:
+          (navigator as Navigator & { connection?: { effectiveType?: string } }).connection?.effectiveType ?? null,
       },
       fingerprint,
     };

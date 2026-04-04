@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 import { useState, useCallback, useRef } from "react";

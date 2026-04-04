@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- premium module with dynamic types from private repo
 "use client";
 
 /**
@@ -48,14 +48,18 @@ export function CollabAiPanel({ isOpen, onClose, sessionId, displayName }: Props
 
   // Hydrate messages from loaded threads
   useEffect(() => {
-    if (sharedThreads.data?.[0]?.messages) {
-      setSharedMessages(sharedThreads.data[0].messages as Message[]);
+    const threads = sharedThreads.data as { messages: Message[] }[] | undefined;
+    const firstThread = threads?.[0];
+    if (firstThread?.messages) {
+      setSharedMessages(firstThread.messages);
     }
   }, [sharedThreads.data]);
 
   useEffect(() => {
-    if (privateThreads.data?.[0]?.messages) {
-      setPrivateMessages(privateThreads.data[0].messages as Message[]);
+    const threads = privateThreads.data as { messages: Message[] }[] | undefined;
+    const firstThread = threads?.[0];
+    if (firstThread?.messages) {
+      setPrivateMessages(firstThread.messages);
     }
   }, [privateThreads.data]);
 
@@ -98,12 +102,13 @@ export function CollabAiPanel({ isOpen, onClose, sessionId, displayName }: Props
           message: msg,
           displayName,
         });
+        const aiMsg = result.aiMessage as { content: string; timestamp: number };
         setCurrentMessages((prev) => [
           ...prev,
           {
             role: "assistant" as const,
-            content: result.aiMessage.content,
-            timestamp: result.aiMessage.timestamp,
+            content: aiMsg.content,
+            timestamp: aiMsg.timestamp,
           },
         ]);
       } else {
@@ -111,21 +116,23 @@ export function CollabAiPanel({ isOpen, onClose, sessionId, displayName }: Props
           sessionId,
           message: msg,
         });
+        const aiMsg = result.aiMessage as { content: string; timestamp: number };
         setCurrentMessages((prev) => [
           ...prev,
           {
             role: "assistant" as const,
-            content: result.aiMessage.content,
-            timestamp: result.aiMessage.timestamp,
+            content: aiMsg.content,
+            timestamp: aiMsg.timestamp,
           },
         ]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
       setCurrentMessages((prev) => [
         ...prev,
         {
           role: "assistant" as const,
-          content: `Error: ${err.message}`,
+          content: `Error: ${message}`,
           timestamp: Date.now(),
         },
       ]);
@@ -137,7 +144,7 @@ export function CollabAiPanel({ isOpen, onClose, sessionId, displayName }: Props
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 

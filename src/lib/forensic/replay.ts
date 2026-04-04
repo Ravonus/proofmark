@@ -10,10 +10,10 @@ import type {
   TimedSignatureStroke,
 } from "./types";
 import {
-  REPLAY_CLIPBOARD_ACTION_CODES,
+  type REPLAY_CLIPBOARD_ACTION_CODES,
   REPLAY_ENCODING,
   REPLAY_FORMAT_LIMITS,
-  REPLAY_NAV_DIRECTION_CODES,
+  type REPLAY_NAV_DIRECTION_CODES,
 } from "./replay-format";
 import {
   decodeReplayEventsSync,
@@ -30,9 +30,6 @@ const TIME_QUANTUM_MS = REPLAY_FORMAT_LIMITS.timeQuantumMs;
 const MAX_STORED_STRING_LENGTH = REPLAY_FORMAT_LIMITS.maxStoredStringLength;
 const MAX_FIELD_SNAPSHOT_LENGTH = REPLAY_FORMAT_LIMITS.maxFieldSnapshotLength;
 const MAX_CLIPBOARD_PREVIEW = REPLAY_FORMAT_LIMITS.maxClipboardPreview;
-
-const NAV_DIRECTION_CODES = REPLAY_NAV_DIRECTION_CODES;
-const CLIPBOARD_ACTION_CODES = REPLAY_CLIPBOARD_ACTION_CODES;
 
 type ReplayStringKind = ForensicReplayStringEntry["kind"];
 type ReplayGazeAnchorAttribute = ForensicReplayGazeAnchorEntry["attribute"];
@@ -55,7 +52,7 @@ type RecordedReplayEvent =
   | {
       type: "navigation";
       at: number;
-      direction: keyof typeof NAV_DIRECTION_CODES;
+      direction: keyof typeof REPLAY_NAV_DIRECTION_CODES;
       target: string | null;
       index: number;
     }
@@ -79,7 +76,7 @@ type RecordedReplayEvent =
       type: "clipboard";
       at: number;
       target: string | null;
-      action: keyof typeof CLIPBOARD_ACTION_CODES;
+      action: keyof typeof REPLAY_CLIPBOARD_ACTION_CODES;
       summary: string;
     }
   | { type: "contextMenu"; at: number; target: string | null; x: number; y: number }
@@ -108,7 +105,7 @@ export type DecodedForensicReplayEvent =
   | {
       type: "navigation";
       at: number;
-      direction: keyof typeof NAV_DIRECTION_CODES;
+      direction: keyof typeof REPLAY_NAV_DIRECTION_CODES;
       target: ForensicReplayTarget | null;
       index: number;
     }
@@ -139,7 +136,7 @@ export type DecodedForensicReplayEvent =
       type: "clipboard";
       at: number;
       target: ForensicReplayTarget | null;
-      action: keyof typeof CLIPBOARD_ACTION_CODES;
+      action: keyof typeof REPLAY_CLIPBOARD_ACTION_CODES;
       summary: string;
     }
   | { type: "contextMenu"; at: number; target: ForensicReplayTarget | null; x: number; y: number }
@@ -527,7 +524,7 @@ export class DeterministicReplayRecorder {
     });
   }
 
-  recordNavigation(direction: keyof typeof NAV_DIRECTION_CODES, target?: TargetSource, index?: number) {
+  recordNavigation(direction: keyof typeof REPLAY_NAV_DIRECTION_CODES, target?: TargetSource, index?: number) {
     this.pushEvent({
       type: "navigation",
       at: this.elapsed(),
@@ -687,7 +684,7 @@ export class DeterministicReplayRecorder {
     this.pushEvent({ type: "gazeLost", at: this.elapsed(), reason: byte(reason) });
   }
 
-  recordClipboard(action: keyof typeof CLIPBOARD_ACTION_CODES, target: TargetSource, text?: string | null) {
+  recordClipboard(action: keyof typeof REPLAY_CLIPBOARD_ACTION_CODES, target: TargetSource, text?: string | null) {
     this.metrics.clipboardEventCount += 1;
     this.pushEvent({
       type: "clipboard",

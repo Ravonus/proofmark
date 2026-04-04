@@ -56,7 +56,7 @@ const ipApiProvider: ForensicGeoProvider = {
       `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,country,countryCode,region,regionName,city,lat,lon,isp,org,as,proxy,hosting,mobile,query`,
       "ip-api",
       (d) => {
-        if (d.status === "fail") throw new Error(`ip-api: ${d.message}`);
+        if (d.status === "fail") throw new Error(`ip-api: ${String(d.message)}`);
         return {
           city: (d.city as string) ?? null,
           region: (d.regionName as string) ?? null,
@@ -433,7 +433,7 @@ export async function assembleForensicEvidence(input: AssembleForensicInput): Pr
         const provider = input.providerConfig ? createGeoProvider(input.providerConfig) : await getDefaultGeoProvider();
         return await provider.lookupIp(ip);
       } catch (err) {
-        logger.warn("forensic", `Geo lookup failed: ${err}`);
+        logger.warn("forensic", `Geo lookup failed: ${String(err)}`);
         return null;
       }
     })();

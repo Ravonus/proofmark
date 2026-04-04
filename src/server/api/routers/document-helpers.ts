@@ -13,10 +13,16 @@ import { findSignersByDocumentId, findDocumentsByGroupId } from "~/server/db/com
 import { sendCompletionEmail, sendFinalizationEmail } from "~/server/email";
 import { resolveDocumentBranding, sendSignerInvite } from "~/server/delivery";
 import { GROUP_ROLE, getBaseUrl, type SignData } from "~/lib/signing-constants";
+import type { db as _dbInstance } from "~/server/db";
+import type { AuditLogParams } from "~/server/audit";
+import type { BrandingSettings } from "~/server/db/schema";
+
+/** Type alias for the Drizzle database client used throughout document helpers. */
+type Db = typeof _dbInstance;
 
 // ── Safe-import wrappers (new tables may not exist before db:push) ──
 
-export async function safeLogAudit(params: Parameters<typeof import("~/server/audit").logAuditEvent>[0]) {
+export async function safeLogAudit(params: AuditLogParams) {
   try {
     const { logAuditEvent } = await import("~/server/audit");
     await logAuditEvent(params);
@@ -34,12 +40,19 @@ export async function safeIndexDocument(documentId: string) {
   }
 }
 
-export async function safeSendSigningOtp(params: Parameters<typeof import("~/server/otp").sendSigningOtp>[0]) {
+export async function safeSendSigningOtp(params: {
+  signerId: string;
+  email: string;
+  documentTitle: string;
+  signerLabel: string;
+  branding?: BrandingSettings;
+  replyTo?: string;
+}) {
   const { sendSigningOtp } = await import("~/server/otp");
   return sendSigningOtp(params);
 }
 
-export async function safeVerifySigningOtp(params: Parameters<typeof import("~/server/otp").verifySigningOtp>[0]) {
+export async function safeVerifySigningOtp(params: { signerId: string; code: string }) {
   const { verifySigningOtp } = await import("~/server/otp");
   return verifySigningOtp(params);
 }
@@ -217,7 +230,7 @@ export async function getSignerFieldContext(params: {
   return { content, fields, signerIdx, editableFields };
 }
 
-export async function assertDocAccess(db: typeof import("~/server/db").db, docId: string, callerAddress: string) {
+export async function assertDocAccess(db: Db, docId: string, callerAddress: string) {
   const { findDocumentById } = await import("~/server/db/compat");
   const doc = await findDocumentById(db, docId);
   if (!doc) throw new Error("Document not found");
@@ -237,7 +250,7 @@ export async function assertDocAccess(db: typeof import("~/server/db").db, docId
  * if all actionable signers are done, send completion email.
  */
 export async function handlePostSignCompletion(params: {
-  db: typeof import("~/server/db").db;
+  db: Db;
   doc: typeof documents.$inferSelect;
   docSigners: Array<typeof signers.$inferSelect>;
   justSignedId: string;
@@ -350,7 +363,7 @@ export async function handlePostSignCompletion(params: {
  * discloser's signer row on every sibling document in the group.
  */
 export async function propagateGroupSignature(params: {
-  db: typeof import("~/server/db").db;
+  db: Db;
   doc: {
     id: string;
     groupId: string | null;
@@ -434,7 +447,7 @@ export async function propagateGroupSignature(params: {
   }
 
   if (propagatedCount > 0) {
-    console.log(
+    console.warn(
       `[group] Propagated data from ${doc.id} to ${propagatedCount} sibling(s) in group ${doc.groupId} (awaiting individual signatures)`,
     );
   }
