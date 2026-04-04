@@ -1544,7 +1544,7 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking, runs in background)
       try {
-        const { enqueueAiForensicReview } = await import("~/premium/ai/forensic-queue");
+        const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         enqueueAiForensicReview(signer.id, doc.id);
       } catch {}
 
@@ -2450,7 +2450,7 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking)
       try {
-        const { enqueueAiForensicReview } = await import("~/premium/ai/forensic-queue");
+        const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         enqueueAiForensicReview(signer.id, doc.id);
       } catch {}
 

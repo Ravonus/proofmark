@@ -64,7 +64,7 @@ export async function createGazeTracker(
   if (typeof window === "undefined") throw new Error("Browser only");
 
   const { GazeTracker } = await import(
-    /* webpackChunkName: "gaze-tracker" */
+    /* webpackIgnore: true */
     "~/premium/eye-tracking/gaze-tracker"
   );
   const adaptedCallbacks: GazeTrackerCallbacks = {

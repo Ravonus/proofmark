@@ -16,8 +16,8 @@ let _escrowEngine: Awaited<typeof import("~/premium/escrow/engine")> | null = nu
 async function requireEscrow() {
   if (!_escrowSchema) {
     try {
-      _escrowSchema = await import("~/premium/escrow/schema");
-      _escrowEngine = await import("~/premium/escrow/engine");
+      _escrowSchema = await import(/* webpackIgnore: true */ "~/premium/escrow/schema");
+      _escrowEngine = await import(/* webpackIgnore: true */ "~/premium/escrow/engine");
     } catch {
       throw new TRPCError({ code: "FORBIDDEN", message: "Escrow is a premium feature — upgrade to enable" });
     }

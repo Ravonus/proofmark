@@ -151,7 +151,7 @@ export const collabRouter = createTRPCRouter({
 
   saveToDocument: authedProcedure.input(z.object({ sessionId: z.string() })).mutation(async ({ ctx, input }) => {
     await requireCollabForSession(ctx);
-    const { saveToDocument } = await import("~/premium/collaboration/yjs-persistence");
+    const { saveToDocument } = await import(/* webpackIgnore: true */ "~/premium/collaboration/yjs-persistence");
     await saveToDocument(ctx.db, input.sessionId);
     return { ok: true };
   }),
@@ -210,7 +210,7 @@ export const collabRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireCollabFeatureForSession(ctx, "collab_review_mode");
-      const { createAnnotation } = await import("~/premium/collaboration/annotation-manager");
+      const { createAnnotation } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
       return createAnnotation(ctx.db, {
         sessionId: input.sessionId,
         authorUserId: ctx.session.address,
@@ -230,13 +230,13 @@ export const collabRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       await requireCollabFeatureForSession(ctx, "collab_review_mode");
-      const { getAnnotations } = await import("~/premium/collaboration/annotation-manager");
+      const { getAnnotations } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
       return getAnnotations(ctx.db, input.sessionId, { type: input.type, resolved: input.resolved });
     }),
 
   resolveAnnotation: authedProcedure.input(z.object({ annotationId: z.string() })).mutation(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_review_mode");
-    const { resolveAnnotation } = await import("~/premium/collaboration/annotation-manager");
+    const { resolveAnnotation } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
     return resolveAnnotation(ctx.db, input.annotationId, ctx.session.address);
   }),
 
@@ -244,7 +244,7 @@ export const collabRouter = createTRPCRouter({
     .input(z.object({ annotationId: z.string(), sessionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       await requireCollabFeatureForSession(ctx, "collab_review_mode");
-      const { deleteAnnotation } = await import("~/premium/collaboration/annotation-manager");
+      const { deleteAnnotation } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
       const collab = await requireCollabForSession(ctx);
       const session = await collab.getSession(ctx.db, input.sessionId);
       const isHost = session?.session.hostUserId === ctx.session.address;
@@ -254,7 +254,7 @@ export const collabRouter = createTRPCRouter({
 
   annotationCounts: authedProcedure.input(z.object({ sessionId: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_review_mode");
-    const { getAnnotationCounts } = await import("~/premium/collaboration/annotation-manager");
+    const { getAnnotationCounts } = await import(/* webpackIgnore: true */ "~/premium/collaboration/annotation-manager");
     return getAnnotationCounts(ctx.db, input.sessionId);
   }),
 
@@ -262,7 +262,7 @@ export const collabRouter = createTRPCRouter({
 
   getSharedThreads: authedProcedure.input(z.object({ sessionId: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_shared_ai");
-    const { getSharedThreads } = await import("~/premium/collaboration/ai-threads");
+    const { getSharedThreads } = await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
     return getSharedThreads(ctx.db, input.sessionId);
   }),
 
@@ -286,8 +286,8 @@ export const collabRouter = createTRPCRouter({
       const resolved = await ai.resolveKeyWithFallback(ctx.session.address, (input.provider as any) ?? "anthropic");
       if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "No AI provider configured." });
 
-      const { sendSharedMessage, getOrCreateDefaultSharedThread } = await import("~/premium/collaboration/ai-threads");
-      const { getSession } = await import("~/premium/collaboration/session-manager");
+      const { sendSharedMessage, getOrCreateDefaultSharedThread } = await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
+      const { getSession } = await import(/* webpackIgnore: true */ "~/premium/collaboration/session-manager");
 
       const session = await getSession(ctx.db, input.sessionId);
       const threadId = input.threadId ?? (await getOrCreateDefaultSharedThread(ctx.db, input.sessionId)).id;
@@ -325,7 +325,7 @@ export const collabRouter = createTRPCRouter({
 
   getPrivateThreads: authedProcedure.input(z.object({ sessionId: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_shared_ai");
-    const { getPrivateThreads } = await import("~/premium/collaboration/ai-threads");
+    const { getPrivateThreads } = await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
     return getPrivateThreads(ctx.db, input.sessionId, ctx.session.address);
   }),
 
@@ -349,8 +349,8 @@ export const collabRouter = createTRPCRouter({
       if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "No AI provider configured." });
 
       const { sendPrivateMessage, getOrCreateDefaultPrivateThread } =
-        await import("~/premium/collaboration/ai-threads");
-      const { getSession } = await import("~/premium/collaboration/session-manager");
+        await import(/* webpackIgnore: true */ "~/premium/collaboration/ai-threads");
+      const { getSession } = await import(/* webpackIgnore: true */ "~/premium/collaboration/session-manager");
 
       const session = await getSession(ctx.db, input.sessionId);
       const threadId =
@@ -397,7 +397,7 @@ export const collabRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireCollabFeatureForSession(ctx, "collab_shareable_links");
-      const { createShareableLink } = await import("~/premium/collaboration/shareable-links");
+      const { createShareableLink } = await import(/* webpackIgnore: true */ "~/premium/collaboration/shareable-links");
       return createShareableLink(ctx.db, {
         sessionId: input.sessionId,
         createdBy: ctx.session.address,
@@ -408,7 +408,7 @@ export const collabRouter = createTRPCRouter({
 
   resolveLink: authedProcedure.input(z.object({ token: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_shareable_links");
-    const { resolveShareableLink } = await import("~/premium/collaboration/shareable-links");
+    const { resolveShareableLink } = await import(/* webpackIgnore: true */ "~/premium/collaboration/shareable-links");
     const link = await resolveShareableLink(ctx.db, input.token);
     if (!link) throw new TRPCError({ code: "NOT_FOUND", message: "Link not found or expired" });
     return link;
@@ -416,7 +416,7 @@ export const collabRouter = createTRPCRouter({
 
   sessionLinks: authedProcedure.input(z.object({ sessionId: z.string() })).query(async ({ ctx, input }) => {
     await requireCollabFeatureForSession(ctx, "collab_shareable_links");
-    const { getLinksForSession } = await import("~/premium/collaboration/shareable-links");
+    const { getLinksForSession } = await import(/* webpackIgnore: true */ "~/premium/collaboration/shareable-links");
     return getLinksForSession(ctx.db, input.sessionId);
   }),
 
@@ -444,7 +444,7 @@ export const collabRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireCollabFeatureForSession(ctx, "collab_pdf_review");
-      const { collabSessions } = await import("~/premium/collaboration/schema");
+      const { collabSessions } = await import(/* webpackIgnore: true */ "~/premium/collaboration/schema");
       const { eq } = await import("drizzle-orm");
 
       const pdfAnalysis = {
