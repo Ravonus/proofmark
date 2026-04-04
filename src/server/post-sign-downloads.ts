@@ -5,7 +5,9 @@ import type { PostSignReveal } from "~/server/db/schema";
 
 export type PostSignDownload = NonNullable<PostSignReveal["downloads"]>[number];
 
-const POST_SIGN_DOWNLOAD_ROOT = path.resolve(process.cwd(), "private", "downloads");
+const POST_SIGN_DOWNLOAD_ROOT = process.env.PLATFORM_PERSIST_FAST_ROOT
+  ? path.join(process.env.PLATFORM_PERSIST_FAST_ROOT, "downloads")
+  : path.resolve(process.cwd(), "private", "downloads");
 
 export const MAX_POST_SIGN_DOWNLOAD_BYTES = 25 * 1024 * 1024;
 
