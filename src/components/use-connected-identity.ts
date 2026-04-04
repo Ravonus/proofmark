@@ -9,7 +9,6 @@
  */
 
 import { useMemo } from "react";
-import type { WalletChain } from "~/lib/chains";
 import { useSession } from "~/lib/auth-client";
 import { useWallet } from "~/components/wallet-provider";
 
