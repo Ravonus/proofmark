@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ForensicEvidence } from "./types";
 import type { PersistedForensicSessionCapture, ForensicSessionProfile, SignerBaselineProfile } from "./session";
 import type { ReplayTapeVerification } from "~/server/rust-engine";
+import type { GazeBehaviorFeatures } from "./gaze-analysis";
 
 export const automationDecisionSchema = z.enum(["ALLOW", "FLAG", "DENY"]);
 export const automationAssessmentSchema = z.enum(["human", "agent", "mixed", "uncertain"]);
@@ -129,4 +130,5 @@ export type EnhancedForensicEvidence = ForensicEvidence & {
   signerBaseline?: SignerBaselineProfile | null;
   forensicSessions?: PersistedForensicSessionCapture[];
   replayValidation?: ReplayTapeVerification;
+  gazeBehavior?: GazeBehaviorFeatures | null;
 };

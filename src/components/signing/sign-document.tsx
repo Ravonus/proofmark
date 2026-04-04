@@ -38,6 +38,9 @@ import {
 import { useSigningFlow } from "../hooks/use-signing-flow";
 import { describeSignerTokenGate } from "~/lib/token-gates";
 
+// TODO: re-integrate gaze gates (GazeGate, GazeGateMobile) and AI signer chat (AiSignerChat) in signing flow for premium build
+// These components live at ~/components/gaze-gate, ~/components/gaze-gate-mobile, ~/components/ai/ai-signer-chat
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function SignDocument({ documentId, claimToken }: { documentId: string; claimToken: string | null }) {

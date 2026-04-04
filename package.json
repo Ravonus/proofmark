@@ -78,7 +78,16 @@
     "viem": "^2.21.0",
     "wagmi": "^2.14.0",
     "zod": "^3.24.0",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "@mediapipe/face_mesh": "^0.4.1633559619",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.5",
+    "@tensorflow/tfjs-backend-webgl": "^4.22.0",
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "lib0": "^0.2.99",
+    "webgazer": "^2.1.0",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.20"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
@@ -88,6 +97,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.5.13",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.30.0",

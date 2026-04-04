@@ -5,7 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { PdfAnalysisResult, FieldType } from "~/lib/document/pdf-types";
 import { FadeIn, ScaleIn, GlassCard, AnimatedButton } from "./ui/motion";
 
-// ─── Result type for the parent ───────────────────────────────────────────────
+// TODO: re-integrate AI scraper review (AiScraperReview from ~/components/ai/ai-scraper-review) for premium build
+
+// ─── Result type for the parent ─────��─────────────────────────���───────────────
 
 type PdfUploadResult = {
   title: string;

@@ -7,14 +7,16 @@ import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { Select } from "~/components/ui/select";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
-import { User, ToggleRight, Palette } from "lucide-react";
+import { User, ToggleRight, Palette, Bot } from "lucide-react";
+import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 
-type SettingsTab = "account" | "pdf" | "features";
+type SettingsTab = "account" | "pdf" | "features" | "ai";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "account", label: "Account", icon: User },
   { id: "pdf", label: "PDF", icon: Palette },
   { id: "features", label: "Features", icon: ToggleRight },
+  { id: "ai", label: "AI", icon: Bot },
 ];
 
 export function UserSettings() {
@@ -117,6 +119,7 @@ export function UserSettings() {
         {activeTab === "features" && currentWallet && (
           <FeaturesSection address={currentWallet.address} chain={currentWallet.chain} />
         )}
+        {activeTab === "ai" && <AiProviderSettings />}
       </div>
     </div>
   );
