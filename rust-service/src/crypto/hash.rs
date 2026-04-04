@@ -34,7 +34,7 @@ pub fn hash_hand_signature(data_url: &str) -> String {
         None => data_url,
     };
     // Decode base64 first, then hash the raw bytes
-    match base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64) {
+    match crate::util::b64::decode(b64) {
         Ok(raw) => sha256_hex(&raw),
         Err(_) => sha256_hex(b64.as_bytes()),
     }

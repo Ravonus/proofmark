@@ -5,6 +5,7 @@ use actix_web::{web, HttpResponse, Responder};
 use super::error;
 use super::types::*;
 use crate::pqcrypto;
+use crate::util::b64;
 
 // ── Post-Quantum Encryption ─────────────────────────────────────────────────────
 
@@ -14,16 +15,11 @@ pub async fn pq_keygen() -> impl Responder {
 }
 
 pub async fn pq_encrypt(body: web::Json<PqEncryptReq>) -> impl Responder {
-    let plaintext =
-        match base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &body.plaintext) {
-            Ok(b) => b,
-            Err(e) => return error::bad_request(format!("Invalid base64: {e}")),
-        };
-    match web::block(move || pqcrypto::pq_encrypt(&plaintext, &body.recipient_public_key)).await {
-        Ok(Ok(ct)) => HttpResponse::Ok().json(ct),
-        Ok(Err(e)) => error::internal_error(e),
-        Err(e) => error::internal_error(e),
-    }
+    let plaintext = match b64::decode(&body.plaintext) {
+        Ok(b) => b,
+        Err(e) => return error::bad_request(e),
+    };
+    error::block_ok(web::block(move || pqcrypto::pq_encrypt(&plaintext, &body.recipient_public_key)).await)
 }
 
 pub async fn pq_decrypt(body: web::Json<PqDecryptReq>) -> impl Responder {
@@ -31,9 +27,7 @@ pub async fn pq_decrypt(body: web::Json<PqDecryptReq>) -> impl Responder {
     let key = body.recipient_private_key.clone();
     match web::block(move || pqcrypto::pq_decrypt(&ct, &key)).await {
         Ok(Ok(plaintext)) => {
-            let b64 =
-                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &plaintext);
-            HttpResponse::Ok().json(serde_json::json!({ "plaintext": b64 }))
+            HttpResponse::Ok().json(serde_json::json!({ "plaintext": b64::encode(&plaintext) }))
         }
         Ok(Err(e)) => error::internal_error(e),
         Err(e) => error::internal_error(e),
@@ -58,11 +52,10 @@ pub async fn zk_verify_document_proof(
 }
 
 pub async fn zk_signature_proof(body: web::Json<ZkSigProofReq>) -> impl Responder {
-    let sig_bytes =
-        match base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &body.signature) {
-            Ok(b) => b,
-            Err(e) => return error::bad_request(format!("Invalid base64: {e}")),
-        };
+    let sig_bytes = match b64::decode(&body.signature) {
+        Ok(b) => b,
+        Err(e) => return error::bad_request(e),
+    };
     let proof = pqcrypto::create_signature_proof(
         &body.document_hash,
         &body.signer_address,

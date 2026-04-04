@@ -15,7 +15,13 @@ mod types;
 pub use types::PdfGenerateRequest;
 
 use printpdf::*;
+use once_cell::sync::Lazy;
 use regex::Regex;
+
+static HEADING_NUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\d+\.\s+\S").unwrap());
+static HEADING_SECTION_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?:SECTION|ARTICLE|CLAUSE)\s").unwrap());
+static BULLET_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[-*•(]").unwrap());
 use std::io::BufWriter;
 
 use content::parse_content_to_segments;
@@ -199,10 +205,10 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
             let all_text = line.iter().all(|segment| matches!(segment, ContentSegment::Text { .. }));
 
             if all_text && !trimmed.is_empty() {
-                let is_heading = Regex::new(r"^\d+\.\s+\S").unwrap().is_match(trimmed)
-                    || Regex::new(r"^(?:SECTION|ARTICLE|CLAUSE)\s").unwrap().is_match(trimmed)
+                let is_heading = HEADING_NUM_RE.is_match(trimmed)
+                    || HEADING_SECTION_RE.is_match(trimmed)
                     || (trimmed == trimmed.to_uppercase() && trimmed.len() > 3 && trimmed.len() < 80);
-                let is_bullet = Regex::new(r"^[-*•(]").unwrap().is_match(trimmed);
+                let is_bullet = BULLET_RE.is_match(trimmed);
                 if is_heading {
                     ctx.ensure_space(pt_to_mm(20.0));
                     ctx.y -= pt_to_mm(6.0);

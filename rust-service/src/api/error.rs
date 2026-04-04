@@ -13,3 +13,14 @@ pub fn bad_request(msg: impl std::fmt::Display) -> HttpResponse {
     HttpResponse::BadRequest()
         .json(serde_json::json!({ "error": msg.to_string() }))
 }
+
+/// Handle the common web::block result pattern: Ok(Ok(T)) -> json, Ok(Err)/Err -> error.
+pub fn block_ok<T: serde::Serialize>(
+    result: Result<Result<T, impl std::fmt::Display>, actix_web::error::BlockingError>,
+) -> HttpResponse {
+    match result {
+        Ok(Ok(val)) => HttpResponse::Ok().json(val),
+        Ok(Err(e)) => internal_error(e),
+        Err(e) => internal_error(e),
+    }
+}

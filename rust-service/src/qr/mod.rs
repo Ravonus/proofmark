@@ -5,6 +5,8 @@ use image::{ImageBuffer, Luma};
 use qrcode::QrCode;
 use qrcode::types::QrError;
 
+use crate::util::b64;
+
 /// Generate a QR code as an SVG string.
 pub fn generate_qr_svg(text: &str, size: u32) -> Result<String, QrError> {
     let code = QrCode::new(text.as_bytes())?;
@@ -77,8 +79,8 @@ pub fn generate_qr_data_url(text: &str, size: u32) -> Result<String, anyhow::Err
         image::ExtendedColorType::L8,
     )?;
 
-    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &buf);
-    Ok(format!("data:image/png;base64,{b64}"))
+    let encoded = b64::encode(&buf);
+    Ok(format!("data:image/png;base64,{encoded}"))
 }
 
 #[cfg(test)]

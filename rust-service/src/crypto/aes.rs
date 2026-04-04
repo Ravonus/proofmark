@@ -10,6 +10,8 @@ use rand::RngCore;
 use sha2::Sha256;
 use thiserror::Error;
 
+use crate::util::b64;
+
 const IV_LEN: usize = 12;
 const TAG_LEN: usize = 16;
 
@@ -60,15 +62,12 @@ pub fn aes_encrypt(key: &[u8; 32], plaintext: &[u8]) -> Result<String, CryptoErr
     blob.extend_from_slice(&iv);
     blob.extend_from_slice(&ciphertext);
 
-    Ok(base64::Engine::encode(
-        &base64::engine::general_purpose::STANDARD,
-        &blob,
-    ))
+    Ok(b64::encode(&blob))
 }
 
 /// Decrypt AES-256-GCM ciphertext from base64 blob.
 pub fn aes_decrypt(key: &[u8; 32], ciphertext_b64: &str) -> Result<Vec<u8>, CryptoError> {
-    let blob = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, ciphertext_b64)
+    let blob = b64::decode(ciphertext_b64)
         .map_err(|_| CryptoError::InvalidFormat)?;
 
     if blob.len() < IV_LEN + TAG_LEN {

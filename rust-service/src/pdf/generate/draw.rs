@@ -4,10 +4,23 @@
 use base64::Engine;
 use printpdf::*;
 use printpdf::path::{PaintMode, WindingOrder};
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::theme::*;
 use super::types::*;
+
+// ── SVG parsing regexes (compiled once) ─────────────────────────────────────
+
+static SVG_VIEWBOX_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r#"viewBox=["']\s*0(?:\.0+)?\s+0(?:\.0+)?\s+([\d.]+)\s+([\d.]+)\s*["']"#).unwrap()
+});
+static SVG_WIDTH_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"width=["']([\d.]+)["']"#).unwrap());
+static SVG_HEIGHT_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"height=["']([\d.]+)["']"#).unwrap());
+static SVG_PATH_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<path\b[^>]*\bd=["']([^"']+)["'][^>]*\/?>"#).unwrap());
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PDF Context
@@ -268,36 +281,31 @@ pub(super) fn parse_signature_svg(data_url: &str) -> Option<ParsedSignatureSvg> 
     let bytes = base64::engine::general_purpose::STANDARD.decode(b64).ok()?;
     let svg = String::from_utf8(bytes).ok()?;
 
-    let view_box_re = Regex::new(r#"viewBox=["']\s*0(?:\.0+)?\s+0(?:\.0+)?\s+([\d.]+)\s+([\d.]+)\s*["']"#).ok()?;
-    let width_re = Regex::new(r#"width=["']([\d.]+)["']"#).ok()?;
-    let height_re = Regex::new(r#"height=["']([\d.]+)["']"#).ok()?;
-    let path_re = Regex::new(r#"<path\b[^>]*\bd=["']([^"']+)["'][^>]*\/?>"#).ok()?;
-
-    let width = view_box_re
+    let width = SVG_VIEWBOX_RE
         .captures(&svg)
         .and_then(|caps| caps.get(1))
         .and_then(|m| m.as_str().parse::<f32>().ok())
         .or_else(|| {
-            width_re
+            SVG_WIDTH_RE
                 .captures(&svg)
                 .and_then(|caps| caps.get(1))
                 .and_then(|m| m.as_str().parse::<f32>().ok())
         })
         .unwrap_or(320.0);
 
-    let height = view_box_re
+    let height = SVG_VIEWBOX_RE
         .captures(&svg)
         .and_then(|caps| caps.get(2))
         .and_then(|m| m.as_str().parse::<f32>().ok())
         .or_else(|| {
-            height_re
+            SVG_HEIGHT_RE
                 .captures(&svg)
                 .and_then(|caps| caps.get(1))
                 .and_then(|m| m.as_str().parse::<f32>().ok())
         })
         .unwrap_or(140.0);
 
-    let paths = path_re
+    let paths = SVG_PATH_RE
         .captures_iter(&svg)
         .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
         .collect::<Vec<_>>();

@@ -15,11 +15,7 @@ pub async fn index_document(
     let req = body.into_inner();
     let engine = engine.get_ref().clone();
 
-    match web::block(move || engine.index_document(&req)).await {
-        Ok(Ok(result)) => HttpResponse::Ok().json(result),
-        Ok(Err(e)) => error::internal_error(e),
-        Err(e) => error::internal_error(e),
-    }
+    error::block_ok(web::block(move || engine.index_document(&req)).await)
 }
 
 pub async fn remove_document(
@@ -43,11 +39,7 @@ pub async fn search_index(
     let req = body.into_inner();
     let engine = engine.get_ref().clone();
 
-    match web::block(move || engine.search(&req)).await {
-        Ok(Ok(result)) => HttpResponse::Ok().json(result),
-        Ok(Err(e)) => error::internal_error(e),
-        Err(e) => error::internal_error(e),
-    }
+    error::block_ok(web::block(move || engine.search(&req)).await)
 }
 
 pub async fn autocomplete(
@@ -74,20 +66,17 @@ pub async fn scan_document(
     let req = body.into_inner();
     let engine = engine.get_ref().clone();
 
-    match web::block(move || {
-        index::scanner::scan_document(
-            engine.store(),
-            &req.doc_id,
-            &req.content,
-            req.encrypted.unwrap_or(false),
-        )
-    })
-    .await
-    {
-        Ok(Ok(result)) => HttpResponse::Ok().json(result),
-        Ok(Err(e)) => error::internal_error(e),
-        Err(e) => error::internal_error(e),
-    }
+    error::block_ok(
+        web::block(move || {
+            index::scanner::scan_document(
+                engine.store(),
+                &req.doc_id,
+                &req.content,
+                req.encrypted.unwrap_or(false),
+            )
+        })
+        .await,
+    )
 }
 
 pub async fn privacy_scan(body: web::Json<PrivacyScanReq>) -> impl Responder {

@@ -17,6 +17,8 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+use crate::util::b64;
+
 const VERSION: [u8; 2] = [0x50, 0x51]; // "PQ"
 const IV_LEN: usize = 12;
 const HKDF_INFO: &[u8] = b"proofmark-pq-v1-aes256gcm";
@@ -95,7 +97,7 @@ pub fn pq_encrypt(
     packed.extend_from_slice(&encrypted);
 
     Ok(HybridCiphertext {
-        ciphertext: base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &packed),
+        ciphertext: b64::encode(&packed),
         algorithm: "ML-KEM-768+AES-256-GCM".into(),
     })
 }
@@ -105,10 +107,8 @@ pub fn pq_decrypt(
     ciphertext: &HybridCiphertext,
     recipient_private_key_hex: &str,
 ) -> Result<Vec<u8>, anyhow::Error> {
-    let packed = base64::Engine::decode(
-        &base64::engine::general_purpose::STANDARD,
-        &ciphertext.ciphertext,
-    ).map_err(|e| anyhow::anyhow!("Invalid base64: {e}"))?;
+    let packed = b64::decode(&ciphertext.ciphertext)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     if packed.len() < 2 {
         return Err(anyhow::anyhow!("Ciphertext too short"));

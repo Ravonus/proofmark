@@ -4,6 +4,7 @@
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 
 use super::VerifyResult;
+use crate::util::b64;
 
 /// Verify a Solana Ed25519 detached signature.
 pub fn verify_sol_signature(address: &str, message: &str, signature_b64: &str) -> VerifyResult {
@@ -44,10 +45,7 @@ pub fn verify_sol_signature(address: &str, message: &str, signature_b64: &str) -
     };
 
     // Decode the signature from base64
-    let sig_bytes = match base64::Engine::decode(
-        &base64::engine::general_purpose::STANDARD,
-        signature_b64,
-    ) {
+    let sig_bytes = match b64::decode(signature_b64) {
         Ok(b) if b.len() == 64 => {
             let mut arr = [0u8; 64];
             arr.copy_from_slice(&b);

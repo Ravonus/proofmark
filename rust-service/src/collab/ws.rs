@@ -18,6 +18,7 @@ use super::awareness::AwarenessState;
 use super::protocol;
 use super::room::{ClientInfo, RoomManager};
 use super::sync;
+use crate::util::b64;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -320,12 +321,12 @@ async fn validate_token(auth_url: &str, token: &str, session_id: &str) -> bool {
 async fn flush_room_state(session_id: &str, state: &[u8]) {
     let flush_url = std::env::var("FLUSH_CALLBACK_URL").ok();
     if let Some(url) = flush_url {
-        let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, state);
+        let encoded = b64::encode(state);
         let _ = reqwest::Client::new()
             .post(&url)
             .json(&serde_json::json!({
                 "sessionId": session_id,
-                "yjsState": b64,
+                "yjsState": encoded,
             }))
             .timeout(Duration::from_secs(5))
             .send()

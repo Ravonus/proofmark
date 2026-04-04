@@ -11,6 +11,7 @@ use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 
 use super::VerifyResult;
 use crate::crypto::{double_sha256, sha256};
+use crate::util::b64;
 use crate::util::encoding::{hash160, base58check_encode, bech32_encode, bech32m_encode};
 use crate::util::varint::{btc_encode_varint, btc_read_varint};
 
@@ -413,10 +414,7 @@ pub fn verify_btc_signature(address: &str, message: &str, signature_raw: &str) -
     let mut debug = Vec::new();
 
     // Decode signature (try base64 first, then hex)
-    let raw = if let Ok(bytes) = base64::Engine::decode(
-        &base64::engine::general_purpose::STANDARD,
-        signature_raw,
-    ) {
+    let raw = if let Ok(bytes) = b64::decode(signature_raw) {
         if bytes.is_empty() {
             if let Ok(hex_bytes) = hex::decode(signature_raw) {
                 debug.push("decoded as hex".into());
