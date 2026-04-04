@@ -41,12 +41,12 @@ services:
       PDF_UPLOAD_MAX_MB: "${PDF_UPLOAD_MAX_MB:-10}"
       PROOFMARK_DEPLOYMENT_MODE: "${PROOFMARK_DEPLOYMENT_MODE:-oss}"
       RUST_ENGINE_URL: http://rust-engine:9090
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: "465"
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_USER:-}
-      ADMIN_EMAIL: ${SMTP_USER:-}
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-noreply@proofmark.local}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-}"
       ENCRYPTION_MASTER_KEY: "${ENCRYPTION_MASTER_KEY:-}"
     depends_on:
       - db
