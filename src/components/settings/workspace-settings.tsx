@@ -5,7 +5,6 @@ import { trpc } from "~/lib/trpc";
 import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
-import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 
 type BrandingForm = {
   name: string;
@@ -478,18 +477,6 @@ export function WorkspaceSettings() {
               </div>
             ))}
           </div>
-        </GlassCard>
-      </FadeIn>
-
-      <FadeIn delay={0.24}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">AI Providers</h3>
-            <p className="mt-1 text-sm text-muted">
-              Configure AI provider keys and preferences for AI-powered features.
-            </p>
-          </div>
-          <AiProviderSettings />
         </GlassCard>
       </FadeIn>
 

@@ -86,16 +86,6 @@ export type {
   SignerForensicSessions,
 } from "./session";
 
-// Gaze analysis (premium eye-tracking)
-export { extractGazeBehaviorFeatures } from "./gaze-analysis";
-export type { GazeBehaviorFeatures } from "./gaze-analysis";
-export {
-  createDefaultGazeLivenessPlan,
-  buildGazeLivenessSummary,
-  isGazeLivenessAccepted,
-  describeGazeLivenessStep,
-} from "./gaze-liveness";
-
 // Sub-modules (for advanced usage / testing)
 export { sha256, generateId } from "./hash";
 export { getOrCreatePersistentId } from "./persistence";

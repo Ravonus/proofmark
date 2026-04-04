@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, Camera, Loader2 } from "lucide-react";
 import { buildGazeLivenessSummary } from "~/lib/forensic/gaze-liveness";
 import type { GazeLivenessStepResult, GazeLivenessSummary } from "~/lib/forensic/types";
-import type { DeviceProfile } from "~/lib/signing-constants";
+import type { DeviceProfile } from "~/lib/signing/signing-constants";
 
 type Props = {
   mode: "full" | "signing_only";

@@ -703,7 +703,6 @@ export function AiProviderSettings() {
 
 function UsageLimitsTab() {
   const { data: _usageData } = trpc.ai.usageSummary.useQuery({});
-  const { data: _usageData } = trpc.ai.usageSummary.useQuery({});
   const defaultLimits = trpc.ai.getUserLimitStatus.useQuery({});
   const setDefaultMut = trpc.ai.setDefaultLimits.useMutation({ onSuccess: () => void defaultLimits.refetch() });
 

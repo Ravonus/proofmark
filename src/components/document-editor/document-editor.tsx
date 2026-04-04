@@ -43,14 +43,12 @@ import {
   Minimize2,
   Undo2,
   Redo2,
-  Sparkles,
 } from "lucide-react";
 import { W3SButton, W3SIconButton } from "../ui/motion";
 import type { SignerDef, EditorResult, PreviewValueMap } from "./document-editor-types";
 import { SIGNER_BORDER_COLORS } from "./document-editor-types";
 import { EditorField, EditorSignatureBlock, type SignatureBlockToken } from "./document-editor-fields";
 import { TokenGateEditor } from "../settings/token-gate-editor";
-import { AiChatPanel } from "../ai/ai-chat-panel";
 
 export type { EditorResult, SignerDef } from "./document-editor-types";
 
@@ -104,7 +102,6 @@ export function DocumentEditor({
   const [showSigners, setShowSigners] = useState(false);
   const [mobilePanel, setMobilePanel] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [showAiChat, setShowAiChat] = useState(false);
   const fieldCounter = useRef(fields.length);
 
   // ── Undo/redo ──
@@ -1085,14 +1082,6 @@ export function DocumentEditor({
           </W3SIconButton>
         )}
 
-        <W3SButton
-          variant={showAiChat ? "accent-outline" : "ghost"}
-          size="xs"
-          onClick={() => setShowAiChat(!showAiChat)}
-        >
-          <Sparkles className="h-3.5 w-3.5" /> <span className="hidden sm:inline">AI</span>
-        </W3SButton>
-
         <W3SButton variant="primary" size="xs" onClick={() => onSubmit(buildResult())} disabled={!title.trim()}>
           <Send className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Send</span>
         </W3SButton>
@@ -1374,20 +1363,6 @@ export function DocumentEditor({
       )}
 
       {/* AI Chat Panel (premium) */}
-      {showAiChat && (
-        <AiChatPanel
-          isOpen={showAiChat}
-          onClose={() => setShowAiChat(false)}
-          documentId=""
-          documentTitle={title}
-          tokens={tokens as unknown[]}
-          signerCount={signers.length}
-          signerLabels={signers.map((s) => s.label)}
-          onApplyEdits={() => {
-            // TODO: wire AiEditOperation apply logic into editor token state
-          }}
-        />
-      )}
     </div>
   );
 }

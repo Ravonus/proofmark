@@ -36,9 +36,7 @@ import {
   MessageSquare,
   MapPin,
   Key,
-  Bot,
 } from "lucide-react";
-import { AiProviderSettings } from "~/components/ai/ai-provider-settings";
 
 // ── Types ──
 
@@ -72,7 +70,6 @@ type AdminTab =
   | "webhooks"
   | "templates"
   | "security"
-  | "ai"
   | "system"
   | "premium";
 
@@ -85,7 +82,6 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: typeof Users; premiumOnly
   { id: "webhooks", label: "Webhooks", icon: Webhook },
   { id: "templates", label: "Templates", icon: FileText },
   { id: "security", label: "Security", icon: Lock },
-  { id: "ai", label: "AI", icon: Bot, premiumOnly: true },
   { id: "system", label: "System", icon: Server },
   { id: "premium", label: "Premium", icon: Sparkles, premiumOnly: true },
 ];
@@ -213,7 +209,6 @@ export function AdminPanel() {
         {activeTab === "webhooks" && <WebhooksSection />}
         {activeTab === "templates" && <TemplatesSection />}
         {activeTab === "security" && <SecuritySection status={statusQuery.data} />}
-        {activeTab === "ai" && <AiProviderSettings />}
         {activeTab === "system" && <SystemSection status={statusQuery.data} />}
         {activeTab === "premium" && <PremiumSection status={statusQuery.data} />}
       </div>
