@@ -1,0 +1,1 @@
+ALTER TABLE "signers" ADD COLUMN "token_gates" jsonb;

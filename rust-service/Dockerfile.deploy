@@ -1,0 +1,49 @@
+# ── Stage 1: Build ────────────────────────────────────────────────────────────
+FROM rust:latest AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev curl clang libclang-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Override fat LTO to thin — reduces build disk from ~15GB to ~5GB
+ENV CARGO_PROFILE_RELEASE_LTO=thin
+ENV CARGO_PROFILE_RELEASE_CODEGEN_UNITS=4
+
+# Cache dependency compilation
+COPY Cargo.toml Cargo.lock* ./
+COPY crates ./crates
+RUN mkdir src && echo 'fn main(){}' > src/main.rs && \
+    cargo build --release 2>/dev/null || true && \
+    rm -rf src target/release/proofmark-engine target/release/deps/proofmark* target/release/.fingerprint/proofmark*
+
+# Build the actual binary
+COPY src ./src
+RUN cargo build --release --jobs $(nproc) && \
+    strip target/release/proofmark-engine && \
+    cp target/release/proofmark-engine /usr/local/bin/proofmark-engine && \
+    rm -rf target
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd -r proofmark && \
+    useradd -r -g proofmark proofmark
+
+COPY --from=builder /usr/local/bin/proofmark-engine /usr/local/bin/
+
+USER proofmark
+
+ENV BIND_ADDR=0.0.0.0:9090
+ENV RUST_LOG=proofmark_engine=info
+
+EXPOSE 9090
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD curl -sf http://localhost:9090/api/v1/health || exit 1
+
+ENTRYPOINT ["proofmark-engine"]

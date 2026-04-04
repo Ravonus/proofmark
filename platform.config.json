@@ -1,0 +1,30 @@
+{
+  "persistent": {
+    "fast": ["index"],
+    "slow": ["archive", { "name": "public-assets", "public": true }]
+  },
+  "microservices": {
+    "rust-engine": {
+      "dockerfile": "./rust-service/Dockerfile.deploy",
+      "buildContext": "./rust-service",
+      "architecture": "arm64",
+      "port": 9090,
+      "healthCheck": "/api/v1/health",
+      "cpu": 1024,
+      "memory": 2048,
+      "env": {
+        "BIND_ADDR": "0.0.0.0:9090",
+        "RUST_LOG": "proofmark_engine=info",
+        "WORKERS": "4",
+        "INDEX_DB_PATH": "/mnt/persist/index"
+      },
+      "connectEnv": "RUST_ENGINE_URL",
+      "scaling": {
+        "min": 1,
+        "max": 8,
+        "targetCpuPercent": 60
+      },
+      "useEfs": true
+    }
+  }
+}

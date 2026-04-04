@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: web3sign
+      POSTGRES_PASSWORD: web3sign_dev
+      POSTGRES_DB: web3sign
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U web3sign"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  rust-engine:
+    build: ./rust-service
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    environment:
+      BIND_ADDR: "0.0.0.0:9090"
+      PDF_UPLOAD_MAX_MB: "${PDF_UPLOAD_MAX_MB:-10}"
+      RUST_LOG: "proofmark_engine=info"
+      WORKERS: "4"
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    environment:
+      DATABASE_URL: postgresql://web3sign:web3sign_dev@db:5432/web3sign
+      NEXTAUTH_URL: http://localhost:3100
+      PDF_UPLOAD_MAX_MB: "${PDF_UPLOAD_MAX_MB:-10}"
+      PROOFMARK_DEPLOYMENT_MODE: "${PROOFMARK_DEPLOYMENT_MODE:-oss}"
+      RUST_ENGINE_URL: http://rust-engine:9090
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: "465"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_USER:-}
+      ADMIN_EMAIL: ${SMTP_USER:-}
+      ENCRYPTION_MASTER_KEY: "${ENCRYPTION_MASTER_KEY:-}"
+    depends_on:
+      - db
+      - rust-engine
+
+volumes:
+  pgdata:

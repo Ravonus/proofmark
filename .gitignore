@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build
+.next/
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Premium (OSS repo excludes this; private repo overrides)
+premium/
+
+# Private/secrets
+private/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Claude Code
+.claude/
+
+# Temp / test data
+tmp/
+data/
+pentest-*.mjs
+
+# Rust build artifacts
+**/target/
+
+# OpenNext build output
+.open-next/
