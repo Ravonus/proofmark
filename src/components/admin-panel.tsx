@@ -1354,7 +1354,7 @@ function AiLimitsSection() {
   const runtimeHealthMut = trpc.runtime.healthCheck.useMutation({
     onSuccess: () => runtimeQuery.refetch(),
   });
-  const runtimeConfigMut = trpc.runtime.setConfig.useMutation({
+  const _runtimeConfigMut = trpc.runtime.setConfig.useMutation({
     onSuccess: () => runtimeQuery.refetch(),
   });
 
