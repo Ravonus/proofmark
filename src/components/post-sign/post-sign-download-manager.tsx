@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, PackageOpen, Save, Trash2, Upload } from "lucide-react";
+import { FileDown, Loader2, PackageOpen, Save, Trash2, Upload } from "lucide-react";
 import { trpc } from "~/lib/trpc";
 import type { PostSignReveal } from "~/server/db/schema";
 
@@ -288,6 +288,15 @@ export function PostSignDownloadManager({
                     {busyKey === saveKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                     {busyKey === saveKey ? "Saving..." : item.replacementFile ? "Save + replace" : "Save changes"}
                   </button>
+
+                  <a
+                    href={`/api/download/${encodeURIComponent(item.filename)}?documentId=${documentId}`}
+                    download
+                    className="inline-flex items-center gap-1 rounded-xs bg-[var(--bg-card)] px-2.5 py-1.5 text-[10px] font-medium text-secondary border border-[var(--border)] transition-colors hover:bg-[var(--bg-hover)]"
+                  >
+                    <FileDown className="h-3 w-3" />
+                    Download
+                  </a>
 
                   <button
                     onClick={() => handleRemove(item.filename)}
