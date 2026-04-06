@@ -20,9 +20,7 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Core: Commitment scheme (Pedersen-like using hash functions)
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Generate a random 32-byte nonce.
 fn random_nonce() -> [u8; 32] {
@@ -52,9 +50,7 @@ fn xor_bytes(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
     result
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Generic sigma protocol (shared by all proof types)
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Result of a sigma protocol commitment.
 struct SigmaCommit {
@@ -106,9 +102,7 @@ fn sigma_verify(
     claimed_challenge_hex == hex::encode(expected)
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // DocumentProof: prove knowledge of document content
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Proof that the prover knows a document whose SHA-256 hash is `document_hash`.
 /// Does NOT reveal the document content.
@@ -173,9 +167,7 @@ pub fn verify_document_proof(proof: &DocumentProof) -> bool {
     )
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // SignatureProof: prove a signature exists without revealing it
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Proof that a valid signature exists for a document hash by a specific address.
 /// Does NOT reveal the signature bytes.
@@ -255,9 +247,7 @@ pub fn verify_signature_proof(proof: &SignatureProof) -> bool {
     )
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // FieldProof: prove a field value matches criteria without revealing others
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Proof that a specific field in a document has a certain value,
 /// without revealing the rest of the document or other field values.

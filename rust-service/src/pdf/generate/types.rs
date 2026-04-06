@@ -2,9 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Request / Response types
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PdfGenerateRequest {

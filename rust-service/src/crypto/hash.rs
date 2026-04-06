@@ -1,8 +1,5 @@
-//! SHA-256 hashing utilities — mirrors src/lib/hash.ts
-
 use sha2::{Digest, Sha256};
 
-/// SHA-256 of arbitrary bytes, returns raw 32-byte digest.
 #[inline]
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
@@ -10,37 +7,32 @@ pub fn sha256(data: &[u8]) -> [u8; 32] {
     hasher.finalize().into()
 }
 
-/// SHA-256 of arbitrary bytes, returns lowercase hex string.
 #[inline]
 pub fn sha256_hex(data: &[u8]) -> String {
     hex::encode(sha256(data))
 }
 
-/// Double SHA-256 (used in Bitcoin protocols).
 #[inline]
 pub fn double_sha256(data: &[u8]) -> [u8; 32] {
     sha256(&sha256(data))
 }
 
-/// Hash a document's content string — mirrors `hashDocument()`.
 pub fn hash_document(content: &str) -> String {
     sha256_hex(content.as_bytes())
 }
 
-/// Hash a hand-drawn signature from its base64 data URL — mirrors `hashHandSignature()`.
 pub fn hash_hand_signature(data_url: &str) -> String {
     let b64 = match data_url.find(',') {
         Some(idx) => &data_url[idx + 1..],
         None => data_url,
     };
-    // Decode base64 first, then hash the raw bytes
     match crate::util::b64::decode(b64) {
         Ok(raw) => sha256_hex(&raw),
         Err(_) => sha256_hex(b64.as_bytes()),
     }
 }
 
-/// Build the signing message that wallets sign — mirrors `buildSigningMessage()`.
+/// Build the wallet signing message: `proofmark:{hash}:{addr}:{label}[:{ink_hash}]`
 pub fn build_signing_message(
     content_hash: &str,
     address: &str,
@@ -73,7 +65,6 @@ mod tests {
     fn test_double_sha256() {
         let result = double_sha256(b"test");
         assert_eq!(result.len(), 32);
-        // Double SHA-256 should differ from single
         assert_ne!(result, sha256(b"test"));
     }
 

@@ -1,5 +1,4 @@
 //! QR code generation — SVG and PNG data URL output.
-//! Mirrors src/lib/qr-svg.ts.
 
 use image::{ImageBuffer, Luma};
 use qrcode::QrCode;

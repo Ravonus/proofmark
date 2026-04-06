@@ -1,12 +1,57 @@
-//! Index endpoints — document indexing, search, privacy scanning, queue management.
-
 use std::sync::Arc;
 
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
 use super::error;
-use super::types::*;
 use crate::index;
+
+#[derive(Deserialize)]
+pub struct RemoveDocReq {
+    pub doc_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct AutocompleteReq {
+    pub prefix: String,
+    pub max_suggestions: Option<usize>,
+}
+
+#[derive(Deserialize)]
+pub struct ScanDocReq {
+    pub doc_id: String,
+    pub content: String,
+    pub encrypted: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct PrivacyScanReq {
+    pub text: String,
+}
+
+#[derive(Deserialize)]
+pub struct EnqueueJobReq {
+    pub doc_id: String,
+    pub owner_id: String,
+    pub job_type: String,
+}
+
+#[derive(Deserialize)]
+pub struct BulkImportReq {
+    pub owner_id: String,
+    pub doc_ids: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct OwnerReq {
+    pub owner_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct AiIndexReq {
+    pub doc_id: String,
+    pub content: String,
+}
 
 pub async fn index_document(
     engine: web::Data<Arc<index::IndexEngine>>,

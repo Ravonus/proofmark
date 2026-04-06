@@ -1,9 +1,26 @@
-//! Audit endpoints — chained hash computation and verification.
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
-use super::types::*;
 use crate::audit;
+
+#[derive(Deserialize)]
+pub struct ComputeAuditHashReq {
+    pub prev_hash: Option<String>,
+    pub event_type: String,
+    pub actor: String,
+    pub timestamp: String,
+    pub metadata: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+pub struct VerifyAuditChainReq {
+    pub events: Vec<audit::AuditEvent>,
+}
+
+#[derive(Deserialize)]
+pub struct ComputeChainBatchReq {
+    pub events: Vec<(String, String, String, Option<serde_json::Value>)>,
+}
 
 pub async fn compute_audit_hash(body: web::Json<ComputeAuditHashReq>) -> impl Responder {
     let hash = audit::compute_event_hash(

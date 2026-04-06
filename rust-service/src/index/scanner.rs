@@ -99,7 +99,8 @@ pub struct MonetaryValue {
     pub context: String,
 }
 
-// ── Regex patterns ───────────────────────────────────────────────────
+
+
 
 static RE_SECTION_HEADER: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?m)^(?:(?:ARTICLE|SECTION|CLAUSE)\s+)?(\d+(?:\.\d+)*)[.\s]+([A-Z][A-Za-z\s]{2,60})$").unwrap()
@@ -129,7 +130,8 @@ static RE_LEGAL_REF: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)(?:section|§)\s*(\d+(?:\.\d+)*(?:\([a-z]\))?)(?:\s+of\s+(?:the\s+)?([A-Za-z\s]+(?:Act|Code|Law|Statute|Regulation)))").unwrap()
 });
 
-// ── Legal term patterns ──────────────────────────────────────────────
+
+
 
 static LEGAL_PATTERNS: Lazy<Vec<(Regex, LegalCategory)>> = Lazy::new(|| {
     vec![
@@ -271,7 +273,7 @@ pub struct EntitySearchResult {
     pub total_score: f64,
 }
 
-// ── Extraction functions ─────────────────────────────────────────────
+// Extraction functions
 
 fn extract_entities(text: &str, is_encrypted: bool) -> Vec<Entity> {
     let mut entities = Vec::new();
@@ -449,7 +451,7 @@ fn detect_currency(text: &str) -> &'static str {
     "USD"
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// Helpers
 
 /// Single-pass dedup: group by (type, lowered_value), sum frequencies.
 fn deduplicate_entities(entities: &mut Vec<Entity>) {

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium router stubs expose `any` types */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { trpc } from "~/lib/trpc";
 import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
@@ -91,10 +92,9 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: typeof Users; premiumOnly
 export function AdminPanel() {
   const identity = useConnectedIdentity();
   const statusQuery = trpc.account.operatorStatus.useQuery(undefined, { enabled: identity.isSignedIn });
-  const [isDev, setIsDev] = useState(false);
-  useEffect(() => {
-    setIsDev(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-  }, []);
+  const isDev =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
 
@@ -1749,6 +1749,60 @@ function SystemSection({ status }: { status?: OperatorStatus | null }) {
 
 // ── Premium Section ──
 
+function CollabSessionsAdmin() {
+  const capabilities = trpc.collab.capabilities.useQuery();
+  const available = capabilities.data?.available ?? false;
+  const sessionsQuery = trpc.collab.list.useQuery({ status: "active" }, { enabled: available });
+  const sessions = (sessionsQuery.data ?? []) as Array<{
+    session: { id: string; title: string; createdAt: string | number | Date; hostUserId: string };
+    participants: Array<{ isActive: boolean }>;
+  }>;
+
+  return (
+    <GlassCard className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold">Active Sessions</h4>
+        <button
+          onClick={() => void sessionsQuery.refetch()}
+          className="text-muted transition-colors hover:text-secondary"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${sessionsQuery.isFetching ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+      {sessions.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted">No active collaboration sessions.</p>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map((s) => {
+            const activeCount = s.participants.filter((p) => p.isActive).length;
+            return (
+              <div
+                key={s.session.id}
+                className="bg-surface/30 flex items-center justify-between rounded-lg border border-border p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{s.session.title}</p>
+                  <p className="text-xs text-muted">
+                    Host: {s.session.hostUserId.slice(0, 10)}... &middot;{" "}
+                    {new Date(s.session.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <Users className="h-3 w-3" />
+                    {activeCount}
+                  </span>
+                  <StatusPill tone="success" label="Live" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
 function PremiumSection({ status }: { status?: OperatorStatus | null }) {
   const premiumFeatures = status?.featureStates.filter((f) => !f.oss) ?? [];
   const enabledCount = premiumFeatures.filter((f) => f.effectiveEnabled).length;
@@ -1868,6 +1922,9 @@ function PremiumSection({ status }: { status?: OperatorStatus | null }) {
               ))}
           </div>
         </GlassCard>
+
+        {/* Active Collab Sessions */}
+        <CollabSessionsAdmin />
 
         {/* AI Enterprise */}
         <GlassCard className="space-y-4">

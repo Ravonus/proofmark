@@ -5,8 +5,9 @@ mod crypto;
 mod forensic;
 pub mod index;
 mod pdf;
-pub mod pqcrypto;
+pub mod pq;
 mod qr;
+pub mod zk;
 pub mod util;
 mod verify;
 
@@ -101,7 +102,6 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-/// Spawn background maintenance tasks.
 fn spawn_background_tasks(room_mgr: Arc<collab::RoomManager>) {
     // Stale awareness cleanup (every 30s)
     let mgr = room_mgr.clone();

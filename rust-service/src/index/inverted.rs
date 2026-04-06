@@ -11,7 +11,8 @@ use rayon::prelude::*;
 use super::keys;
 use super::store::{IndexStore, CF_INVERTED, CF_FORWARD, StoreResult};
 
-// ── Term entry (8 bytes, zero-copy) ─────────────────────────────────
+
+
 
 /// Per-(token, doc_id) payload: frequency + first position.
 #[derive(Debug, Clone, Copy)]
@@ -39,7 +40,6 @@ impl TermEntry {
     }
 }
 
-// ── Indexing ─────────────────────────────────────────────────────────
 
 /// Index a document's tokens into the inverted + forward indices atomically.
 pub fn index_tokens(
@@ -89,7 +89,6 @@ pub fn remove_document(store: &IndexStore, doc_id: &str) -> StoreResult<()> {
     store.write_batch(batch)
 }
 
-// ── Search ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ScoredDoc {
@@ -162,7 +161,8 @@ pub fn search_any(
     finish_results(store, candidates, owner_id, max_results)
 }
 
-// ── Internal helpers ────────────────────────────────────────────────
+
+
 
 /// Scan the inverted index for all documents containing `token`.
 fn gather_token_docs(store: &IndexStore, token: &str) -> HashMap<String, TermEntry> {
@@ -221,7 +221,8 @@ fn tf_score(freq: u32) -> f64 {
     (1.0 + freq as f64).ln()
 }
 
-// ── Tests ───────────────────────────────────────────────────────────
+
+
 
 #[cfg(test)]
 mod tests {

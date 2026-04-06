@@ -53,7 +53,8 @@ pub fn damerau_levenshtein(a: &str, b: &str) -> usize {
     p_row[n]
 }
 
-// ── BK-tree internals ────────────────────────────────────────────────
+
+
 
 #[derive(Debug)]
 struct BkNode {
@@ -126,7 +127,8 @@ impl BkNode {
     }
 }
 
-// ── Public API ───────────────────────────────────────────────────────
+
+
 
 /// Thread-safe BK-tree for fuzzy search.
 pub struct FuzzyIndex {
@@ -187,7 +189,8 @@ pub struct FuzzyMatch {
     pub doc_ids: HashSet<String>,
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+
+
 
 #[cfg(test)]
 mod tests {

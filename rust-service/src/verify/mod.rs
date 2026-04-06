@@ -1,10 +1,10 @@
 //! Multi-chain signature verification: EVM (EIP-191), Bitcoin (ECDSA + BIP-322), Solana (Ed25519).
-//!
-//! Mirrors src/lib/verify.ts with identical verification logic.
 
 mod bitcoin;
+mod encoding;
 mod evm;
 mod solana;
+mod varint;
 
 use serde::{Deserialize, Serialize};
 

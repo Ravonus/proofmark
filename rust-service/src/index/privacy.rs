@@ -48,7 +48,8 @@ pub struct PrivacyScanResult {
     pub redacted_text: String,
 }
 
-// ── Regex patterns ───────────────────────────────────────────────────
+
+
 
 static RE_EMAIL: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap()

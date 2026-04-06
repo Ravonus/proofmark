@@ -1,57 +1,7 @@
-//! Variable-length integer encoding — two standard formats.
+//! Variable-length integer encoding — LEB128 (lib0 / Yjs compatible).
 //!
-//! **Bitcoin VarInt**: prefix byte determines width (< 0xFD = 1 byte, 0xFD = 3, 0xFE = 5).
-//! Used for Bitcoin message hashing and witness stack parsing.
-//!
-//! **LEB128 VarUint** (lib0 compatible): MSB continuation bit, 7 data bits per byte.
-//! Used by Yjs sync protocol, collab wire format, and forensic replay tapes.
-
-// ── Bitcoin VarInt ──────────────────────────────────────────────────────────────
-
-/// Encode a length as a Bitcoin-style VarInt.
-pub fn btc_encode_varint(length: usize) -> Vec<u8> {
-    if length < 0xfd {
-        vec![length as u8]
-    } else if length <= 0xffff {
-        let mut buf = vec![0xfd];
-        buf.extend_from_slice(&(length as u16).to_le_bytes());
-        buf
-    } else {
-        let mut buf = vec![0xfe];
-        buf.extend_from_slice(&(length as u32).to_le_bytes());
-        buf
-    }
-}
-
-/// Read a Bitcoin-style VarInt from `buf` at `offset`.
-/// Returns `(value, bytes_consumed)`.
-pub fn btc_read_varint(buf: &[u8], offset: usize) -> Option<(usize, usize)> {
-    let first = *buf.get(offset)?;
-    if first < 0xfd {
-        Some((first as usize, 1))
-    } else if first == 0xfd {
-        if offset + 3 > buf.len() {
-            return None;
-        }
-        let val = u16::from_le_bytes([buf[offset + 1], buf[offset + 2]]) as usize;
-        Some((val, 3))
-    } else if first == 0xfe {
-        if offset + 5 > buf.len() {
-            return None;
-        }
-        let val = u32::from_le_bytes([
-            buf[offset + 1],
-            buf[offset + 2],
-            buf[offset + 3],
-            buf[offset + 4],
-        ]) as usize;
-        Some((val, 5))
-    } else {
-        None // 64-bit varint not supported
-    }
-}
-
-// ── LEB128 VarUint (lib0 / Yjs compatible) ─────────────────────────────────────
+//! MSB continuation bit, 7 data bits per byte. Used by Yjs sync protocol,
+//! collab wire format, and forensic replay tapes.
 
 /// Read a variable-length unsigned integer (LEB128 / lib0 format).
 pub fn read_var_uint(buf: &[u8], pos: &mut usize) -> Option<u64> {
@@ -112,8 +62,6 @@ pub fn read_var_string(buf: &[u8], pos: &mut usize) -> Option<String> {
     String::from_utf8(bytes).ok()
 }
 
-// ── Zigzag-encoded signed VarInt (forensic replay tapes) ────────────────────────
-
 /// Read a zigzag-encoded signed integer (used by forensic replay tapes).
 pub fn read_var_int_zigzag(buf: &[u8], pos: &mut usize) -> Option<i32> {
     let zigzag = read_var_uint(buf, pos)? as u32;
@@ -127,15 +75,6 @@ pub fn read_var_int_zigzag(buf: &[u8], pos: &mut usize) -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn btc_varint_roundtrip() {
-        for &val in &[0usize, 1, 0xfc, 0xfd, 0xffff, 0x10000] {
-            let encoded = btc_encode_varint(val);
-            let (decoded, _) = btc_read_varint(&encoded, 0).unwrap();
-            assert_eq!(val, decoded);
-        }
-    }
 
     #[test]
     fn leb128_varuint_roundtrip() {
@@ -161,7 +100,7 @@ mod tests {
 
     #[test]
     fn zigzag_decode() {
-        // zigzag: 0→0, 1→-1, 2→1, 3→-2, 4→2
+        // zigzag: 0->0, 1->-1, 2->1, 3->-2, 4->2
         let cases: &[(u64, i32)] = &[(0, 0), (1, -1), (2, 1), (3, -2), (4, 2)];
         for &(encoded_val, expected) in cases {
             let mut buf = Vec::new();

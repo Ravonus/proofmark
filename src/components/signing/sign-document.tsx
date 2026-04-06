@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRecipientActionLabel } from "~/lib/signing/recipient-roles";
 import { useWallet } from "../wallet-provider";
@@ -289,18 +290,18 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
                   <FileDown className="h-3.5 w-3.5" /> Download PDF
                 </a>
               )}
-              <a
+              <Link
                 href={`/view/${documentId}${claimToken ? `?claim=${claimToken}` : ""}`}
                 className="bg-accent/10 hover:bg-accent/20 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium text-accent transition-colors"
               >
                 <FileSignature className="h-3.5 w-3.5" /> View Online
-              </a>
-              <a
+              </Link>
+              <Link
                 href={`/verify/${doc.contentHash}`}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-surface-hover px-4 py-2 text-xs font-medium text-secondary transition-colors hover:bg-surface-elevated"
               >
                 <ShieldCheck className="h-3.5 w-3.5" /> Verify
-              </a>
+              </Link>
               {doc.status === "COMPLETED" && (
                 <a
                   href={`/api/proof-packet/${documentId}?address=${address ?? ""}`}
@@ -314,12 +315,12 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
             </div>
           </div>
           {doc.postSignReveal && (
-            <a
+            <Link
               href={`/reveal/${documentId}`}
-              className="inline-block rounded-xl bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+              className="inline-block rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               View Project Details &rarr;
-            </a>
+            </Link>
           )}
         </motion.div>
 
@@ -498,7 +499,7 @@ export function SignDocument({ documentId, claimToken }: { documentId: string; c
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 pb-28">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 pb-20 sm:pb-28">
       {/* Signing error banner */}
       {signingError && (
         <div className="flex items-center justify-between rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">

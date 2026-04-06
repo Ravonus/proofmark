@@ -1,8 +1,4 @@
-//! Bitcoin address encoding utilities — Bech32, Bech32m, Base58Check, HASH160.
-//!
-//! These are general-purpose encoding primitives used for Bitcoin address
-//! derivation. Extracted from verify/bitcoin.rs to avoid coupling address
-//! encoding with signature verification.
+//! Bitcoin address encoding: Bech32, Bech32m, Base58Check, HASH160.
 
 use crate::crypto::sha256;
 use crate::crypto::double_sha256;
@@ -29,7 +25,6 @@ pub fn base58check_encode(version: u8, payload: &[u8]) -> String {
     bs58::encode(data).into_string()
 }
 
-// ── Bech32 / Bech32m ────────────────────────────────────────────────────────────
 
 const BECH32_CHARSET: &[u8; 32] = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const BECH32_SPEC: u32 = 1;

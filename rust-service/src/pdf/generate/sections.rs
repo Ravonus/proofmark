@@ -6,9 +6,8 @@ use printpdf::Mm;
 use super::draw::*;
 use super::theme::*;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Footer stamping
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn stamp_footers(ctx: &PdfCtx, content_hash: &str) {
     let total = ctx.pages.len();
@@ -40,9 +39,8 @@ pub(super) fn stamp_footers(ctx: &PdfCtx, content_hash: &str) {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Page annotation helpers
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn append_page_annotation(
     doc: &mut LoDocument,
@@ -128,9 +126,8 @@ pub(super) fn attach_cover_verification_note(
     Ok(out)
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Forensic evidence extraction
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn extract_forensic_lines(fe: &serde_json::Value) -> Vec<String> {
     if let Some(summary) = fe.get("pdfSummary").and_then(|value| value.get("lines")).and_then(|value| value.as_array()) {

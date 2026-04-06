@@ -23,7 +23,8 @@ pub enum CollabMessage {
     Custom(String),
 }
 
-// ── Encoding ─────────────────────────────────────────────────────────────────
+
+
 
 /// Encode a CollabMessage to wire format.
 pub fn encode_message(msg: &CollabMessage) -> Vec<u8> {

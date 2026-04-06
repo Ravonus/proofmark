@@ -359,7 +359,7 @@ export function ForensicReplayPanel({ documentId }: Props) {
 
   const [prepared, setPrepared] = useState<PreparedReplaySession | null>(null);
   const [mode, setMode] = useState<ReplayMode>("sync");
-  const [selectedSignerId, setSelectedSignerId] = useState<string>("");
+  const [selectedSignerId, setSelectedSignerId] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [currentMs, setCurrentMs] = useState(0);
@@ -386,15 +386,17 @@ export function ForensicReplayPanel({ documentId }: Props) {
     };
   }, [participants]);
 
-  useEffect(() => {
-    if (!selectedSignerId && prepared?.lanes[0]) {
-      setSelectedSignerId(prepared.lanes[0].signerId);
+  const effectiveSelectedSignerId = useMemo(() => {
+    if (!prepared?.lanes.length) return "";
+    if (selectedSignerId && prepared.lanes.some((lane) => lane.signerId === selectedSignerId)) {
+      return selectedSignerId;
     }
+    return prepared.lanes[0]?.signerId ?? "";
   }, [prepared, selectedSignerId]);
 
   const selectedLane = useMemo(
-    () => prepared?.lanes.find((lane) => lane.signerId === selectedSignerId) ?? prepared?.lanes[0] ?? null,
-    [prepared, selectedSignerId],
+    () => prepared?.lanes.find((lane) => lane.signerId === effectiveSelectedSignerId) ?? prepared?.lanes[0] ?? null,
+    [effectiveSelectedSignerId, prepared],
   );
 
   const visibleLanes = useMemo(() => {
@@ -405,10 +407,7 @@ export function ForensicReplayPanel({ documentId }: Props) {
 
   const activeDuration =
     mode === "sync" ? (prepared?.durationMs ?? 0) : (selectedLane?.durationMs ?? prepared?.durationMs ?? 0);
-
-  useEffect(() => {
-    setCurrentMs((value) => Math.min(value, activeDuration));
-  }, [activeDuration]);
+  const effectiveCurrentMs = Math.min(currentMs, activeDuration);
 
   useEffect(() => {
     if (!playing || activeDuration <= 0) return;
@@ -435,9 +434,9 @@ export function ForensicReplayPanel({ documentId }: Props) {
   const snapshots = useMemo(() => {
     return visibleLanes.map((lane) => ({
       lane,
-      snapshot: buildReplayLaneSnapshot(lane, currentMs),
+      snapshot: buildReplayLaneSnapshot(lane, effectiveCurrentMs),
     }));
-  }, [currentMs, visibleLanes]);
+  }, [effectiveCurrentMs, visibleLanes]);
 
   useEffect(() => {
     if (!canvasRef.current || !prepared) return;
@@ -446,19 +445,19 @@ export function ForensicReplayPanel({ documentId }: Props) {
       mode,
       source: prepared.source,
       durationMs: activeDuration,
-      currentMs,
+      currentMs: effectiveCurrentMs,
       lanes: snapshots,
     });
-  }, [activeDuration, currentMs, mode, prepared, replayQuery.data?.title, snapshots]);
+  }, [activeDuration, effectiveCurrentMs, mode, prepared, replayQuery.data?.title, snapshots]);
 
   const recentActivity = useMemo(() => {
     const visibleLaneIds = new Set(visibleLanes.map((lane) => lane.lane));
     const source = prepared?.mergedEvents ?? [];
     return source
-      .filter((event) => event.atMs <= currentMs && visibleLaneIds.has(event.lane))
+      .filter((event) => event.atMs <= effectiveCurrentMs && visibleLaneIds.has(event.lane))
       .slice(-6)
       .reverse();
-  }, [currentMs, prepared?.mergedEvents, visibleLanes]);
+  }, [effectiveCurrentMs, prepared?.mergedEvents, visibleLanes]);
 
   const exportReplayVideo = async () => {
     if (!prepared || visibleLanes.length === 0) return;
@@ -632,12 +631,12 @@ export function ForensicReplayPanel({ documentId }: Props) {
       <div className="space-y-3">
         <canvas ref={canvasRef} className="h-[420px] w-full rounded-2xl border border-border bg-surface-card" />
         <div className="flex items-center gap-3">
-          <span className="min-w-20 text-xs font-medium text-muted">{formatDuration(currentMs)}</span>
+          <span className="min-w-20 text-xs font-medium text-muted">{formatDuration(effectiveCurrentMs)}</span>
           <input
             type="range"
             min={0}
             max={Math.max(1, activeDuration)}
-            value={Math.min(currentMs, Math.max(1, activeDuration))}
+            value={Math.min(effectiveCurrentMs, Math.max(1, activeDuration))}
             onChange={(event) => {
               setPlaying(false);
               setCurrentMs(Number(event.target.value));
