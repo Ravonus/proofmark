@@ -6,8 +6,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::keys;
-use super::store::{IndexStore, CF_PREFIX, StoreResult};
+use crate::index::store::keys;
+use crate::index::store::{IndexStore, CF_PREFIX, StoreResult};
 
 
 

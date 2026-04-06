@@ -17,8 +17,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use super::privacy::{self, PiiType, PrivacyScanResult};
-use super::store::{IndexStore, CF_ENCRYPTED, PrivacyLevel, StoreResult};
-use super::tokenizer;
+use crate::index::store::{IndexStore, CF_ENCRYPTED, PrivacyLevel, StoreResult};
+use crate::index::search::tokenizer;
 
 // Regexes for safe entity extraction — compiled once.
 static RE_MONEY: Lazy<Regex> = Lazy::new(|| Regex::new(r"\$[\d,]+\.?\d*").unwrap());

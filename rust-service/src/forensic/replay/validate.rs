@@ -1,115 +1,10 @@
-//! Replay tape validation — decodes binary replay tapes and extracts
-//! ground-truth metrics for cross-validation against claimed values.
+//! Main replay tape validation logic.
 
-use serde::{Deserialize, Serialize};
-
-use super::ForensicFlag;
+use super::anomalies::detect_structural_anomalies;
+use super::decode::*;
+use super::types::*;
 use crate::crypto::sha256_hex;
-use crate::util::varint;
-
-// Server-side replay tape validation
-//
-// Decodes the binary replay tape server-side and extracts ground-truth
-// metrics (event counts by type, total duration, signature strokes, etc.).
-// The caller compares these against the client-supplied behavioral metrics
-// to detect fabrication.
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReplayTapeVerification {
-    pub valid: bool,
-    pub error: Option<String>,
-    /// Actual metrics extracted from decoding the binary tape
-    pub actual_event_count: u32,
-    pub actual_duration_quanta: u32,
-    pub actual_duration_ms: u32,
-    pub actual_click_count: u32,
-    pub actual_key_count: u32,
-    pub actual_mouse_move_count: u32,
-    pub actual_scroll_count: u32,
-    pub actual_focus_count: u32,
-    pub actual_signature_start_count: u32,
-    pub actual_signature_point_count: u32,
-    pub actual_signature_end_count: u32,
-    pub actual_field_commit_count: u32,
-    pub actual_clipboard_count: u32,
-    pub actual_gaze_point_count: u32,
-    pub actual_gaze_fixation_count: u32,
-    pub actual_gaze_blink_count: u32,
-    pub actual_gaze_saccade_count: u32,
-    pub actual_gaze_calibration_count: u32,
-    pub actual_gaze_lost_count: u32,
-    /// Mismatches detected against claimed metrics
-    pub mismatches: Vec<ReplayMismatch>,
-    /// Structural anomalies in the tape itself
-    pub anomalies: Vec<ForensicFlag>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReplayMismatch {
-    pub field: String,
-    pub claimed: f64,
-    pub actual: f64,
-    pub severity: String,
-    pub message: String,
-}
-
-/// Opcodes matching the TypeScript REPLAY_OPS
-mod replay_ops {
-    pub const SCROLL: u8 = 1;
-    pub const CLICK: u8 = 2;
-    pub const KEY: u8 = 3;
-    pub const FOCUS: u8 = 4;
-    pub const BLUR: u8 = 5;
-    pub const VISIBILITY: u8 = 6;
-    pub const HIGHLIGHT: u8 = 7;
-    pub const NAVIGATION: u8 = 8;
-    pub const PAGE: u8 = 9;
-    pub const MODAL: u8 = 10;
-    pub const SIGNATURE_START: u8 = 11;
-    pub const SIGNATURE_POINT: u8 = 12;
-    pub const SIGNATURE_END: u8 = 13;
-    pub const SIGNATURE_COMMIT: u8 = 14;
-    pub const FIELD_COMMIT: u8 = 15;
-    pub const CLIPBOARD: u8 = 16;
-    pub const CONTEXT_MENU: u8 = 17;
-    pub const SIGNATURE_CLEAR: u8 = 18;
-    pub const MOUSE_MOVE: u8 = 19;
-    pub const HOVER_DWELL: u8 = 20;
-    pub const VIEWPORT_RESIZE: u8 = 21;
-    pub const TOUCH_START: u8 = 22;
-    pub const TOUCH_MOVE: u8 = 23;
-    pub const TOUCH_END: u8 = 24;
-    pub const FIELD_CORRECTION: u8 = 25;
-    pub const SCROLL_MOMENTUM: u8 = 26;
-    pub const GAZE_POINT: u8 = 27;
-    pub const GAZE_FIXATION: u8 = 28;
-    pub const GAZE_SACCADE: u8 = 29;
-    pub const GAZE_BLINK: u8 = 30;
-    pub const GAZE_CALIBRATION: u8 = 31;
-    pub const GAZE_LOST: u8 = 32;
-}
-
-fn read_varuint(bytes: &[u8], offset: &mut usize) -> u32 {
-    varint::read_var_uint(bytes, offset).unwrap_or(0) as u32
-}
-
-fn read_varint(bytes: &[u8], offset: &mut usize) -> i32 {
-    varint::read_var_int_zigzag(bytes, offset).unwrap_or(0)
-}
-
-/// Skip N varuint fields in the tape
-fn skip_varuints(bytes: &[u8], offset: &mut usize, count: usize) {
-    for _ in 0..count {
-        read_varuint(bytes, offset);
-    }
-}
-
-/// Skip N raw bytes
-fn skip_bytes(offset: &mut usize, count: usize) {
-    *offset += count;
-}
-
-const TIME_QUANTUM_MS: u32 = 8;
+use crate::forensic::ForensicFlag;
 
 /// Decode the replay tape and extract ground-truth metrics.
 pub fn validate_replay_tape(
@@ -460,66 +355,15 @@ pub fn validate_replay_tape(
     }
 
     // Structural anomaly detection
-
-    // Gaze fixation uniformity check (synthetic gaze has very uniform fixations)
-    if gaze_fixation_durations.len() >= 6 {
-        let avg = gaze_fixation_durations.iter().sum::<u32>() as f64 / gaze_fixation_durations.len() as f64;
-        let variance = gaze_fixation_durations.iter()
-            .map(|&d| (d as f64 - avg).powi(2))
-            .sum::<f64>() / gaze_fixation_durations.len() as f64;
-        let cv = if avg > 0.0 { variance.sqrt() / avg } else { 0.0 };
-        if cv < 0.08 {
-            anomalies.push(ForensicFlag {
-                code: "TAPE_GAZE_FIXATION_TOO_UNIFORM".into(),
-                severity: "critical".into(),
-                message: format!("Gaze fixation durations in tape are suspiciously uniform (CV={cv:.3})"),
-            });
-        }
-    }
-
-    // Gaze blink regularity check (human blinks are irregular)
-    if gaze_blink_durations.len() >= 4 {
-        let avg = gaze_blink_durations.iter().sum::<u32>() as f64 / gaze_blink_durations.len() as f64;
-        let variance = gaze_blink_durations.iter()
-            .map(|&d| (d as f64 - avg).powi(2))
-            .sum::<f64>() / gaze_blink_durations.len() as f64;
-        let cv = if avg > 0.0 { variance.sqrt() / avg } else { 0.0 };
-        if cv < 0.10 {
-            anomalies.push(ForensicFlag {
-                code: "TAPE_GAZE_BLINK_TOO_UNIFORM".into(),
-                severity: "warn".into(),
-                message: format!("Gaze blink durations in tape are suspiciously uniform (CV={cv:.3})"),
-            });
-        }
-    }
-
-    // Typing cadence cross-check
-    if key_deltas.len() >= 5 {
-        let avg = key_deltas.iter().sum::<u32>() as f64 / key_deltas.len() as f64;
-        let variance = key_deltas.iter()
-            .map(|&d| (d as f64 - avg).powi(2))
-            .sum::<f64>() / key_deltas.len() as f64;
-        let cv = if avg > 0.0 { variance.sqrt() / avg } else { 0.0 };
-        if cv < 0.08 {
-            anomalies.push(ForensicFlag {
-                code: "TAPE_TYPING_CADENCE_TOO_UNIFORM".into(),
-                severity: "warn".into(),
-                message: format!("Key press timing in tape is suspiciously uniform (CV={cv:.3})"),
-            });
-        }
-    }
-
-    // Empty tape with claimed activity
-    if event_count == 0 {
-        let claimed_events = claimed_metrics.get("eventCount").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        if claimed_events > 0.0 {
-            anomalies.push(ForensicFlag {
-                code: "TAPE_EMPTY_WITH_CLAIMED_EVENTS".into(),
-                severity: "critical".into(),
-                message: format!("Tape contains 0 events but metrics claim {claimed_events}"),
-            });
-        }
-    }
+    let claimed_events = claimed_metrics.get("eventCount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let structural_anomalies = detect_structural_anomalies(
+        &gaze_fixation_durations,
+        &gaze_blink_durations,
+        &key_deltas,
+        event_count,
+        claimed_events,
+    );
+    anomalies.extend(structural_anomalies);
 
     // Verify tape hash matches claimed tapeHash (if provided in metrics)
     let _tape_hash = sha256_hex(&tape_bytes);
@@ -548,35 +392,5 @@ pub fn validate_replay_tape(
         actual_gaze_lost_count: gaze_lost_count,
         mismatches,
         anomalies,
-    }
-}
-
-impl Default for ReplayTapeVerification {
-    fn default() -> Self {
-        Self {
-            valid: false,
-            error: None,
-            actual_event_count: 0,
-            actual_duration_quanta: 0,
-            actual_duration_ms: 0,
-            actual_click_count: 0,
-            actual_key_count: 0,
-            actual_mouse_move_count: 0,
-            actual_scroll_count: 0,
-            actual_focus_count: 0,
-            actual_signature_start_count: 0,
-            actual_signature_point_count: 0,
-            actual_signature_end_count: 0,
-            actual_field_commit_count: 0,
-            actual_clipboard_count: 0,
-            actual_gaze_point_count: 0,
-            actual_gaze_fixation_count: 0,
-            actual_gaze_blink_count: 0,
-            actual_gaze_saccade_count: 0,
-            actual_gaze_calibration_count: 0,
-            actual_gaze_lost_count: 0,
-            mismatches: Vec::new(),
-            anomalies: Vec::new(),
-        }
     }
 }
