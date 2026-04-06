@@ -179,9 +179,7 @@ impl Room {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Room Manager
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Global room manager — manages all active collaboration rooms.
 pub struct RoomManager {

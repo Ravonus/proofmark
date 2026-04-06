@@ -138,7 +138,7 @@ impl IndexStore {
         self.stats.read().clone()
     }
 
-    // ── Meta operations ──────────────────────────────────────────────
+    // Meta operations
 
     pub fn put_meta(&self, doc_id: &str, meta: &DocumentMeta) -> StoreResult<()> {
         let cf = self.cf(CF_META)?;
@@ -174,7 +174,7 @@ impl IndexStore {
         Ok(ids)
     }
 
-    // ── Generic CF operations ────────────────────────────────────────
+    // Generic CF operations
 
     /// Put a value into a column family.
     pub fn put_cf(&self, cf_name: &str, key: &[u8], value: &[u8]) -> StoreResult<()> {
@@ -236,7 +236,7 @@ impl IndexStore {
         Ok(())
     }
 
-    // ── Stats ────────────────────────────────────────────────────────
+    // Stats
 
     pub fn increment_stat<F: FnOnce(&mut IndexStats)>(&self, f: F) {
         let mut stats = self.stats.write();

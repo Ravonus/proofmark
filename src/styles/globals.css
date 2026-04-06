@@ -92,6 +92,25 @@
   --replay-sidebar-bg: #080c14;
   --replay-page-bg: #0a0f1a;
 
+  /* Opacity variants — for use in Tailwind arbitrary values */
+  --accent-10: rgba(124, 92, 252, 0.1);
+  --accent-20: rgba(124, 92, 252, 0.2);
+  --accent-25: rgba(124, 92, 252, 0.25);
+  --accent-30: rgba(124, 92, 252, 0.3);
+  --accent-40: rgba(124, 92, 252, 0.4);
+  --accent-50: rgba(124, 92, 252, 0.5);
+  --success-10: rgba(52, 211, 153, 0.1);
+  --success-15: rgba(52, 211, 153, 0.15);
+  --success-20: rgba(52, 211, 153, 0.2);
+  --success-30: rgba(52, 211, 153, 0.3);
+  --danger-15: rgba(248, 113, 113, 0.15);
+  --danger-20: rgba(248, 113, 113, 0.2);
+  --warning-20: rgba(217, 119, 6, 0.2);
+  --bg-hover-30: rgba(20, 20, 26, 0.3);
+  --bg-inset-30: rgba(10, 10, 14, 0.3);
+  --bg-inset-40: rgba(10, 10, 14, 0.4);
+  --bg-card-80: rgba(14, 14, 18, 0.8);
+
   /* Radii — sharp, intentional */
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -153,6 +172,25 @@
   /* Signature */
   --sig-stroke: #161616;
   --sig-bg: #fffdf8;
+
+  /* Opacity variants */
+  --accent-10: rgba(109, 77, 232, 0.1);
+  --accent-20: rgba(109, 77, 232, 0.2);
+  --accent-25: rgba(109, 77, 232, 0.25);
+  --accent-30: rgba(109, 77, 232, 0.3);
+  --accent-40: rgba(109, 77, 232, 0.4);
+  --accent-50: rgba(109, 77, 232, 0.5);
+  --success-10: rgba(5, 150, 105, 0.1);
+  --success-15: rgba(5, 150, 105, 0.15);
+  --success-20: rgba(5, 150, 105, 0.2);
+  --success-30: rgba(5, 150, 105, 0.3);
+  --danger-15: rgba(220, 38, 38, 0.15);
+  --danger-20: rgba(220, 38, 38, 0.2);
+  --warning-20: rgba(217, 119, 6, 0.2);
+  --bg-hover-30: rgba(240, 240, 244, 0.3);
+  --bg-inset-30: rgba(244, 244, 248, 0.3);
+  --bg-inset-40: rgba(244, 244, 248, 0.4);
+  --bg-card-80: rgba(255, 255, 255, 0.8);
 
   /* Forensic replay canvas */
   --replay-canvas-bg: #f1f5f9;

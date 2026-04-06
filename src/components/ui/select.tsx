@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check } from "lucide-react";
 
@@ -51,10 +52,11 @@ export function Select({
     const shouldDropUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
     setDropUp(shouldDropUp);
 
+    const dropdownWidth = Math.max(rect.width, 180);
     setPosition({
       top: shouldDropUp ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)),
-      width: Math.max(rect.width, 180),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - dropdownWidth - 8)),
+      width: dropdownWidth,
     });
   }, [options.length]);
 
@@ -78,6 +80,16 @@ export function Select({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  const [highlightedIdx, setHighlightedIdx] = useState(-1);
+
+  useEffect(() => {
+    if (open) {
+      const enabledOpts = options.filter((o) => !o.disabled);
+      const idx = enabledOpts.findIndex((o) => o.value === value);
+      setHighlightedIdx(idx >= 0 ? idx : 0);
+    }
+  }, [open, value, options]);
+
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -86,23 +98,22 @@ export function Select({
         return;
       }
       const enabledOpts = options.filter((o) => !o.disabled);
-      const idx = enabledOpts.findIndex((o) => o.value === value);
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const next = enabledOpts[(idx + 1) % enabledOpts.length];
-        if (next) onChange(next.value);
+        setHighlightedIdx((prev) => (prev + 1) % enabledOpts.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        const prev = enabledOpts[(idx - 1 + enabledOpts.length) % enabledOpts.length];
-        if (prev) onChange(prev.value);
+        setHighlightedIdx((prev) => (prev - 1 + enabledOpts.length) % enabledOpts.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
+        const enabledOpt = enabledOpts[highlightedIdx];
+        if (enabledOpt) onChange(enabledOpt.value);
         setOpen(false);
       }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, value, options, onChange]);
+  }, [open, options, onChange, highlightedIdx]);
 
   const sizeClasses = size === "sm" ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[12px]";
 
@@ -136,9 +147,10 @@ export function Select({
         </motion.span>
       </button>
 
-      <AnimatePresence>
-        {open && position && (
-          <>
+      {open &&
+        position &&
+        createPortal(
+          <AnimatePresence>
             <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
 
             <motion.div
@@ -157,36 +169,49 @@ export function Select({
               }}
             >
               <div className="overflow-y-auto p-0.5" style={{ maxHeight: 252 }}>
-                {options.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    disabled={opt.disabled}
-                    onClick={() => {
-                      onChange(opt.value);
-                      setOpen(false);
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
-                      opt.value === value
-                        ? "bg-[var(--accent-subtle)] text-accent"
-                        : opt.disabled
-                          ? "cursor-not-allowed opacity-40"
-                          : "text-primary hover:bg-[var(--bg-hover)]"
-                    }`}
-                  >
-                    {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate">{opt.label}</div>
-                      {opt.description && <div className="truncate text-[9px] text-muted">{opt.description}</div>}
-                    </div>
-                    {opt.value === value && <Check className="h-3 w-3 shrink-0 text-accent" />}
-                  </button>
-                ))}
+                {(() => {
+                  const enabledOpts = options.filter((o) => !o.disabled);
+                  return options.map((opt) => {
+                    const isSelected = opt.value === value;
+                    const enabledIdx = enabledOpts.indexOf(opt);
+                    const isHighlighted = !opt.disabled && enabledIdx === highlightedIdx;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={opt.disabled}
+                        onMouseEnter={() => {
+                          if (!opt.disabled && enabledIdx >= 0) setHighlightedIdx(enabledIdx);
+                        }}
+                        onClick={() => {
+                          onChange(opt.value);
+                          setOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
+                          isSelected
+                            ? "bg-[var(--accent-subtle)] text-accent"
+                            : opt.disabled
+                              ? "cursor-not-allowed opacity-40"
+                              : isHighlighted
+                                ? "bg-[var(--bg-hover)] text-primary"
+                                : "text-primary hover:bg-[var(--bg-hover)]"
+                        }`}
+                      >
+                        {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate">{opt.label}</div>
+                          {opt.description && <div className="truncate text-[9px] text-muted">{opt.description}</div>}
+                        </div>
+                        {isSelected && <Check className="h-3 w-3 shrink-0 text-accent" />}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </motion.div>
-          </>
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </div>
   );
 }

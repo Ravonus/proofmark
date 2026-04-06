@@ -9,7 +9,8 @@ use std::collections::{HashMap, HashSet};
 use super::keys;
 use super::store::{IndexStore, CF_PREFIX, StoreResult};
 
-// ── Indexing ─────────────────────────────────────────────────────────
+
+
 
 /// Insert all prefixes of each token, associated with `doc_id`.
 pub fn index_prefixes(
@@ -63,7 +64,8 @@ where
     Ok(())
 }
 
-// ── Search ──────────────────────────────────────────────────────────
+
+
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PrefixMatch {

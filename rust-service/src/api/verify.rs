@@ -1,10 +1,16 @@
-//! Signature verification endpoint — multi-chain (ETH, BTC, SOL).
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
 use super::error;
-use super::types::*;
 use crate::verify;
+
+#[derive(Deserialize)]
+pub struct VerifySigReq {
+    pub chain: String,
+    pub address: String,
+    pub message: String,
+    pub signature: String,
+}
 
 pub async fn verify_signature(body: web::Json<VerifySigReq>) -> impl Responder {
     let chain = match body.chain.to_uppercase().as_str() {

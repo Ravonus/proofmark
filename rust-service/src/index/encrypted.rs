@@ -223,7 +223,8 @@ pub struct EncryptedSearchResult {
     pub privacy_level: PrivacyLevel,
 }
 
-// ── Internal helpers ─────────────────────────────────────────────────
+
+
 
 fn filter_safe_tokens(scan: &PrivacyScanResult, config: &EncryptedIndexConfig) -> Vec<String> {
     let tokenized = tokenizer::tokenize(&scan.redacted_text);

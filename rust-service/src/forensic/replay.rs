@@ -7,14 +7,12 @@ use super::ForensicFlag;
 use crate::crypto::sha256_hex;
 use crate::util::varint;
 
-// ══════════════════════════════════════════════════════════════════════════
 // Server-side replay tape validation
 //
 // Decodes the binary replay tape server-side and extracts ground-truth
 // metrics (event counts by type, total duration, signature strokes, etc.).
 // The caller compares these against the client-supplied behavioral metrics
 // to detect fabrication.
-// ══════════════════════════════════════════════════════════════════════════
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplayTapeVerification {
@@ -320,7 +318,7 @@ pub fn validate_replay_tape(
 
     let actual_duration_ms = total_delta_quanta * TIME_QUANTUM_MS;
 
-    // ── Cross-validate claimed metrics against tape ─────────────────
+    // Cross-validate claimed metrics against tape
 
     let mut mismatches = Vec::new();
 
@@ -461,7 +459,7 @@ pub fn validate_replay_tape(
         }
     }
 
-    // ── Structural anomaly detection ───────────────────────────────
+    // Structural anomaly detection
 
     // Gaze fixation uniformity check (synthetic gaze has very uniform fixations)
     if gaze_fixation_durations.len() >= 6 {

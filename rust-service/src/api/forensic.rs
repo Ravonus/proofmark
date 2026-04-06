@@ -1,9 +1,19 @@
-//! Forensic endpoints — evidence hashing, flag analysis, replay validation.
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
-use super::types::*;
 use crate::forensic;
+
+#[derive(Deserialize)]
+pub struct ValidateReplayReq {
+    pub tape_base64: String,
+    pub claimed_metrics: serde_json::Value,
+    pub claimed_behavioral: serde_json::Value,
+}
+
+#[derive(Deserialize)]
+pub struct HeaderFingerprintReq {
+    pub header_names: Vec<String>,
+}
 
 pub async fn hash_forensic(body: web::Json<serde_json::Value>) -> impl Responder {
     let hash = forensic::hash_forensic_evidence(&body);

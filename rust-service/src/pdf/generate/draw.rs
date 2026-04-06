@@ -10,7 +10,8 @@ use regex::Regex;
 use super::theme::*;
 use super::types::*;
 
-// ── SVG parsing regexes (compiled once) ─────────────────────────────────────
+
+
 
 static SVG_VIEWBOX_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r#"viewBox=["']\s*0(?:\.0+)?\s+0(?:\.0+)?\s+([\d.]+)\s+([\d.]+)\s*["']"#).unwrap()
@@ -22,9 +23,7 @@ static SVG_HEIGHT_RE: Lazy<Regex> =
 static SVG_PATH_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"<path\b[^>]*\bd=["']([^"']+)["'][^>]*\/?>"#).unwrap());
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PDF Context
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) struct PdfCtx {
     pub doc: PdfDocumentReference,
@@ -83,9 +82,7 @@ impl PdfCtx {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Drawing helpers
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) fn draw_rect(
     layer: &PdfLayerReference,

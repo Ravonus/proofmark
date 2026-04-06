@@ -45,7 +45,7 @@ export function UserSettings() {
     return (
       <FadeIn>
         <GlassCard className="p-6 text-center">
-          <div className="border-[var(--accent)]/30 inline-block h-4 w-4 animate-spin rounded-full border border-t-accent" />
+          <div className="inline-block h-4 w-4 animate-spin rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]" />
           <p className="mt-2 text-[11px] text-muted">Loading settings...</p>
         </GlassCard>
       </FadeIn>
@@ -345,7 +345,7 @@ function FeaturesSection({ address, chain }: { address: string; chain: string })
             {ossFeatures.map((f) => (
               <div
                 key={f.id}
-                className="border-[var(--success)]/15 flex items-center gap-2 rounded-sm border bg-[var(--success-subtle)] px-2.5 py-1.5 text-[11px]"
+                className="flex items-center gap-2 rounded-sm border border-[var(--success-15)] bg-[var(--success-subtle)] px-2.5 py-1.5 text-[11px]"
               >
                 <span className="status-dot status-dot-success" />
                 <span>{f.label}</span>
@@ -433,11 +433,11 @@ function InfoCard({ label, value, detail, mono }: { label: string; value: string
 function StatusPill({ label, tone }: { label: string; tone: "success" | "warning" | "danger" | "info" | "muted" }) {
   const cls =
     tone === "success"
-      ? "border-[var(--success)]/20 bg-[var(--success-subtle)] text-[var(--success)]"
+      ? "border-[var(--success-20)] bg-[var(--success-subtle)] text-[var(--success)]"
       : tone === "warning"
-        ? "border-[var(--warning)]/20 bg-[var(--warning-subtle)] text-[var(--warning)]"
+        ? "border-[var(--warning-20)] bg-[var(--warning-subtle)] text-[var(--warning)]"
         : tone === "danger"
-          ? "border-[var(--danger)]/20 bg-[var(--danger-subtle)] text-[var(--danger)]"
+          ? "border-[var(--danger-20)] bg-[var(--danger-subtle)] text-[var(--danger)]"
           : tone === "info"
             ? "border-sky-400/20 bg-sky-400/8 text-sky-300"
             : "border-[var(--border)] bg-[var(--bg-inset)] text-muted";

@@ -6,47 +6,48 @@ import { collectFingerprintBestEffort } from "~/lib/forensic";
 import { SignaturePad } from "~/components/signing/signature-pad";
 
 export function MobileSignClient({ token, mode = "signature" }: { token: string; mode?: "signature" | "initials" }) {
-  const [status, setStatus] = useState<"loading" | "ready" | "signing" | "done" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [rotationPromptDismissed, setRotationPromptDismissed] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const sessionStartRef = useRef(Date.now());
 
+  const submitMut = trpc.document.submitMobileSignature.useMutation();
   const sessionQuery = trpc.document.pollMobileSign.useQuery(
     { token },
-    { enabled: status === "loading", retry: false },
+    {
+      enabled: !submitMut.isPending && !submitMut.isSuccess && !submitMut.isError,
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
   );
 
-  const submitMut = trpc.document.submitMobileSignature.useMutation({
-    onSuccess: () => setStatus("done"),
-    onError: (e) => {
-      setError(e.message);
-      setStatus("error");
-    },
-  });
-
-  // Check session
-  useEffect(() => {
-    if (sessionQuery.data) {
-      if (sessionQuery.data.status === "expired") {
-        setError("This signing link has expired.");
-        setStatus("error");
-      } else if (sessionQuery.data.status === "signed") {
-        setStatus("done");
-      } else {
-        setStatus("ready");
-      }
-    }
-    if (sessionQuery.error) {
-      setError("Invalid signing link.");
-      setStatus("error");
-    }
-  }, [sessionQuery.data, sessionQuery.error]);
+  const queryErrorMessage = sessionQuery.error
+    ? "Invalid signing link."
+    : sessionQuery.data?.status === "expired"
+      ? "This signing link has expired."
+      : null;
+  const errorMessage = submitMut.error?.message ?? queryErrorMessage;
+  const status: "loading" | "ready" | "signing" | "done" | "error" = submitMut.isPending
+    ? "signing"
+    : submitMut.isSuccess
+      ? "done"
+      : submitMut.isError
+        ? "error"
+        : sessionQuery.error
+          ? "error"
+          : sessionQuery.data?.status === "expired"
+            ? "error"
+            : sessionQuery.data?.status === "signed"
+              ? "done"
+              : sessionQuery.data
+                ? "ready"
+                : "loading";
 
   // Track orientation
   useEffect(() => {
     const check = () => {
       const isLandscape = window.innerWidth > window.innerHeight;
+      if (isLandscape) setRotationPromptDismissed(false);
       setOrientation(isLandscape ? "landscape" : "portrait");
     };
     check();
@@ -94,7 +95,6 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
 
   const handleSubmit = useCallback(async () => {
     if (!signatureData) return;
-    setStatus("signing");
 
     let fingerprint: Record<string, unknown> = {};
     try {
@@ -131,7 +131,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
   }, [token, submitMut, signatureData, orientation]);
 
   // ── Portrait overlay: prompt to rotate (signature only) ──
-  if (status === "ready" && orientation === "portrait" && mode === "signature") {
+  if (status === "ready" && orientation === "portrait" && mode === "signature" && !rotationPromptDismissed) {
     return (
       <MobileShell>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
@@ -146,7 +146,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
             </div>
           </div>
           <button
-            onClick={() => setOrientation("landscape")}
+            onClick={() => setRotationPromptDismissed(true)}
             className="mt-6 rounded-lg bg-white/5 px-4 py-2 text-xs text-white/40 hover:bg-white/10"
           >
             Continue anyway →
@@ -162,7 +162,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
         <div className="flex flex-1 items-center justify-center p-6">
           <div className="space-y-3 text-center">
             <div className="text-4xl">⚠️</div>
-            <p className="font-medium text-red-400">{error}</p>
+            <p className="font-medium text-red-400">{errorMessage ?? "Something went wrong."}</p>
           </div>
         </div>
       </MobileShell>

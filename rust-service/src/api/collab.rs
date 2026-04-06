@@ -1,11 +1,31 @@
-//! Collaboration CRDT endpoints — merge, compact, diff, batch operations.
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
 use super::error;
-use super::types::*;
 use crate::collab;
 use crate::util::b64;
+
+#[derive(Deserialize)]
+pub struct CollabMergeReq {
+    pub states: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct CollabCompactReq {
+    pub state: String,
+}
+
+#[derive(Deserialize)]
+pub struct CollabDiffReq {
+    pub base_state: String,
+    pub current_state: String,
+}
+
+#[derive(Deserialize)]
+pub struct CollabBatchMergeReq {
+    pub states: Vec<String>,
+    pub chunk_size: Option<usize>,
+}
 
 pub async fn collab_merge(body: web::Json<CollabMergeReq>) -> impl Responder {
     let states: Result<Vec<Vec<u8>>, _> = body.states.iter().map(|s| b64::decode(s)).collect();

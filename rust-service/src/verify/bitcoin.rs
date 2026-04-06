@@ -1,23 +1,16 @@
-//! Bitcoin signature verification: Legacy ECDSA message signing + BIP-322.
-//!
-//! Supports:
-//! - Legacy 65-byte ECDSA (P2PKH, P2SH-P2WPKH, P2WPKH)
-//! - BIP-322 P2TR (Taproot / Schnorr)
-//! - BIP-322 P2WPKH (SegWit)
-//!
-//! Mirrors src/lib/verify.ts Bitcoin verification logic.
+//! Bitcoin signature verification: legacy ECDSA + BIP-322 (Taproot/Schnorr, SegWit).
 
 use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 
 use super::VerifyResult;
 use crate::crypto::{double_sha256, sha256};
 use crate::util::b64;
-use crate::util::encoding::{hash160, base58check_encode, bech32_encode, bech32m_encode};
-use crate::util::varint::{btc_encode_varint, btc_read_varint};
+use super::encoding::{hash160, base58check_encode, bech32_encode, bech32m_encode};
+use super::varint::{btc_encode_varint, btc_read_varint};
 
 const BITCOIN_MESSAGE_MAGIC: &str = "Bitcoin Signed Message:\n";
 
-// ── Bitcoin message hash ─────────────────────────────────────────────────────
+// Bitcoin message hash
 
 fn bitcoin_message_hash(message: &str) -> [u8; 32] {
     let prefix = BITCOIN_MESSAGE_MAGIC.as_bytes();
@@ -32,7 +25,7 @@ fn bitcoin_message_hash(message: &str) -> [u8; 32] {
     double_sha256(&data)
 }
 
-// ── Public key compression ───────────────────────────────────────────────────
+// Public key compression
 
 fn compress_pubkey(uncompressed: &[u8]) -> Option<[u8; 33]> {
     if uncompressed.len() == 33 {
@@ -52,7 +45,7 @@ fn compress_pubkey(uncompressed: &[u8]) -> Option<[u8; 33]> {
     Some(out)
 }
 
-// ── Address derivation from compressed pubkey ────────────────────────────────
+// Address derivation from compressed pubkey
 
 /// Derive multiple Bitcoin address formats from a compressed public key.
 /// Returns: [P2PKH, P2WPKH (bech32), P2SH-P2WPKH, P2TR] (lowercase).
@@ -87,7 +80,7 @@ fn addresses_from_pubkey(compressed: &[u8; 33]) -> Vec<String> {
     addrs.into_iter().map(|a| a.to_lowercase()).collect()
 }
 
-// ── Witness stack parser ─────────────────────────────────────────────────────
+// Witness stack parser
 
 fn parse_witness_stack(buf: &[u8], debug: &mut Vec<String>) -> Option<Vec<Vec<u8>>> {
     let mut offset = 0;
@@ -120,7 +113,7 @@ fn parse_witness_stack(buf: &[u8], debug: &mut Vec<String>) -> Option<Vec<Vec<u8
     Some(items)
 }
 
-// ── BIP-322 Tagged Hash ──────────────────────────────────────────────────────
+// BIP-322 Tagged Hash
 
 fn tagged_hash(tag: &str, msgs: &[&[u8]]) -> [u8; 32] {
     let tag_hash = sha256(tag.as_bytes());
@@ -133,7 +126,7 @@ fn tagged_hash(tag: &str, msgs: &[&[u8]]) -> [u8; 32] {
     sha256(&data)
 }
 
-// ── BIP-322 Transaction Construction ─────────────────────────────────────────
+// BIP-322 Transaction Construction
 
 fn build_bip322_to_spend(message: &str, script_pubkey: &[u8]) -> Vec<u8> {
     let msg_hash = tagged_hash(
@@ -207,7 +200,7 @@ fn build_bip322_sighash(to_spend_txid: &[u8; 32], script_pubkey: &[u8]) -> [u8; 
     tagged_hash("TapSighash", &[&preimage])
 }
 
-// ── Legacy ECDSA verification ────────────────────────────────────────────────
+// Legacy ECDSA verification
 
 fn verify_legacy_btc_signature(
     address: &str,
@@ -276,7 +269,7 @@ fn verify_legacy_btc_signature(
     false
 }
 
-// ── BIP-322 Taproot (Schnorr) ────────────────────────────────────────────────
+// BIP-322 Taproot (Schnorr)
 
 fn verify_bip322_taproot(
     address: &str,
@@ -355,7 +348,7 @@ fn verify_bip322_taproot(
     }
 }
 
-// ── BIP-322 P2WPKH ──────────────────────────────────────────────────────────
+// BIP-322 P2WPKH
 
 fn verify_bip322_p2wpkh(address: &str, pubkey: &[u8], debug: &mut Vec<String>) -> bool {
     if pubkey.len() != 33 {
@@ -372,7 +365,7 @@ fn verify_bip322_p2wpkh(address: &str, pubkey: &[u8], debug: &mut Vec<String>) -
     candidates.iter().any(|c| c == &address.to_lowercase())
 }
 
-// ── Bech32m decode ───────────────────────────────────────────────────────────
+// Bech32m decode
 
 fn decode_bech32m_witness(address: &str) -> Option<Vec<u8>> {
     let pos = address.rfind('1')?;
@@ -408,7 +401,7 @@ fn decode_bech32m_witness(address: &str) -> Option<Vec<u8>> {
     Some(result)
 }
 
-// ── Main BTC entry point ─────────────────────────────────────────────────────
+// Main BTC entry point
 
 pub fn verify_btc_signature(address: &str, message: &str, signature_raw: &str) -> VerifyResult {
     let mut debug = Vec::new();

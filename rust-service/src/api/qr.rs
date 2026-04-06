@@ -1,10 +1,14 @@
-//! QR code endpoints — SVG and data URL generation.
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
 use super::error;
-use super::types::*;
 use crate::qr;
+
+#[derive(Deserialize)]
+pub struct QrReq {
+    pub text: String,
+    pub size: Option<u32>,
+}
 
 pub async fn generate_qr_svg(body: web::Json<QrReq>) -> impl Responder {
     let size = body.size.unwrap_or(200);

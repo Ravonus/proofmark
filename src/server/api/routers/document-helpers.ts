@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { documents, signers as signersTable, type signers, type PostSignReveal } from "~/server/db/schema";
@@ -8,11 +7,15 @@ import {
   encodeStructuredFieldValue,
   type PaymentFieldValue,
 } from "~/lib/document/field-values";
-import { documentAutomationPolicySchema } from "~/lib/forensic/premium";
+export {
+  documentFieldSchema as fieldInput,
+  documentSignerSchema as signerInput,
+  documentReminderSchema as reminderInput,
+  createDocumentSchema as createDocumentInput,
+} from "~/lib/schemas/document";
 import { decryptDocument as decryptContent, hashDocument } from "~/server/rust-engine";
 import { evaluateIdentityVerification } from "~/server/id-verification";
 import type { InlineField } from "~/lib/document/document-tokens";
-import { optionalSignerTokenGateSchema } from "~/lib/token-gates";
 import { findSignersByDocumentId, findDocumentsByGroupId } from "~/server/db/compat";
 import { sendCompletionEmail, sendFinalizationEmail } from "~/server/email";
 import { resolveDocumentBranding, sendSignerInvite } from "~/server/delivery";
@@ -60,87 +63,6 @@ export async function safeVerifySigningOtp(params: { signerId: string; code: str
   const { verifySigningOtp } = await import("~/server/otp");
   return verifySigningOtp(params);
 }
-
-// ── Zod schemas ──
-
-export const fieldInput = z.object({
-  id: z.string().optional(),
-  type: z.string().min(1),
-  label: z.string(),
-  value: z.string().nullable().optional(),
-  required: z.boolean().default(true),
-  options: z.array(z.string().min(1)).optional(),
-  settings: z.record(z.unknown()).optional(),
-});
-
-export const signerInput = z.object({
-  label: z.string().min(1).max(100),
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().max(30).optional().or(z.literal("")),
-  fields: z.array(fieldInput).optional(),
-  tokenGates: optionalSignerTokenGateSchema,
-  signMethod: z.enum(["WALLET", "EMAIL_OTP"]).default("WALLET"),
-  role: z.enum(["SIGNER", "APPROVER", "CC", "WITNESS", "OBSERVER"]).default("SIGNER"),
-  deliveryMethods: z.array(z.enum(["EMAIL", "SMS"])).optional(),
-});
-
-export const reminderInput = z.object({
-  cadence: z.enum(["NONE", "DAILY", "EVERY_2_DAYS", "EVERY_3_DAYS", "WEEKLY"]).default("NONE"),
-  channels: z.array(z.enum(["EMAIL", "SMS"])).default(["EMAIL"]),
-});
-
-export const createDocumentInput = z.object({
-  title: z.string().min(1).max(200),
-  content: z.string().min(1),
-  createdByEmail: z.string().email().optional().or(z.literal("")),
-  signers: z.array(signerInput).min(1).max(20),
-  proofMode: z.enum(["PRIVATE", "HYBRID", "CRYPTO_NATIVE"]).default("HYBRID"),
-  securityMode: z.enum(["HASH_ONLY", "ENCRYPTED_PRIVATE", "ENCRYPTED_IPFS"]).default("HASH_ONLY"),
-  signingOrder: z.enum(["parallel", "sequential"]).default("parallel"),
-  expiresInDays: z.number().int().min(1).max(365).optional(),
-  brandingProfileId: z.string().optional(),
-  templateId: z.string().optional(),
-  pdfStyleTemplateId: z.string().optional(),
-  reminder: reminderInput.optional(),
-  gazeTracking: z.enum(["off", "full", "signing_only"]).default("off"),
-  automationPolicy: documentAutomationPolicySchema.optional(),
-  postSignReveal: z
-    .object({
-      enabled: z.boolean(),
-      summary: z.string().optional(),
-      sections: z
-        .array(
-          z.object({
-            title: z.string(),
-            content: z.string(),
-            icon: z.string().optional(),
-          }),
-        )
-        .optional(),
-      downloads: z
-        .array(
-          z.object({
-            label: z.string(),
-            filename: z.string(),
-            description: z.string().optional(),
-            icon: z.string().optional(),
-            uploadedByAddress: z.string().optional(),
-            uploadedByLabel: z.string().optional(),
-            uploadedAt: z.string().optional(),
-          }),
-        )
-        .optional(),
-      testbedAccess: z
-        .object({
-          enabled: z.boolean(),
-          description: z.string().optional(),
-          proxyEndpoint: z.string().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
-});
-
 // ── Utility functions ──
 
 export function generateToken(): string {

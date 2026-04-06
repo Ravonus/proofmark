@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -10,7 +11,7 @@ import {
   Clock,
   User,
   Hash,
-  Link,
+  Link as LinkIcon,
   CheckCircle,
   XCircle,
   Shield,
@@ -188,7 +189,7 @@ export default function VerifyPage() {
               )}
               {detectedType === "cid" && (
                 <>
-                  <Link className="h-3 w-3" /> Detected as IPFS CID
+                  <LinkIcon className="h-3 w-3" /> Detected as IPFS CID
                 </>
               )}
               {detectedType === "id" && (
@@ -272,7 +273,7 @@ export default function VerifyPage() {
                   />
                   {hasEncryptedIpfs && (
                     <InfoRow
-                      icon={<Link className="h-3.5 w-3.5" />}
+                      icon={<LinkIcon className="h-3.5 w-3.5" />}
                       label="Encrypted Payload CID"
                       value={encryptedIpfsCid!}
                       mono
@@ -574,13 +575,13 @@ ipfs cat ${encryptedIpfsCid!} > encrypted-payload.bin
                     </p>
                   </div>
                 </div>
-                <a
+                <Link
                   href={`/replay/${doc.id}`}
-                  className="flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+                  className="flex shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
                 >
                   <Play className="h-4 w-4" />
                   View Forensic Replay
-                </a>
+                </Link>
               </div>
             </motion.div>
           )}

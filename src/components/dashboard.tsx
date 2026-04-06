@@ -184,7 +184,7 @@ function OnboardingChecklist() {
                   {step.done ? <CheckCircle className="h-3.5 w-3.5" /> : step.icon}
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={`my-0.5 h-8 w-px ${step.done ? "bg-[var(--success)]/30" : "bg-[var(--border)]"}`} />
+                  <div className={`my-0.5 h-8 w-px ${step.done ? "bg-[var(--success-30)]" : "bg-[var(--border)]"}`} />
                 )}
               </div>
 
@@ -192,7 +192,7 @@ function OnboardingChecklist() {
                 <p
                   className={`text-[13px] font-medium ${
                     step.done
-                      ? "decoration-[var(--success)]/30 text-[var(--success)] line-through"
+                      ? "text-[var(--success)] line-through decoration-[var(--success-30)]"
                       : step.locked
                         ? "text-faint"
                         : "text-primary"
@@ -332,7 +332,7 @@ export function Dashboard() {
           </p>
           {showAuthenticating && (
             <motion.div
-              className="border-[var(--accent)]/30 mt-3 inline-block h-4 w-4 rounded-full border border-t-accent"
+              className="mt-3 inline-block h-4 w-4 rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]"
               animate={{ rotate: 360 }}
               transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
             />
@@ -518,7 +518,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
 
   return (
     <div className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""}`}>
-      <a href={`/sign/${doc.id}`} className="group block px-4 py-3 transition-colors hover:bg-[var(--bg-hover)]">
+      <Link href={`/sign/${doc.id}`} className="group block px-4 py-3 transition-colors hover:bg-[var(--bg-hover)]">
         {/* Header row */}
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
@@ -573,7 +573,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
                 key={s.id}
                 className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${
                   s.status === "SIGNED"
-                    ? "border-[var(--success)]/10 border bg-[var(--success-subtle)] text-[var(--success)]"
+                    ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
                     : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
                 }`}
               >
@@ -584,7 +584,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
             );
           })}
         </div>
-      </a>
+      </Link>
 
       {hasFooter && (
         <div className="border-t border-[var(--border-subtle)] px-4 py-2">
@@ -600,7 +600,7 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
                       resendMut.mutate({ documentId: doc.id, signerId: s.id });
                     }}
                     disabled={resendMut.isPending}
-                    className="bg-blue-500/8 inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/15 disabled:opacity-40"
+                    className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
                   >
                     <Send className="h-2.5 w-2.5" />
                     Resend {s.label}

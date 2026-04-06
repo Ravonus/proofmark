@@ -393,7 +393,7 @@ export function OnboardingChecklist({
                   </motion.div>
                   {!isLast && (
                     <div
-                      className={`min-h-[20px] w-px flex-1 transition-colors ${isCompleted ? "bg-[var(--success)]/30" : "bg-[var(--border)]"}`}
+                      className={`min-h-[20px] w-px flex-1 transition-colors ${isCompleted ? "bg-[var(--success-30)]" : "bg-[var(--border)]"}`}
                     />
                   )}
                 </div>

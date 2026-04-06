@@ -55,7 +55,7 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
               const active = pathname === link.href;
               const Icon = link.icon;
               return (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   className="accent-line group relative inline-flex items-center gap-1.5 px-3 py-1 text-[12px] font-medium transition-colors"
@@ -73,7 +73,7 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
                       transition={{ type: "spring", stiffness: 500, damping: 35 }}
                     />
                   )}
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -117,16 +117,13 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
             className="sticky top-12 z-30 overflow-hidden border-b border-[var(--border)] bg-[var(--bg-card)] sm:hidden"
           >
             <div className="space-y-px p-1.5">
-              {navLinks.map((link, i) => {
+              {navLinks.map((link) => {
                 const active = pathname === link.href;
                 const Icon = link.icon;
                 return (
-                  <motion.a
+                  <Link
                     key={link.href}
                     href={link.href}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.04, duration: 0.2 }}
                     className={`flex items-center gap-2.5 rounded-sm px-3 py-2 text-[12px] font-medium transition-colors ${
                       active ? "bg-[var(--bg-hover)] text-primary" : "text-secondary hover:bg-[var(--bg-hover)]"
                     }`}
@@ -134,18 +131,18 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
                   >
                     <Icon className={`h-3.5 w-3.5 ${active ? "text-accent" : ""}`} />
                     {link.label}
-                  </motion.a>
+                  </Link>
                 );
               })}
               {!isLoggedIn && (
-                <a
+                <Link
                   href="/login"
                   className="flex items-center gap-2.5 rounded-sm px-3 py-2 text-[12px] font-medium text-[var(--accent)]"
                   onClick={() => setMobileMenu(false)}
                 >
                   <LogIn className="h-3.5 w-3.5" />
                   Sign in
-                </a>
+                </Link>
               )}
             </div>
           </motion.div>

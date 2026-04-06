@@ -1,14 +1,11 @@
-//! Forensic evidence hashing — SHA-256 fingerprinting of evidence packets.
-//! Mirrors the hashing logic from src/server/forensic.ts.
+//! Forensic evidence hashing, anomaly detection, and replay tape validation.
 
-pub mod format;
 pub mod replay;
 pub mod anomaly;
 
 use crate::crypto::sha256_hex;
 use serde::{Deserialize, Serialize};
 
-// Re-export public API so callers can use `forensic::validate_replay_tape` etc.
 pub use replay::validate_replay_tape;
 pub use anomaly::analyze_flags;
 
@@ -20,12 +17,6 @@ pub fn hash_forensic_evidence(evidence: &serde_json::Value) -> String {
         obj.remove("evidenceHash");
     }
     sha256_hex(ev.to_string().as_bytes())
-}
-
-/// Hash an arbitrary JSON payload (used for evidence fingerprinting).
-#[allow(dead_code)]
-pub fn hash_json_payload(payload: &serde_json::Value) -> String {
-    sha256_hex(payload.to_string().as_bytes())
 }
 
 /// Compute HTTP header fingerprint (sorted header names, pipe-separated, SHA-256).

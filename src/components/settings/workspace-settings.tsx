@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium router stubs expose `any` types */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { trpc } from "~/lib/trpc";
-import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
+import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 
@@ -55,7 +56,29 @@ export function WorkspaceSettings() {
     onSuccess: () => utils.account.workspace.invalidate(),
   });
 
+  // Initialize branding from server data (replaces useEffect hydration)
+  const hydratedRef = useRef(false);
+  const serverProfile = workspaceQuery.data?.branding[0];
+  const initialBranding = useMemo<BrandingForm>(() => {
+    if (!serverProfile) return EMPTY_BRANDING;
+    return {
+      name: serverProfile.name,
+      brandName: serverProfile.settings.brandName || "Proofmark",
+      logoUrl: serverProfile.settings.logoUrl || "",
+      primaryColor: serverProfile.settings.primaryColor || "#6366f1",
+      accentColor: serverProfile.settings.accentColor || "#22c55e",
+      emailFromName: serverProfile.settings.emailFromName || serverProfile.settings.brandName || "Proofmark",
+      emailReplyTo: serverProfile.settings.emailReplyTo || "",
+      emailFooter: serverProfile.settings.emailFooter || "",
+      signingIntro: serverProfile.settings.signingIntro || "",
+      emailIntro: serverProfile.settings.emailIntro || "",
+    };
+  }, [serverProfile]);
   const [branding, setBranding] = useState<BrandingForm>(EMPTY_BRANDING);
+  if (serverProfile && !hydratedRef.current) {
+    hydratedRef.current = true;
+    setBranding(initialBranding);
+  }
   const [smsProvider, setSmsProvider] = useState("TWILIO");
   const [smsLabel, setSmsLabel] = useState("Primary SMS");
   const [smsFrom, setSmsFrom] = useState("");
@@ -73,23 +96,6 @@ export function WorkspaceSettings() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [webhookEvents, setWebhookEvents] = useState("DOCUMENT_COMPLETED,SIGNER_SIGNED,SIGNER_DECLINED");
-
-  useEffect(() => {
-    const profile = workspaceQuery.data?.branding[0];
-    if (!profile) return;
-    setBranding({
-      name: profile.name,
-      brandName: profile.settings.brandName || "Proofmark",
-      logoUrl: profile.settings.logoUrl || "",
-      primaryColor: profile.settings.primaryColor || "#6366f1",
-      accentColor: profile.settings.accentColor || "#22c55e",
-      emailFromName: profile.settings.emailFromName || profile.settings.brandName || "Proofmark",
-      emailReplyTo: profile.settings.emailReplyTo || "",
-      emailFooter: profile.settings.emailFooter || "",
-      signingIntro: profile.settings.signingIntro || "",
-      emailIntro: profile.settings.emailIntro || "",
-    });
-  }, [workspaceQuery.data]);
 
   const groupedFeatures = useMemo(() => {
     const catalog = featuresQuery.data ?? [];
@@ -244,7 +250,7 @@ export function WorkspaceSettings() {
             value={branding.emailFooter}
             onChange={(value) => setBranding((current) => ({ ...current, emailFooter: value }))}
           />
-          <AnimatedButton
+          <W3SButton
             className="px-4 py-2"
             onClick={() =>
               upsertBranding.mutate({
@@ -266,7 +272,7 @@ export function WorkspaceSettings() {
             disabled={upsertBranding.isPending}
           >
             Save Branding
-          </AnimatedButton>
+          </W3SButton>
         </GlassCard>
       </FadeIn>
 
@@ -303,7 +309,7 @@ export function WorkspaceSettings() {
               <TextField label="API key" value={smsApiKey} onChange={setSmsApiKey} password />
             )}
           </div>
-          <AnimatedButton
+          <W3SButton
             className="px-4 py-2"
             onClick={() =>
               upsertIntegration.mutate({
@@ -325,7 +331,7 @@ export function WorkspaceSettings() {
             disabled={upsertIntegration.isPending || !smsFrom}
           >
             Save SMS Provider
-          </AnimatedButton>
+          </W3SButton>
           {workspace?.integrations.filter((entry) => entry.kind === "SMS").length ? (
             <div className="space-y-2">
               {workspace.integrations
@@ -373,7 +379,7 @@ export function WorkspaceSettings() {
               <TextareaField label="Custom headers (JSON)" value={addressHeaders} onChange={setAddressHeaders} />
             )}
           </div>
-          <AnimatedButton
+          <W3SButton
             className="px-4 py-2"
             onClick={() => {
               let parsedHeaders: Record<string, string> | undefined;
@@ -403,7 +409,7 @@ export function WorkspaceSettings() {
             disabled={upsertIntegration.isPending || (addressProvider === "CUSTOM" ? !addressEndpoint : !addressApiKey)}
           >
             Save Address Provider
-          </AnimatedButton>
+          </W3SButton>
           {workspace?.integrations.filter((entry) => entry.kind === "ADDRESS").length ? (
             <div className="space-y-2">
               {workspace.integrations
@@ -439,7 +445,7 @@ export function WorkspaceSettings() {
           </div>
           <TextField label="Shared secret" value={webhookSecret} onChange={setWebhookSecret} password />
           <TextareaField label="Events (comma separated)" value={webhookEvents} onChange={setWebhookEvents} />
-          <AnimatedButton
+          <W3SButton
             className="px-4 py-2"
             onClick={() =>
               upsertWebhook.mutate({
@@ -456,7 +462,7 @@ export function WorkspaceSettings() {
             disabled={upsertWebhook.isPending || !webhookLabel || !webhookUrl}
           >
             Save Webhook
-          </AnimatedButton>
+          </W3SButton>
           <div className="space-y-2">
             {workspace?.webhooks.map((hook) => (
               <div key={hook.id} className="bg-surface/30 rounded-xl border border-border p-3">
@@ -466,13 +472,13 @@ export function WorkspaceSettings() {
                     <p className="text-sm text-muted">{hook.url}</p>
                     <p className="mt-1 text-xs text-muted">{hook.events.join(", ") || "All events"}</p>
                   </div>
-                  <AnimatedButton
+                  <W3SButton
                     variant="danger"
                     className="px-3 py-1.5 text-xs"
                     onClick={() => deleteWebhook.mutate({ id: hook.id })}
                   >
                     Remove
-                  </AnimatedButton>
+                  </W3SButton>
                 </div>
               </div>
             ))}
@@ -480,7 +486,11 @@ export function WorkspaceSettings() {
         </GlassCard>
       </FadeIn>
 
-      <FadeIn delay={0.24}>
+      <FadeIn delay={0.28}>
+        <CollabSettingsCard />
+      </FadeIn>
+
+      <FadeIn delay={0.3}>
         <GlassCard className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold">Reusable Templates</h3>
@@ -498,13 +508,13 @@ export function WorkspaceSettings() {
                       <p className="text-sm text-muted">{template.title}</p>
                       {template.description ? <p className="mt-1 text-xs text-muted">{template.description}</p> : null}
                     </div>
-                    <AnimatedButton
+                    <W3SButton
                       variant="danger"
                       className="px-3 py-1.5 text-xs"
                       onClick={() => deleteTemplate.mutate({ id: template.id })}
                     >
                       Delete
-                    </AnimatedButton>
+                    </W3SButton>
                   </div>
                 </div>
               ))
@@ -515,6 +525,58 @@ export function WorkspaceSettings() {
         </GlassCard>
       </FadeIn>
     </div>
+  );
+}
+
+function CollabSettingsCard() {
+  const capabilities = trpc.collab.capabilities.useQuery();
+  const available = capabilities.data?.available ?? false;
+  const sessions = trpc.collab.list.useQuery({ status: "active" }, { enabled: available });
+  const sessionCount = (sessions.data as unknown[] | undefined)?.length ?? 0;
+
+  return (
+    <GlassCard className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">Collaboration</h3>
+        <p className="mt-1 text-sm text-muted">
+          Real-time co-editing with CRDT sync, shared AI conversations, and annotation tools.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className={`rounded-xl border p-4 ${available ? "border-emerald-400/20 bg-emerald-400/10" : "border-zinc-700/30 bg-zinc-800/20"}`}
+        >
+          <p className="text-xs font-medium text-muted">Status</p>
+          <p className={`mt-1 text-sm font-semibold ${available ? "text-emerald-300" : "text-zinc-400"}`}>
+            {available ? "Available" : "Premium Required"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-zinc-700/30 bg-zinc-800/20 p-4">
+          <p className="text-xs font-medium text-muted">Active Sessions</p>
+          <p className="mt-1 text-sm font-semibold">{sessionCount}</p>
+        </div>
+      </div>
+
+      {available ? (
+        <div className="rounded-lg bg-[var(--bg-surface)] p-4 text-sm text-secondary">
+          <p className="text-xs font-medium text-muted">Configuration</p>
+          <ul className="mt-2 space-y-1 text-xs text-muted">
+            <li>
+              WebSocket server: Rust engine on port 9090 at{" "}
+              <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono">/ws/collab/&#123;sessionId&#125;</code>
+            </li>
+            <li>CRDT: Yjs/Yrs with binary sync protocol</li>
+            <li>Start sessions from the document editor via the Collab button</li>
+          </ul>
+        </div>
+      ) : (
+        <p className="text-xs text-muted">
+          Run <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono">npm run paid</code> with the premium directory
+          to enable collaboration features.
+        </p>
+      )}
+    </GlassCard>
   );
 }
 
@@ -689,7 +751,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <AnimatedButton
+                  <W3SButton
                     variant="primary"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending || !statusQuery.data.premiumRuntimeAvailable}
@@ -703,8 +765,8 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Enable All Premium
-                  </AnimatedButton>
-                  <AnimatedButton
+                  </W3SButton>
+                  <W3SButton
                     variant="danger"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending}
@@ -718,8 +780,8 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Disable All Premium
-                  </AnimatedButton>
-                  <AnimatedButton
+                  </W3SButton>
+                  <W3SButton
                     variant="secondary"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending}
@@ -733,7 +795,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Clear Overrides
-                  </AnimatedButton>
+                  </W3SButton>
                 </div>
               </div>
 
@@ -763,7 +825,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                         </div>
                         <p className="text-sm text-muted">{feature.summary}</p>
                       </div>
-                      <AnimatedButton
+                      <W3SButton
                         variant={feature.effectiveEnabled ? "secondary" : "primary"}
                         className="px-3 py-2 text-xs"
                         disabled={setOverrides.isPending || (!feature.deploymentEnabled && !feature.oss)}
@@ -777,7 +839,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                         }
                       >
                         {feature.effectiveEnabled ? "Turn Off" : feature.deploymentEnabled ? "Turn On" : "Runtime Off"}
-                      </AnimatedButton>
+                      </W3SButton>
                     </div>
                   </div>
                 ))}

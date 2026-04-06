@@ -89,13 +89,13 @@ export function PostSignRevealUploader({
       </div>
 
       {message && (
-        <div className="border-[var(--success)]/20 mt-4 rounded-lg border bg-[var(--success-subtle)] px-3 py-2 text-sm text-[var(--success)]">
+        <div className="mt-4 rounded-lg border border-[var(--success-20)] bg-[var(--success-subtle)] px-3 py-2 text-sm text-[var(--success)]">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="border-[var(--danger)]/20 mt-4 rounded-lg border bg-[var(--danger-subtle)] px-3 py-2 text-sm text-[var(--danger)]">
+        <div className="mt-4 rounded-lg border border-[var(--danger-20)] bg-[var(--danger-subtle)] px-3 py-2 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}

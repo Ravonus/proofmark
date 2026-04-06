@@ -173,7 +173,7 @@ pub enum AiIndexError {
     Timeout,
 }
 
-// ── Prompt building ──────────────────────────────────────────────────
+// Prompt building
 
 fn build_index_prompt(text: &str, features: &AiFeatures) -> String {
     let mut sections = Vec::new();
@@ -223,7 +223,7 @@ Identify potentially problematic clauses (one-sided terms, unusual provisions, m
     )
 }
 
-// ── AI provider calls ────────────────────────────────────────────────
+// AI provider calls
 
 async fn call_anthropic(
     api_key: &str,
@@ -338,7 +338,7 @@ async fn call_custom(
     resp.text().await.map_err(|e| AiIndexError::RequestFailed(e.to_string()))
 }
 
-// ── Response parsing ─────────────────────────────────────────────────
+// Response parsing
 
 fn parse_ai_response(response: &str, features: &AiFeatures) -> Result<AiIndexResult, AiIndexError> {
     let json: serde_json::Value = serde_json::from_str(response)

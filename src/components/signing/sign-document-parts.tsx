@@ -66,7 +66,7 @@ export const SignerList = memo(function SignerList({
             signer.isYou || (currentAddress && signer.address?.toLowerCase() === currentAddress.toLowerCase());
           const role = signer.role ?? "SIGNER";
           const roleLabel = role.toLowerCase().replace(/_/g, " ");
-          const contactLabel = signer.address ? addressPreview(signer.address) : signer.email || "Awaiting claim";
+          const contactLabel = signer.address ? addressPreview(signer.address) : signer.email || "Not yet claimed";
           const tokenGateLabel = signer.tokenGates ? describeSignerTokenGate(signer.tokenGates) : null;
           const statusLabel =
             signer.status === "SIGNED"
