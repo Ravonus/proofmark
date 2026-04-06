@@ -8,7 +8,8 @@ import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { Select } from "~/components/ui/select";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
-import { User, ToggleRight, Palette, Bot } from "lucide-react";
+import { WorkspaceSettings } from "./workspace-settings";
+import { User, ToggleRight, Palette, Bot, PaintBucket, Plug, Webhook, FileText, Users } from "lucide-react";
 
 // Premium AI settings — dynamically loaded, absent in OSS builds
 const AiProviderSettings = dynamic(
@@ -16,13 +17,27 @@ const AiProviderSettings = dynamic(
   { ssr: false, loading: () => <p className="p-4 text-xs text-muted">Loading AI settings...</p> },
 );
 
-type SettingsTab = "account" | "pdf" | "features" | "ai";
+type SettingsTab =
+  | "account"
+  | "branding"
+  | "integrations"
+  | "webhooks"
+  | "templates"
+  | "pdf"
+  | "ai"
+  | "collab"
+  | "features";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "account", label: "Account", icon: User },
+  { id: "branding", label: "Branding", icon: PaintBucket },
+  { id: "integrations", label: "Integrations", icon: Plug },
+  { id: "webhooks", label: "Webhooks", icon: Webhook },
+  { id: "templates", label: "Templates", icon: FileText },
   { id: "pdf", label: "PDF", icon: Palette },
-  { id: "features", label: "Features", icon: ToggleRight },
   { id: "ai", label: "AI", icon: Bot },
+  { id: "collab", label: "Collaboration", icon: Users },
+  { id: "features", label: "Features", icon: ToggleRight },
 ];
 
 export function UserSettings() {
@@ -122,10 +137,15 @@ export function UserSettings() {
           <AccountSection address={currentWallet.address} chain={currentWallet.chain} status={statusQuery.data} />
         )}
         {activeTab === "pdf" && <PdfSection />}
+        {activeTab === "branding" && <WorkspaceSettings section="branding" />}
+        {activeTab === "integrations" && <WorkspaceSettings section="integrations" />}
+        {activeTab === "webhooks" && <WorkspaceSettings section="webhooks" />}
+        {activeTab === "templates" && <WorkspaceSettings section="templates" />}
         {activeTab === "features" && currentWallet && (
           <FeaturesSection address={currentWallet.address} chain={currentWallet.chain} />
         )}
         {activeTab === "ai" && <AiProviderSettings />}
+        {activeTab === "collab" && <WorkspaceSettings section="collab" />}
       </div>
     </div>
   );
