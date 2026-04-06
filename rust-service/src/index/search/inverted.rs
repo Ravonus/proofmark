@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use rayon::prelude::*;
 
-use super::keys;
-use super::store::{IndexStore, CF_INVERTED, CF_FORWARD, StoreResult};
+use crate::index::store::keys;
+use crate::index::store::{IndexStore, CF_INVERTED, CF_FORWARD, StoreResult};
 
 
 

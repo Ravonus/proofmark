@@ -13,7 +13,7 @@ use flume::{Receiver, Sender};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use super::store::{IndexStore, CF_QUEUE, StoreResult};
+use crate::index::store::{IndexStore, CF_QUEUE, StoreResult};
 
 /// Job priority levels.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

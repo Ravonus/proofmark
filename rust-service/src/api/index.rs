@@ -113,7 +113,7 @@ pub async fn scan_document(
 
     error::block_ok(
         web::block(move || {
-            index::scanner::scan_document(
+            index::features::scanner::scan_document(
                 engine.store(),
                 &req.doc_id,
                 &req.content,
@@ -126,7 +126,7 @@ pub async fn scan_document(
 
 pub async fn privacy_scan(body: web::Json<PrivacyScanReq>) -> impl Responder {
     let text = body.text.clone();
-    let result = web::block(move || index::privacy::scan_privacy(&text)).await;
+    let result = web::block(move || index::features::privacy::scan_privacy(&text)).await;
 
     match result {
         Ok(scan) => HttpResponse::Ok().json(scan),
@@ -143,11 +143,11 @@ pub async fn enqueue_index_job(
     body: web::Json<EnqueueJobReq>,
 ) -> impl Responder {
     let job_type = match body.job_type.as_str() {
-        "index_new" => index::queue::JobType::IndexNew,
-        "re_index" => index::queue::JobType::ReIndex,
-        "index_encrypted" => index::queue::JobType::IndexEncrypted,
-        "ai_enhance" => index::queue::JobType::AiEnhance,
-        "full_re_index" => index::queue::JobType::FullReIndex,
+        "index_new" => index::features::queue::JobType::IndexNew,
+        "re_index" => index::features::queue::JobType::ReIndex,
+        "index_encrypted" => index::features::queue::JobType::IndexEncrypted,
+        "ai_enhance" => index::features::queue::JobType::AiEnhance,
+        "full_re_index" => index::features::queue::JobType::FullReIndex,
         _ => return error::bad_request("Invalid job_type"),
     };
 
@@ -221,7 +221,7 @@ pub async fn ai_index_document(
 
 pub async fn set_ai_config(
     engine: web::Data<Arc<index::IndexEngine>>,
-    body: web::Json<index::ai::AiIndexConfig>,
+    body: web::Json<index::features::ai::AiIndexConfig>,
 ) -> impl Responder {
     engine.set_ai_config(body.into_inner());
     HttpResponse::Ok().json(serde_json::json!({ "updated": true }))
@@ -229,7 +229,7 @@ pub async fn set_ai_config(
 
 pub async fn set_encrypted_config(
     engine: web::Data<Arc<index::IndexEngine>>,
-    body: web::Json<index::encrypted::EncryptedIndexConfig>,
+    body: web::Json<index::features::encrypted::EncryptedIndexConfig>,
 ) -> impl Responder {
     engine.set_encrypted_config(body.into_inner());
     HttpResponse::Ok().json(serde_json::json!({ "updated": true }))

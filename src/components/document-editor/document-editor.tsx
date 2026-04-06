@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-empty-function -- premium router stubs expose `any` types */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-empty-function -- premium router stubs expose `any` types */
 "use client";
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
@@ -54,10 +54,7 @@ import { useEditorStore } from "~/stores/editor";
 import { TokenGateEditor } from "../settings/token-gate-editor";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 // Premium collab components — loaded dynamically to keep OSS bundle clean
-const CollabSessionPanel = dynamic(
-  () => import("../../../premium/components/collab/collab-session-panel").then((m) => m.CollabSessionPanel),
-  { ssr: false, loading: () => null },
-);
+// CollabSessionPanel removed — sessions auto-start when documentId is present
 const CollabToolbar = dynamic(
   () => import("../../../premium/components/collab/collab-toolbar").then((m) => m.CollabToolbar),
   { ssr: false, loading: () => null },
@@ -68,6 +65,10 @@ const CollabAnnotationSidebar = dynamic(
 );
 const CollabAiPanel = dynamic(
   () => import("../../../premium/components/collab/collab-ai-panel").then((m) => m.CollabAiPanel),
+  { ssr: false, loading: () => null },
+);
+const CollabSharePopover = dynamic(
+  () => import("../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
   { ssr: false, loading: () => null },
 );
 
@@ -139,18 +140,33 @@ export function DocumentEditor({
   const [expandedSignerPhone, setExpandedSignerPhone] = useState<number | null>(null);
   const fieldCounter = useRef(fields.length);
 
-  // ── Collaboration ──
+  // ── Collaboration (auto-start) ──
   const identity = useConnectedIdentity();
   const collabCapabilities = trpc.collab.capabilities.useQuery();
   const collabAvailable = collabCapabilities.data?.available ?? false;
-  const [showCollabPanel, setShowCollabPanel] = useState(false);
-  const [collabSessionId, setCollabSessionId] = useState<string | null>(null);
   const [showAnnotations, setShowAnnotations] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const displayName = identity.session?.user?.name ?? identity.wallet?.address?.slice(0, 8) ?? "Anonymous";
+
+  // Auto-create/join a collab session when documentId is present and collab is available
+  const autoCollab = trpc.collab.getOrCreateForDocument.useMutation();
+  const [collabSessionId, setCollabSessionId] = useState<string | null>(null);
+  const autoCollabInitiated = useRef(false);
+
+  useEffect(() => {
+    if (!collabAvailable || !documentId || !displayName || autoCollabInitiated.current) return;
+    autoCollabInitiated.current = true;
+    autoCollab
+      .mutateAsync({ documentId, documentTitle: title, displayName })
+      .then((res) => setCollabSessionId(res.sessionId))
+      .catch(() => {
+        autoCollabInitiated.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabAvailable, documentId, displayName]);
 
   const collabSessionQuery = trpc.collab.get.useQuery({ sessionId: collabSessionId! }, { enabled: !!collabSessionId });
   const collabSession = collabSessionQuery.data;
-  const displayName = identity.session?.user?.name ?? identity.wallet?.address?.slice(0, 8) ?? "Anonymous";
 
   // ── Undo/redo ──
   const historyRef = useRef(new EditorHistory());
@@ -746,57 +762,9 @@ export function DocumentEditor({
         >
           {(() => {
             const isInline = (k: string) => k === "text" || k === "field";
-            const canInsert = addMode && !previewMode && !isDragging;
+            const canInsert = (addMode || showPanel) && !previewMode && !isDragging;
             const elements: React.ReactNode[] = [];
             let i = 0;
-
-            const renderInsertBar = (beforeIdx: number) => (
-              <div key={`ins-${beforeIdx}`} className="group/insert relative z-10 -my-px h-0">
-                <div className="absolute left-0 right-0 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/insert:opacity-100">
-                  <div className="h-px flex-1 bg-[var(--accent-30)]" />
-                  <div className="flex items-center gap-0.5 px-1">
-                    <button
-                      onClick={() => insertTokenAfter(beforeIdx - 1, { kind: "text", text: "" })}
-                      className="w3s-icon-btn !h-5 !w-5"
-                      title="Paragraph"
-                    >
-                      <Pilcrow className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        const n = tokens.filter((t) => t.kind === "heading").length + 1;
-                        insertTokenAfter(beforeIdx - 1, { kind: "heading", text: "", sectionNum: n });
-                      }}
-                      className="w3s-icon-btn !h-5 !w-5"
-                      title="Heading"
-                    >
-                      <Heading className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      onClick={() => insertTokenAfter(beforeIdx - 1, { kind: "listItem", text: "- " })}
-                      className="w3s-icon-btn !h-5 !w-5"
-                      title="Bullet"
-                    >
-                      <List className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        insertTokenAfter(beforeIdx - 1, {
-                          kind: "signatureBlock",
-                          label: "Signature",
-                          signerIdx: activeSigner,
-                        })
-                      }
-                      className="w3s-icon-btn !h-5 !w-5"
-                      title="Signature"
-                    >
-                      <PenTool className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
-                  <div className="h-px flex-1 bg-[var(--accent-30)]" />
-                </div>
-              </div>
-            );
 
             const renderInlineText = (token: DocToken & { kind: "text" }, idx: number) => {
               // When addMode is active, show word-level insertion targets
@@ -809,7 +777,7 @@ export function DocumentEditor({
                     {/* + at the very start of text */}
                     <span
                       className="mx-px inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-[var(--accent-10)] align-middle text-[var(--accent)] transition-colors hover:bg-[var(--accent-30)]"
-                      onClick={() => insertFieldInlineAt(idx, 0, addMode, "")}
+                      onClick={() => insertFieldInlineAt(idx, 0, addMode || "free-text", "")}
                       title="Insert field here"
                     >
                       <Plus className="h-2 w-2" />
@@ -823,7 +791,7 @@ export function DocumentEditor({
                           {word}
                           <span
                             className="mx-px inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-[var(--accent-10)] align-middle text-[var(--accent)] transition-colors hover:bg-[var(--accent-30)]"
-                            onClick={() => insertFieldInlineAt(idx, cp, addMode, "")}
+                            onClick={() => insertFieldInlineAt(idx, cp, addMode || "free-text", "")}
                             title="Insert field here"
                           >
                             <Plus className="h-2 w-2" />
@@ -903,8 +871,6 @@ export function DocumentEditor({
                     inlineChildren.push(renderInlineField(t as DocToken & { kind: "field" }, i));
                   i++;
                 }
-                // Insert bar before paragraph
-                if (!previewMode && groupStart > 0) elements.push(renderInsertBar(groupStart));
                 elements.push(
                   <div
                     key={`para-${groupStart}`}
@@ -918,12 +884,13 @@ export function DocumentEditor({
               }
 
               // Block-level tokens rendered individually
-              if (!previewMode && token.kind !== "break" && i > 0) elements.push(renderInsertBar(i));
+              // Capture loop index in block-scoped const so closures get the correct value
+              const ti = i;
 
               if (token.kind === "heading") {
                 elements.push(
-                  <span key={`t-${i}`} data-token-idx={i}>
-                    <div className="group relative pb-2 pt-6" data-section={i} draggable={!previewMode}>
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    <div className="group relative pb-2 pt-6" data-section={ti} draggable={!previewMode}>
                       {(token.sectionNum || 0) > 1 && (
                         <div className="absolute left-0 right-0 top-1 h-px bg-[var(--border)]" />
                       )}
@@ -931,11 +898,14 @@ export function DocumentEditor({
                         {!previewMode && (
                           <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                             <GripVertical className="text-muted/50 h-3.5 w-3.5 cursor-grab" />
-                            <button onClick={() => moveSection(i, "up")} className="text-muted/50 hover:text-secondary">
+                            <button
+                              onClick={() => moveSection(ti, "up")}
+                              className="text-muted/50 hover:text-secondary"
+                            >
                               <ChevronUp className="h-3 w-3" />
                             </button>
                             <button
-                              onClick={() => moveSection(i, "down")}
+                              onClick={() => moveSection(ti, "down")}
                               className="text-muted/50 hover:text-secondary"
                             >
                               <ChevronDown className="h-3 w-3" />
@@ -948,13 +918,13 @@ export function DocumentEditor({
                           <input
                             defaultValue={token.text}
                             onBlur={(e) => {
-                              if (e.target.value !== token.text) updateTokenText(i, e.target.value);
+                              if (e.target.value !== token.text) updateTokenText(ti, e.target.value);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
                                 (e.target as HTMLInputElement).blur();
-                                insertTokenAfter(i, { kind: "text", text: "" });
+                                insertTokenAfter(ti, { kind: "text", text: "" });
                               }
                             }}
                             className="flex-1 border-b border-transparent bg-transparent text-base font-bold text-primary outline-none transition-colors focus:border-[var(--accent-30)]"
@@ -963,7 +933,7 @@ export function DocumentEditor({
                         )}
                         {!previewMode && (
                           <button
-                            onClick={() => removeSection(i)}
+                            onClick={() => removeSection(ti)}
                             className="text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -973,7 +943,7 @@ export function DocumentEditor({
                       {canInsert && (
                         <div
                           className="absolute -bottom-1 left-0 right-0 flex h-5 cursor-pointer items-center justify-center rounded bg-[var(--accent-25)] transition-colors hover:bg-[var(--accent-50)]"
-                          onClick={() => insertFieldAfterToken(i, addMode, "")}
+                          onClick={() => insertFieldAfterToken(ti, addMode || "free-text", "")}
                         >
                           <Plus className="h-3 w-3 text-[var(--accent)]" />
                         </div>
@@ -983,7 +953,7 @@ export function DocumentEditor({
                 );
               } else if (token.kind === "subheading") {
                 elements.push(
-                  <span key={`t-${i}`} data-token-idx={i}>
+                  <span key={`t-${ti}`} data-token-idx={ti}>
                     {previewMode ? (
                       <h4 className="pb-2 pt-6 text-sm font-bold uppercase tracking-widest text-secondary">
                         {token.text}
@@ -993,20 +963,20 @@ export function DocumentEditor({
                         <input
                           defaultValue={token.text}
                           onBlur={(e) => {
-                            if (e.target.value !== token.text) updateTokenText(i, e.target.value);
+                            if (e.target.value !== token.text) updateTokenText(ti, e.target.value);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
                               (e.target as HTMLInputElement).blur();
-                              insertTokenAfter(i, { kind: "text", text: "" });
+                              insertTokenAfter(ti, { kind: "text", text: "" });
                             }
                           }}
                           className="w-full border-b border-transparent bg-transparent text-sm font-bold uppercase tracking-widest text-secondary outline-none transition-colors focus:border-[var(--accent-30)]"
                           placeholder="Sub-heading..."
                         />
                         <button
-                          onClick={() => removeToken(i)}
+                          onClick={() => removeToken(ti)}
                           className="absolute right-0 top-6 text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -1017,7 +987,7 @@ export function DocumentEditor({
                 );
               } else if (token.kind === "listItem") {
                 elements.push(
-                  <span key={`t-${i}`} data-token-idx={i}>
+                  <span key={`t-${ti}`} data-token-idx={ti}>
                     {previewMode ? (
                       <div className="flex items-start gap-2 py-0.5 pl-4 text-sm leading-relaxed text-secondary">
                         <span className="mt-0.5 shrink-0 text-muted">&#8226;</span>
@@ -1029,20 +999,20 @@ export function DocumentEditor({
                         <span
                           contentEditable
                           suppressContentEditableWarning
-                          data-token-idx={i}
+                          data-token-idx={ti}
                           onBlur={(e) => {
                             const v = e.currentTarget.textContent || "";
-                            if (v !== token.text) updateTokenText(i, `- ${v}`);
+                            if (v !== token.text) updateTokenText(ti, `- ${v}`);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
                               e.preventDefault();
                               (e.currentTarget as HTMLElement).blur();
-                              insertTokenAfter(i, { kind: "listItem", text: "- " });
+                              insertTokenAfter(ti, { kind: "listItem", text: "- " });
                             }
                             if (e.key === "Backspace" && (e.currentTarget.textContent || "") === "") {
                               e.preventDefault();
-                              removeToken(i);
+                              removeToken(ti);
                             }
                           }}
                           className="flex-1 text-sm leading-relaxed text-secondary outline-none"
@@ -1050,7 +1020,7 @@ export function DocumentEditor({
                           {token.text.replace(/^[-*•]\s*/, "")}
                         </span>
                         <button
-                          onClick={() => removeToken(i)}
+                          onClick={() => removeToken(ti)}
                           className="mt-0.5 shrink-0 text-red-400/30 opacity-0 transition-opacity hover:text-red-400 group-hover/list:opacity-100"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -1061,14 +1031,14 @@ export function DocumentEditor({
                 );
               } else if (token.kind === "break") {
                 elements.push(
-                  <span key={`t-${i}`} data-token-idx={i}>
+                  <span key={`t-${ti}`} data-token-idx={ti}>
                     <div className="h-3" />
                   </span>,
                 );
               } else if (token.kind === "signatureBlock") {
-                const sid = `sig-${i}`;
+                const sid = `sig-${ti}`;
                 elements.push(
-                  <span key={`t-${i}`} data-token-idx={i}>
+                  <span key={`t-${ti}`} data-token-idx={ti}>
                     <EditorSignatureBlock
                       token={token}
                       tokenId={sid}
@@ -1076,8 +1046,8 @@ export function DocumentEditor({
                       previewMode={previewMode}
                       signers={signers}
                       onFocus={() => setActiveFieldId(sid)}
-                      onUpdate={(p) => updateSigBlock(i, p)}
-                      onRemove={() => removeSigBlock(i)}
+                      onUpdate={(p) => updateSigBlock(ti, p)}
+                      onRemove={() => removeSigBlock(ti)}
                     />
                   </span>,
                 );
@@ -1159,6 +1129,7 @@ export function DocumentEditor({
       effectivePreviewValues,
       activeFieldId,
       addMode,
+      showPanel,
       activeSigner,
       signers,
       isDragging,
@@ -1265,10 +1236,8 @@ export function DocumentEditor({
           </W3SIconButton>
         )}
 
-        {collabAvailable && !collabSessionId && (
-          <W3SButton variant="ghost" size="xs" onClick={() => setShowCollabPanel(true)}>
-            <Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Collab</span>
-          </W3SButton>
+        {collabSessionId && collabSession && (
+          <CollabSharePopover sessionId={collabSessionId} joinToken={collabSession.session?.joinToken ?? ""} />
         )}
 
         <W3SButton variant="primary" size="xs" onClick={() => onSubmit(buildResult())} disabled={!title.trim()}>
@@ -1595,17 +1564,7 @@ export function DocumentEditor({
         </>
       )}
 
-      <CollabSessionPanel
-        isOpen={showCollabPanel}
-        onClose={() => setShowCollabPanel(false)}
-        onJoinSession={(sid) => {
-          setCollabSessionId(sid);
-          setShowCollabPanel(false);
-        }}
-        documentId={documentId}
-        documentTitle={title}
-        displayName={displayName}
-      />
+      {/* CollabSessionPanel removed — sessions auto-start when documentId is present */}
     </div>
   );
 }

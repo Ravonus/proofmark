@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-empty-function, @typescript-eslint/consistent-type-imports -- premium router stubs expose `any` types */
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { trpc } from "~/lib/trpc";
 import { useWallet } from "~/components/wallet-provider";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import { isImageDataUrl } from "~/lib/document/field-values";
 import { tokenizeDocument, type DocToken } from "~/lib/document/document-tokens";
 import { getFieldDisplayText, getFieldVisualStyle } from "~/components/signing/sign-document-helpers";
@@ -25,6 +28,24 @@ import {
 } from "lucide-react";
 import { ForensicReplayPanel } from "~/components/forensic/forensic-replay-panel";
 import { ThemeToggle } from "~/components/theme-toggle";
+
+// Premium collab components — loaded dynamically to keep OSS bundle clean
+const CollabToolbar = dynamic(
+  () => import("../../../../premium/components/collab/collab-toolbar").then((m) => m.CollabToolbar),
+  { ssr: false, loading: () => null },
+);
+const CollabAnnotationSidebar = dynamic(
+  () => import("../../../../premium/components/collab/collab-annotations").then((m) => m.CollabAnnotationSidebar),
+  { ssr: false, loading: () => null },
+);
+const CollabAiPanel = dynamic(
+  () => import("../../../../premium/components/collab/collab-ai-panel").then((m) => m.CollabAiPanel),
+  { ssr: false, loading: () => null },
+);
+const CollabSharePopover = dynamic(
+  () => import("../../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
+  { ssr: false, loading: () => null },
+);
 
 type Props = { documentId: string };
 
@@ -81,6 +102,32 @@ export function ViewDocumentClient({ documentId }: Props) {
   const signedCount = doc?.signers.filter((s) => s.status === "SIGNED").length ?? 0;
   const allSigned = doc ? doc.signers.every((s) => s.status === "SIGNED") : false;
   const isCreatorViewer = !!(doc && doc.createdBy.toLowerCase() === address?.toLowerCase());
+
+  // ── Collaboration (auto-start) ──
+  const identity = useConnectedIdentity();
+  const collabCapabilities = trpc.collab.capabilities.useQuery();
+  const collabAvailable = collabCapabilities.data?.available ?? false;
+  const [collabSessionId, setCollabSessionId] = useState<string | null>(null);
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const autoCollabInitiated = useRef(false);
+  const viewerDisplayName = identity.session?.user?.name ?? identity.wallet?.address?.slice(0, 8) ?? "Anonymous";
+
+  const autoCollab = trpc.collab.getOrCreateForDocument.useMutation();
+  const collabSessionQuery = trpc.collab.get.useQuery({ sessionId: collabSessionId! }, { enabled: !!collabSessionId });
+  const collabSession = collabSessionQuery.data;
+
+  useEffect(() => {
+    if (!collabAvailable || !documentId || !viewerDisplayName || autoCollabInitiated.current) return;
+    autoCollabInitiated.current = true;
+    autoCollab
+      .mutateAsync({ documentId, documentTitle: doc?.title, displayName: viewerDisplayName })
+      .then((res) => setCollabSessionId(res.sessionId))
+      .catch(() => {
+        autoCollabInitiated.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabAvailable, documentId, viewerDisplayName]);
 
   // Scroll spy
   useEffect(() => {
@@ -191,6 +238,9 @@ export function ViewDocumentClient({ documentId }: Props) {
             >
               <ShieldCheck className="h-3.5 w-3.5" /> Verify
             </a>
+            {collabSessionId && collabSession && (
+              <CollabSharePopover sessionId={collabSessionId} joinToken={collabSession.session?.joinToken ?? ""} />
+            )}
           </div>
         </div>
       </div>
@@ -455,7 +505,7 @@ export function ViewDocumentClient({ documentId }: Props) {
             <section
               id="downloads"
               ref={(el) => {
-                sectionRefs.current["downloads"] = el;
+                sectionRefs.current.downloads = el;
               }}
               className="mt-12"
             >
@@ -467,17 +517,15 @@ export function ViewDocumentClient({ documentId }: Props) {
                   <a
                     key={dl.filename}
                     href={`/api/download/${encodeURIComponent(dl.filename)}?documentId=${documentId}`}
-                    className="flex items-center gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition-colors hover:bg-card/80"
+                    className="border-border/40 bg-card/60 hover:bg-card/80 flex items-center gap-4 rounded-xl border p-4 transition-colors"
                     download
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                    <div className="bg-accent/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-accent">
                       <FileDown className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-primary">{dl.label}</p>
-                      {dl.description && (
-                        <p className="truncate text-xs text-muted">{dl.description}</p>
-                      )}
+                      {dl.description && <p className="truncate text-xs text-muted">{dl.description}</p>}
                     </div>
                     <span className="shrink-0 text-xs text-muted">{dl.filename.split(".").pop()?.toUpperCase()}</span>
                   </a>
@@ -573,6 +621,45 @@ export function ViewDocumentClient({ documentId }: Props) {
           </div>
         </main>
       </div>
+
+      {/* ── Collaboration overlays ── */}
+      {collabSessionId && collabSession && (
+        <>
+          <CollabToolbar
+            sessionId={collabSessionId}
+            sessionTitle={collabSession.session?.title ?? doc.title}
+            joinToken={collabSession.session?.joinToken ?? ""}
+            isHost={collabSession.myRole === "host"}
+            connected={true}
+            participants={(collabSession.participants ?? []).map((p: Record<string, unknown>) => ({
+              userId: p.userId as string,
+              displayName: p.displayName as string,
+              color: p.color as string,
+              role: p.role as string,
+              isActive: Boolean(p.isActive),
+            }))}
+            remoteUsers={[]}
+            onClose={() => setCollabSessionId(null)}
+            hasDocument={true}
+          />
+
+          <CollabAnnotationSidebar
+            sessionId={collabSessionId}
+            isOpen={showAnnotations}
+            onClose={() => setShowAnnotations(false)}
+            onNavigate={() => {}}
+            currentUserId={identity.currentWallet?.address ?? identity.session?.user?.id ?? ""}
+            isHost={collabSession.myRole === "host"}
+          />
+
+          <CollabAiPanel
+            isOpen={showAiPanel}
+            onClose={() => setShowAiPanel(false)}
+            sessionId={collabSessionId}
+            displayName={viewerDisplayName}
+          />
+        </>
+      )}
     </div>
   );
 }

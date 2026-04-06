@@ -15,8 +15,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use super::privacy;
-use super::store::{IndexStore, CF_ENTITIES, StoreResult};
-use super::tokenizer;
+use crate::index::store::{IndexStore, CF_ENTITIES, StoreResult};
+use crate::index::search::tokenizer;
 
 use crate::util::patterns::{DATE_ISO_RE, DATE_WRITTEN_RE};
 

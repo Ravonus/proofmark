@@ -4,27 +4,19 @@
 //! fuzzy/typo-tolerant search (BK-tree), PII detection, encrypted partial
 //! indexing, AI-enhanced indexing, and background job queue.
 
-pub mod ai;
-pub mod bk_tree;
-pub mod encrypted;
-mod engine;
-pub mod inverted;
-pub mod keys;
-pub mod privacy;
-pub mod queue;
-pub mod scanner;
 pub mod store;
-pub mod tokenizer;
-pub mod trie;
+pub mod search;
+pub mod features;
+mod engine;
 
 use std::sync::Arc;
 
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
-use self::bk_tree::FuzzyIndex;
-use self::encrypted::EncryptedIndexConfig;
-use self::queue::{IndexQueue, QueueConfig};
+use self::search::bk_tree::FuzzyIndex;
+use self::features::encrypted::EncryptedIndexConfig;
+use self::features::queue::{IndexQueue, QueueConfig};
 use self::store::IndexStore;
 
 pub use engine::IndexResult;
@@ -33,7 +25,7 @@ pub struct IndexEngine {
     store: IndexStore,
     fuzzy: Arc<FuzzyIndex>,
     queue: Arc<IndexQueue>,
-    ai_config: Arc<RwLock<ai::AiIndexConfig>>,
+    ai_config: Arc<RwLock<features::ai::AiIndexConfig>>,
     encrypted_config: Arc<RwLock<EncryptedIndexConfig>>,
 }
 
@@ -41,7 +33,7 @@ pub struct IndexEngine {
 pub struct IndexEngineConfig {
     pub db_path: String,
     pub queue: QueueConfig,
-    pub ai: ai::AiIndexConfig,
+    pub ai: features::ai::AiIndexConfig,
     pub encrypted: EncryptedIndexConfig,
 }
 
@@ -50,7 +42,7 @@ impl Default for IndexEngineConfig {
         Self {
             db_path: "./data/index".to_string(),
             queue: QueueConfig::default(),
-            ai: ai::AiIndexConfig::default(),
+            ai: features::ai::AiIndexConfig::default(),
             encrypted: EncryptedIndexConfig::default(),
         }
     }
@@ -106,7 +98,7 @@ pub struct SearchResponse {
     pub results: Vec<SearchResultItem>,
     pub total: usize,
     pub fuzzy_results: Vec<FuzzyResultItem>,
-    pub encrypted_results: Vec<encrypted::EncryptedSearchResult>,
+    pub encrypted_results: Vec<features::encrypted::EncryptedSearchResult>,
     pub query_tokens: Vec<String>,
     pub search_time_ms: u64,
 }

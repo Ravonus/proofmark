@@ -4,10 +4,13 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
 use super::*;
-use super::bk_tree::FuzzyIndex;
-use super::encrypted::EncryptedIndexConfig;
-use super::queue::{IndexQueue, IndexJob, JobType, JobPriority};
+use super::search::bk_tree::FuzzyIndex;
+use super::features::encrypted::EncryptedIndexConfig;
+use super::features::queue::{IndexQueue, IndexJob, JobType, JobPriority};
 use super::store::{self, DocumentMeta, IndexStore, PrivacyLevel, StoreResult};
+
+use super::search::{inverted, tokenizer, trie};
+use super::features::{ai, encrypted, privacy, queue, scanner};
 
 impl IndexEngine {
     pub fn new(config: IndexEngineConfig) -> StoreResult<Self> {
