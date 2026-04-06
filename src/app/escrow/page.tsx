@@ -1,28 +1,19 @@
 "use client";
 
-import { Nav } from "~/components/nav";
-import { EscrowDashboard } from "~/components/escrow/escrow-dashboard";
-import { FadeIn, PageTransition } from "~/components/ui/motion";
+import dynamic from "next/dynamic";
+import { isPremiumBuild } from "~/lib/premium-client";
+
+const PremiumEscrowPage = dynamic(() => import("../../../premium/pages/escrow/page"), { ssr: false });
 
 export default function EscrowPage() {
+  if (!isPremiumBuild) return <PremiumNotAvailable feature="Escrow" />;
+  return <PremiumEscrowPage />;
+}
+
+function PremiumNotAvailable({ feature }: { feature: string }) {
   return (
-    <PageTransition>
-      <main className="min-h-screen">
-        <Nav />
-
-        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-          <FadeIn className="mb-8">
-            <h2 className="text-2xl font-bold">Escrow &amp; Bets</h2>
-            <p className="mt-1 text-sm text-muted">
-              Create trustless escrows, bets, and agreements — backed by crypto signatures and on-chain settlement
-            </p>
-          </FadeIn>
-
-          <FadeIn delay={0.12}>
-            <EscrowDashboard />
-          </FadeIn>
-        </div>
-      </main>
-    </PageTransition>
+    <main className="flex min-h-screen items-center justify-center">
+      <p className="text-sm text-muted">{feature} is a premium feature.</p>
+    </main>
   );
 }

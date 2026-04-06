@@ -1,5 +1,4 @@
 //! AES-256-GCM encryption/decryption with HKDF key derivation.
-//! Mirrors src/server/encryption.ts
 
 use aes_gcm::{
     aead::{Aead, KeyInit, OsRng},

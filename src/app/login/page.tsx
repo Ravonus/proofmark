@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Wallet, Shield, ArrowRight, Loader2, Sparkles, Eye, EyeOff, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp, useSession } from "~/lib/auth-client";
+import { signIn, signUp, useSession, twoFactor } from "~/lib/auth-client";
 import { useWallet } from "~/components/wallet-provider";
 import { CHAIN_META, addressPreview } from "~/lib/chains";
 import { trpc } from "~/lib/trpc";
@@ -107,7 +107,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await signIn.email({ email, password });
+      const res = await twoFactor.verifyTotp({ code: totpCode });
       if (res.error) throw new Error(res.error.message ?? "2FA verification failed");
       router.push("/dashboard");
     } catch (err) {
@@ -158,7 +158,7 @@ export default function LoginPage() {
                   }`}
                 >
                   <Icon className="h-3 w-3" />
-                  <span className="hidden sm:inline">{t.label}</span>
+                  <span className="text-[9px] sm:text-[10px]">{t.label}</span>
                   {active && (
                     <motion.span
                       layoutId="auth-tab"
@@ -411,7 +411,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="border-[var(--danger)]/15 mt-3 rounded-sm border bg-[var(--danger-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--danger)]"
+                className="mt-3 rounded-sm border border-[var(--danger-15)] bg-[var(--danger-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--danger)]"
               >
                 {error}
               </motion.p>
@@ -421,7 +421,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="border-[var(--success)]/15 mt-3 rounded-sm border bg-[var(--success-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--success)]"
+                className="mt-3 rounded-sm border border-[var(--success-15)] bg-[var(--success-subtle)] px-2.5 py-1.5 text-[10px] text-[var(--success)]"
               >
                 {success}
               </motion.p>
@@ -485,13 +485,13 @@ function WalletConnectInline() {
         </p>
 
         {authError && (
-          <p className="border-[var(--danger)]/15 mt-2 rounded-sm border bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
+          <p className="mt-2 rounded-sm border border-[var(--danger-15)] bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
             {authError}
           </p>
         )}
 
         {walletError && (
-          <p className="border-[var(--danger)]/15 mt-2 rounded-sm border bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
+          <p className="mt-2 rounded-sm border border-[var(--danger-15)] bg-[var(--danger-subtle)] px-2 py-1 text-[10px] text-[var(--danger)]">
             {walletError}
           </p>
         )}

@@ -4,6 +4,10 @@ import type { SignerTokenGate } from "~/lib/token-gates";
 import { FIELD_REGISTRY, FIELD_CATEGORIES } from "../fields";
 import type { DropdownItem } from "../ui/search-dropdown";
 
+// SignerDef is derived from the Zod schema — single source of truth (DRY)
+export type { SignerDef } from "~/lib/schemas/signer";
+import type { SignerDef } from "~/lib/schemas/signer";
+
 export const SIGNER_BORDER_COLORS = ["#60a5fa", "#fb923c", "#c084fc", "#34d399", "#f472b6", "#22d3ee"];
 
 export const fieldDropdownItems: DropdownItem[] = FIELD_CATEGORIES.flatMap(
@@ -15,17 +19,6 @@ export const fieldDropdownItems: DropdownItem[] = FIELD_CATEGORIES.flatMap(
       })
       .filter(Boolean) as DropdownItem[],
 );
-
-// -- Types --
-
-export type SignerDef = {
-  label: string;
-  email: string;
-  phone?: string;
-  role?: "SIGNER" | "APPROVER" | "CC" | "WITNESS" | "OBSERVER";
-  signMethod?: "WALLET" | "EMAIL_OTP";
-  tokenGates?: SignerTokenGate | null;
-};
 
 export type EditorSignerField = Pick<InlineField, "id" | "type" | "label" | "required" | "options" | "settings"> & {
   value: string | null;

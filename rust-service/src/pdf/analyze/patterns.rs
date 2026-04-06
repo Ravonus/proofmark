@@ -5,9 +5,8 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Core detection patterns
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static BLANK_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?:_{3,}|\.{5,}|-{5,})").unwrap());
@@ -33,9 +32,8 @@ pub static CHECKBOX_RE: Lazy<Regex> = Lazy::new(|| {
         .unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Document type classification
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static DOCTYPE_NDA_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(?:non-?disclosure|nda|confidentiality)\b").unwrap()
@@ -60,9 +58,8 @@ pub static DOCTYPE_PURCHASE_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(?:purchase\s+agreement|sale\s+agreement|bill\s+of\s+sale)\b").unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Document type detection (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static NDA_AGREEMENT_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\bnon[\s-]?disclosure\s+agreement\b").unwrap()
@@ -83,9 +80,8 @@ pub static TOKEN_PURCHASE_AGREEMENT_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\btoken\s+(purchase|sale)\s+agreement\b").unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Field detection patterns (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static CLAUSE_NUM_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^\d+\.\s+(?:COMPLEX\s+)?CLAUSE\s+\d+").unwrap()
@@ -97,9 +93,8 @@ pub static SPECIAL_CONDITIONS_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^SPECIAL\s+CONDITIONS").unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Field-in-line detection patterns (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static SIG_LINE_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)signature\s*:\s*(?:_{3,}|\.{5,}|-{5,})").unwrap()
@@ -135,9 +130,8 @@ pub static TITLE_CAPTURE_RE: Lazy<Regex> = Lazy::new(|| {
     .unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Excluded zone patterns (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static WITNESS_ZONE_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(?:witness(?:ed)?(?:\s+by)?|in\s+the\s+presence\s+of)\s*:?").unwrap()
@@ -159,9 +153,8 @@ pub static DRAFT_CONFIDENTIAL_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^(?:draft|confidential|sample|do\s+not\s+copy|privileged)\s*$").unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Boilerplate detection patterns (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static FIELD_HEADER_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^(?:Signature|Date|Initials|(?:Typed\s+or\s+)?Print(?:ed)?\s+Name|Name|Title|By|Its|Email|Phone|Company|Wallet|Authorized)\s*:").unwrap()
@@ -173,9 +166,8 @@ pub static PARAGRAPH_START_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)^(?:Each|The\s|All\s|Any\s|No\s|In\s|This\s|That\s|Such\s|For\s|If\s|As\s|To\s|Upon\s)").unwrap()
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Utility patterns (inline regexes converted to statics)
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub static PARENS_UPPERCASE_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^\([A-Z]+\)$").unwrap()

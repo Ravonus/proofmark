@@ -6,9 +6,8 @@ use super::fields::{format_field_value, guess_field_type};
 use super::theme::*;
 use super::types::*;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Helpers
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn is_image_data_url(value: &str) -> bool {
     IMAGE_DATA_URL_RE.is_match(value.trim())
@@ -75,9 +74,7 @@ fn string_value(value: &serde_json::Value) -> Option<String> {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Canonical line parsing
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) fn parse_canonical_line(
     line: &str,
@@ -142,9 +139,7 @@ pub(super) fn parse_canonical_line(
     Some(tokens)
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Inline field processing
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) fn process_inline_fields(
     line: &str,
@@ -222,9 +217,7 @@ pub(super) fn process_inline_fields(
     tokens
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Document tokenization
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) fn tokenize_document(content: &str, signer_count: usize) -> (Vec<DocToken>, Vec<InlineFieldDef>) {
     let mut tokens = Vec::new();
@@ -333,9 +326,7 @@ pub(super) fn tokenize_document(content: &str, signer_count: usize) -> (Vec<DocT
     (tokens, fields)
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Content to segments
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub(super) fn parse_content_to_segments(content: &str, signers: &[SignerInfo]) -> (Vec<Vec<ContentSegment>>, Vec<FieldSummaryEntry>) {
     let mut vals = HashMap::<String, FieldValueEntry>::new();

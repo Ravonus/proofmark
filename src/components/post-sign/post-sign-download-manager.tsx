@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { FileDown, Loader2, PackageOpen, Save, Trash2, Upload } from "lucide-react";
 import { trpc } from "~/lib/trpc";
 import type { PostSignReveal } from "~/server/db/schema";
@@ -59,7 +59,13 @@ export function PostSignDownloadManager({
   reveal: PostSignReveal | null;
 }) {
   const utils = trpc.useUtils();
+  // Reset items when reveal changes (replaces useEffect sync)
+  const prevRevealRef = useRef(reveal);
   const [items, setItems] = useState<EditableDownload[]>(() => toEditableDownloads(reveal));
+  if (prevRevealRef.current !== reveal) {
+    prevRevealRef.current = reveal;
+    setItems(toEditableDownloads(reveal));
+  }
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
@@ -67,10 +73,6 @@ export function PostSignDownloadManager({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    setItems(toEditableDownloads(reveal));
-  }, [reveal]);
 
   const syncReveal = async (nextReveal: PostSignReveal) => {
     setItems(toEditableDownloads(nextReveal));
@@ -183,7 +185,7 @@ export function PostSignDownloadManager({
   };
 
   return (
-    <div className="bg-[var(--bg-card)]/80 rounded-lg border border-[var(--border)] p-4">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-card-80)] p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Contract documents</p>
@@ -199,20 +201,20 @@ export function PostSignDownloadManager({
       </div>
 
       {message && (
-        <div className="border-[var(--success)]/20 mt-3 rounded-sm border bg-[var(--success-subtle)] px-3 py-2 text-[11px] text-[var(--success)]">
+        <div className="mt-3 rounded-sm border border-[var(--success-20)] bg-[var(--success-subtle)] px-3 py-2 text-[11px] text-[var(--success)]">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="border-[var(--danger)]/20 mt-3 rounded-sm border bg-[var(--danger-subtle)] px-3 py-2 text-[11px] text-[var(--danger)]">
+        <div className="mt-3 rounded-sm border border-[var(--danger-20)] bg-[var(--danger-subtle)] px-3 py-2 text-[11px] text-[var(--danger)]">
           {error}
         </div>
       )}
 
       <div className="mt-4 space-y-3">
         {items.length === 0 ? (
-          <div className="bg-[var(--bg-inset)]/40 rounded-md border border-dashed border-[var(--border)] px-4 py-5 text-[12px] text-muted">
+          <div className="rounded-md border border-dashed border-[var(--border)] bg-[var(--bg-inset-40)] px-4 py-5 text-[12px] text-muted">
             No shared files yet. Add one below to make it available immediately after signing.
           </div>
         ) : (
@@ -221,7 +223,7 @@ export function PostSignDownloadManager({
             const removeKey = `remove:${item.filename}`;
 
             return (
-              <div key={item.filename} className="bg-[var(--bg-inset)]/30 rounded-md border border-[var(--border)] p-3">
+              <div key={item.filename} className="rounded-md border border-[var(--border)] bg-[var(--bg-inset-30)] p-3">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                   <div className="space-y-2">
                     <label className="block">
@@ -292,7 +294,7 @@ export function PostSignDownloadManager({
                   <a
                     href={`/api/download/${encodeURIComponent(item.filename)}?documentId=${documentId}`}
                     download
-                    className="inline-flex items-center gap-1 rounded-xs bg-[var(--bg-card)] px-2.5 py-1.5 text-[10px] font-medium text-secondary border border-[var(--border)] transition-colors hover:bg-[var(--bg-hover)]"
+                    className="inline-flex items-center gap-1 rounded-xs border border-[var(--border)] bg-[var(--bg-card)] px-2.5 py-1.5 text-[10px] font-medium text-secondary transition-colors hover:bg-[var(--bg-hover)]"
                   >
                     <FileDown className="h-3 w-3" />
                     Download
@@ -317,7 +319,7 @@ export function PostSignDownloadManager({
         )}
       </div>
 
-      <div className="bg-[var(--bg-inset)]/40 mt-4 rounded-md border border-dashed border-[var(--border)] p-4">
+      <div className="mt-4 rounded-md border border-dashed border-[var(--border)] bg-[var(--bg-inset-40)] p-4">
         <p className="text-[12px] font-medium text-primary">Add a new contract document</p>
         <div className="mt-3 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
           <label className="block">

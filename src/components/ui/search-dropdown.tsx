@@ -104,7 +104,7 @@ export const SearchDropdown = memo(function SearchDropdown({
       ) : (
         <button
           onClick={() => setOpen(!open)}
-          className="hover:ring-[var(--accent)]/40 flex w-full items-center gap-2 rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-left text-sm outline-none ring-1 ring-[var(--border)] transition-all"
+          className="flex w-full items-center gap-2 rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-left text-sm outline-none ring-1 ring-[var(--border)] transition-all hover:ring-[var(--accent-40)]"
         >
           {selectedItem ? (
             <>
@@ -178,7 +178,7 @@ export const SearchDropdown = memo(function SearchDropdown({
                           onMouseEnter={() => setHighlightIdx(idx)}
                           className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition-all ${
                             isHighlighted
-                              ? "bg-[var(--accent)]/10 text-primary"
+                              ? "bg-[var(--accent-10)] text-primary"
                               : "text-secondary hover:bg-[var(--bg-hover)]"
                           }`}
                         >
@@ -190,7 +190,7 @@ export const SearchDropdown = memo(function SearchDropdown({
                             {item.description && <p className="truncate text-[10px] text-muted">{item.description}</p>}
                           </div>
                           {isHighlighted && (
-                            <span className="text-[var(--accent)]/50 shrink-0 text-[10px]">&#9166;</span>
+                            <span className="shrink-0 text-[10px] text-[var(--accent-50)]">&#9166;</span>
                           )}
                         </button>
                       );

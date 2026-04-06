@@ -957,17 +957,16 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
 
   const totalDurationMs = Math.max(...signers.map((signer) => signer.durationMs), 0);
   const durationMs = soloIndex !== null ? (signers[soloIndex]?.durationMs ?? 0) : totalDurationMs;
-
-  useEffect(() => {
-    setCursorMs((current) => Math.min(current, totalDurationMs));
-  }, [totalDurationMs]);
+  const effectiveCursorMs = Math.min(cursorMs, durationMs);
 
   const states = useMemo(() => {
     return signers.map((signer) => ({
       signer,
-      state: signer.tape ? buildStateAt(signer.tape, signer.events, cursorMs, signer.documentViewingStartedMs) : null,
+      state: signer.tape
+        ? buildStateAt(signer.tape, signer.events, effectiveCursorMs, signer.documentViewingStartedMs)
+        : null,
     }));
-  }, [cursorMs, signers]);
+  }, [effectiveCursorMs, signers]);
 
   const visibleStates = useMemo(() => {
     return states.filter(({ signer }) =>
@@ -1050,7 +1049,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
     const smoothed = current + diff * 0.25;
     followTargetRef.current = smoothed;
     window.scrollTo({ top: Math.max(0, smoothed) });
-  }, [activeSignerIndex, cursorMs, followEnabled, playing, states, visibleStates]);
+  }, [activeSignerIndex, effectiveCursorMs, followEnabled, playing, states, visibleStates]);
 
   useEffect(() => {
     if (!playing) return;
@@ -1095,7 +1094,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
       setPlaying(false);
       return;
     }
-    if (cursorMs >= durationMs) setCursorMs(0);
+    if (effectiveCursorMs >= durationMs) setCursorMs(0);
     setPlaying(true);
   };
 
@@ -1744,7 +1743,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
             <span>{barMinimized ? "Show controls" : ""}</span>
             {barMinimized && (
               <span className="font-medium text-secondary">
-                {formatTime(cursorMs)} / {formatTime(durationMs)}
+                {formatTime(effectiveCursorMs)} / {formatTime(durationMs)}
               </span>
             )}
           </button>
@@ -1753,7 +1752,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
             <div className="flex flex-col gap-3 px-4 pb-3">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleSeek(cursorMs - 5000)}
+                  onClick={() => handleSeek(effectiveCursorMs - 5000)}
                   className="rounded-xl bg-surface-elevated p-2 text-secondary transition-colors hover:text-primary"
                   aria-label="Back 5 seconds"
                 >
@@ -1767,7 +1766,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                   {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </button>
                 <button
-                  onClick={() => handleSeek(cursorMs + 5000)}
+                  onClick={() => handleSeek(effectiveCursorMs + 5000)}
                   className="rounded-xl bg-surface-elevated p-2 text-secondary transition-colors hover:text-primary"
                   aria-label="Forward 5 seconds"
                 >
@@ -1790,7 +1789,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                     min={0}
                     max={Math.max(durationMs, 1)}
                     step={Math.max(100, TQ)}
-                    value={Math.min(cursorMs, durationMs)}
+                    value={effectiveCursorMs}
                     onChange={(event) => handleSeek(Number(event.target.value))}
                     className="w-full accent-[var(--accent)]"
                   />
@@ -1827,7 +1826,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
                       events={signer.events}
                       interactions={signer.interactions}
                       durationMs={signer.durationMs}
-                      cursorMs={cursorMs}
+                      cursorMs={effectiveCursorMs}
                       onSeek={handleSeek}
                       color={laneColor(signer.index)}
                       docViewStartMs={signer.documentViewingStartedMs}
@@ -1839,7 +1838,7 @@ export function ReplayDocumentViewer({ documentId, shareToken }: Props) {
               <div className="flex items-center justify-between gap-3 text-xs text-muted">
                 <div className="flex items-center gap-3">
                   <span className="font-medium text-secondary">
-                    {formatTime(cursorMs)} / {formatTime(durationMs)}
+                    {formatTime(effectiveCursorMs)} / {formatTime(durationMs)}
                   </span>
                   <span>{activeState?.lastAction || "Waiting for replay"}</span>
                 </div>

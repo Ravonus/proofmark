@@ -795,7 +795,13 @@ export const webhookEndpoints = pgTable(
   ],
 );
 
-// ── AI Provider & Usage ──
+// ══════════════════════════════════════════════════════════════════════════════
+// PREMIUM TABLES — used exclusively by premium/ modules.
+// Defined here for Drizzle migration compatibility. OSS code should NOT
+// import or query these tables directly.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── AI Provider & Usage (premium) ──
 
 export const aiProviderEnum = pgEnum("ai_provider", [
   "anthropic",
@@ -989,7 +995,7 @@ export const aiConversations = pgTable(
   ],
 );
 
-/** OpenClaw Connector sessions — tracks active connector instances. */
+/** OpenClaw Connector sessions (premium) — tracks active connector instances. */
 export const connectorSessions = pgTable(
   "connector_sessions",
   {

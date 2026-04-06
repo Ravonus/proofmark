@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-empty-function -- premium router stubs expose `any` types */
 "use client";
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "~/lib/trpc";
 import { Select } from "../ui/select";
@@ -33,7 +35,6 @@ import {
   PanelLeftOpen,
   Menu,
   Users,
-  FileText,
   Heading,
   List,
   Type as TypeIcon,
@@ -48,7 +49,28 @@ import { W3SButton, W3SIconButton } from "../ui/motion";
 import type { SignerDef, EditorResult, PreviewValueMap } from "./document-editor-types";
 import { SIGNER_BORDER_COLORS } from "./document-editor-types";
 import { EditorField, EditorSignatureBlock, type SignatureBlockToken } from "./document-editor-fields";
+import { useEditorKeyboard } from "./use-editor-keyboard";
+import { useEditorStore } from "~/stores/editor";
 import { TokenGateEditor } from "../settings/token-gate-editor";
+import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
+// Premium collab components — loaded dynamically to keep OSS bundle clean
+// CollabSessionPanel removed — sessions auto-start when documentId is present
+const CollabToolbar = dynamic(
+  () => import("../../../premium/components/collab/collab-toolbar").then((m) => m.CollabToolbar),
+  { ssr: false, loading: () => null },
+);
+const CollabAnnotationSidebar = dynamic(
+  () => import("../../../premium/components/collab/collab-annotations").then((m) => m.CollabAnnotationSidebar),
+  { ssr: false, loading: () => null },
+);
+const CollabAiPanel = dynamic(
+  () => import("../../../premium/components/collab/collab-ai-panel").then((m) => m.CollabAiPanel),
+  { ssr: false, loading: () => null },
+);
+const CollabSharePopover = dynamic(
+  () => import("../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
+  { ssr: false, loading: () => null },
+);
 
 export type { EditorResult, SignerDef } from "./document-editor-types";
 
@@ -59,6 +81,8 @@ type Props = {
   onSubmit: (result: EditorResult) => void;
   onSaveTemplate?: (result: EditorResult) => void | Promise<void>;
   onBack: () => void;
+  /** Pass to enable collab features (start/join from editor) */
+  documentId?: string;
 };
 
 // ── Main Editor ──
@@ -70,6 +94,7 @@ export function DocumentEditor({
   onSubmit,
   onSaveTemplate,
   onBack,
+  documentId,
 }: Props) {
   const addressSuggestionsMut = trpc.account.addressSuggestions.useMutation();
   const addressSuggestionsRef = useRef(addressSuggestionsMut);
@@ -90,19 +115,58 @@ export function DocumentEditor({
           { label: "Party B", email: "", phone: "", tokenGates: null },
         ],
   );
-  const [addMode, setAddMode] = useState<InlineField["type"] | null>(null);
+  // UI state from Zustand store (shared, no useEffect sync needed)
+  const addMode = useEditorStore((s) => s.addMode);
+  const setAddMode = useEditorStore((s) => s.setAddMode);
+  const activeFieldId = useEditorStore((s) => s.activeFieldId);
+  const setActiveFieldId = useEditorStore((s) => s.setActiveFieldId);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
+  const activeSigner = useEditorStore((s) => s.activeSigner);
+  const setActiveSigner = useEditorStore((s) => s.setActiveSigner);
+  const showPanel = useEditorStore((s) => s.showPanel);
+  const togglePanel = useEditorStore((s) => s.togglePanel);
+  const showSigners = useEditorStore((s) => s.showSigners);
+  const setShowSigners = useEditorStore((s) => s.setShowSigners);
+  const mobilePanel = useEditorStore((s) => s.mobilePanel);
+  const setMobilePanel = useEditorStore((s) => s.setMobilePanel);
+  const fullscreen = useEditorStore((s) => s.fullscreen);
+  const setFullscreen = useEditorStore((s) => s.setFullscreen);
+
+  // Local-only UI state (transient, not shared)
   const [showAddSection, setShowAddSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState("");
   const [newSectionContent, setNewSectionContent] = useState("");
-  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState(false);
-  const [activeSigner, setActiveSigner] = useState(0);
   const [expandedSignerPhone, setExpandedSignerPhone] = useState<number | null>(null);
-  const [showPanel, setShowPanel] = useState(false);
-  const [showSigners, setShowSigners] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
   const fieldCounter = useRef(fields.length);
+
+  // ── Collaboration (auto-start) ──
+  const identity = useConnectedIdentity();
+  const collabCapabilities = trpc.collab.capabilities.useQuery();
+  const collabAvailable = collabCapabilities.data?.available ?? false;
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const displayName = identity.session?.user?.name ?? identity.wallet?.address?.slice(0, 8) ?? "Anonymous";
+
+  // Auto-create/join a collab session when documentId is present and collab is available
+  const autoCollab = trpc.collab.getOrCreateForDocument.useMutation();
+  const [collabSessionId, setCollabSessionId] = useState<string | null>(null);
+  const autoCollabInitiated = useRef(false);
+
+  useEffect(() => {
+    if (!collabAvailable || !documentId || !displayName || autoCollabInitiated.current) return;
+    autoCollabInitiated.current = true;
+    autoCollab
+      .mutateAsync({ documentId, documentTitle: title, displayName })
+      .then((res) => setCollabSessionId(res.sessionId))
+      .catch(() => {
+        autoCollabInitiated.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabAvailable, documentId, displayName]);
+
+  const collabSessionQuery = trpc.collab.get.useQuery({ sessionId: collabSessionId! }, { enabled: !!collabSessionId });
+  const collabSession = collabSessionQuery.data;
 
   // ── Undo/redo ──
   const historyRef = useRef(new EditorHistory());
@@ -145,9 +209,16 @@ export function DocumentEditor({
 
   const [dragFieldId, setDragFieldId] = useState<string | null>(null);
   const [dragNewType, setDragNewType] = useState<InlineField["type"] | null>(null);
-  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null);
-  const dropTargetIdxRef = useRef<number | null>(null);
-  const [dropIndicatorY, setDropIndicatorY] = useState(0);
+  type DropTarget = {
+    tokenIdx: number;
+    charOffset: number; // -1 = between tokens, >= 0 = within text at char position
+    x: number;
+    y: number;
+    h: number;
+    vertical: boolean; // true = vertical cursor (inline), false = horizontal line (block)
+  };
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const dropTargetRef = useRef<DropTarget | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const isDragging = dragFieldId !== null || dragNewType !== null;
   const docContainerRef = useRef<HTMLDivElement>(null);
@@ -190,34 +261,75 @@ export function DocumentEditor({
     return "";
   }, [dragNewType, dragFieldId, fields]);
 
-  /** Find the nearest token element to the cursor and show a drop indicator above or below it. */
-  const handleDocDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    const container = docContainerRef.current;
-    if (!container) return;
-    const containerRect = container.getBoundingClientRect();
-    const wrappers = container.querySelectorAll("[data-token-idx]");
-    let closestIdx = 0,
-      closestDist = Infinity,
-      indicatorY = 0;
-    wrappers.forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      const midpoint = rect.top + rect.height / 2;
-      const dist = Math.abs(e.clientY - midpoint);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closestIdx = parseInt(el.getAttribute("data-token-idx") || "0");
-        indicatorY = e.clientY < midpoint ? rect.top - containerRect.top : rect.bottom - containerRect.top;
-      }
-    });
-    dropTargetIdxRef.current = closestIdx;
-    setDropTargetIdx(closestIdx);
-    setDropIndicatorY(indicatorY);
-  }, []);
+  /** Find the nearest inline position (character offset within text, or between tokens). */
+  const handleDocDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = dragFieldId ? "move" : "copy";
+      const container = docContainerRef.current;
+      if (!container) return;
+      const containerRect = container.getBoundingClientRect();
 
-  const insertFieldAfterToken = useCallback(
-    (afterIdx: number, type: InlineField["type"], label: string) => {
+      // Try inline caret placement first (within text/field tokens in a paragraph)
+      const caretRange = "caretRangeFromPoint" in document ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+
+      if (caretRange) {
+        const node = caretRange.startContainer;
+        const offset = caretRange.startOffset;
+        // Walk up to find nearest [data-token-idx] ancestor
+        let el: HTMLElement | null = node instanceof HTMLElement ? node : node.parentElement;
+        while (el && el !== container && !el.hasAttribute("data-token-idx")) el = el.parentElement;
+        if (el?.hasAttribute("data-token-idx")) {
+          const tokenIdx = parseInt(el.getAttribute("data-token-idx") ?? "0");
+          // Calculate caret pixel position using a range rect
+          const rangeRect = caretRange.getBoundingClientRect();
+          if (rangeRect.height > 0) {
+            const dt: DropTarget = {
+              tokenIdx,
+              charOffset: offset,
+              x: rangeRect.left - containerRect.left,
+              y: rangeRect.top - containerRect.top,
+              h: rangeRect.height,
+              vertical: true,
+            };
+            dropTargetRef.current = dt;
+            setDropTarget(dt);
+            return;
+          }
+        }
+      }
+
+      // Fallback: between-token horizontal line (for headings, breaks, sig blocks, etc.)
+      const wrappers = container.querySelectorAll("[data-token-idx]");
+      let closestIdx = 0,
+        closestDist = Infinity,
+        indicatorY = 0;
+      wrappers.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        const dist = Math.abs(e.clientY - midpoint);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestIdx = parseInt(el.getAttribute("data-token-idx") || "0");
+          indicatorY = e.clientY < midpoint ? rect.top - containerRect.top : rect.bottom - containerRect.top;
+        }
+      });
+      const dt: DropTarget = {
+        tokenIdx: closestIdx,
+        charOffset: -1,
+        x: 0,
+        y: indicatorY,
+        h: 0,
+        vertical: false,
+      };
+      dropTargetRef.current = dt;
+      setDropTarget(dt);
+    },
+    [dragFieldId],
+  );
+
+  const makeNewField = useCallback(
+    (type: InlineField["type"], label: string) => {
       const id = `field-${fieldCounter.current++}`;
       const config = getField(type);
       const nf: InlineField = {
@@ -230,6 +342,14 @@ export function DocumentEditor({
         options: config?.validation?.options,
         settings: type === "custom-field" ? { inputType: "text", validation: {}, logic: {}, display: {} } : undefined,
       };
+      return nf;
+    },
+    [activeSigner],
+  );
+
+  const insertFieldAfterToken = useCallback(
+    (afterIdx: number, type: InlineField["type"], label: string) => {
+      const nf = makeNewField(type, label);
       setTokens((prev) => {
         const c = [...prev];
         c.splice(afterIdx + 1, 0, { kind: "field", field: nf });
@@ -237,10 +357,73 @@ export function DocumentEditor({
       });
       setFields((prev) => [...prev, nf]);
       setAddMode(null);
-      setActiveFieldId(id);
+      setActiveFieldId(nf.id);
     },
-    [activeSigner],
+    [makeNewField],
   );
+
+  /** Insert a field inline within a text token, splitting the text at charOffset. */
+  const insertFieldInlineAt = useCallback(
+    (tokenIdx: number, charOffset: number, type: InlineField["type"], label: string) => {
+      const nf = makeNewField(type, label);
+      setTokens((prev) => {
+        const token = prev[tokenIdx];
+        if (!token) return prev;
+        // For text-like tokens, split into [before, field, after]
+        if (token.kind === "text" || token.kind === "listItem") {
+          const fullText = token.text;
+          const before = fullText.slice(0, charOffset);
+          const after = fullText.slice(charOffset);
+          const newTokens: DocToken[] = [];
+          if (before) newTokens.push({ ...token, text: before });
+          newTokens.push({ kind: "field", field: nf });
+          if (after) newTokens.push({ ...token, text: after });
+          const c = [...prev];
+          c.splice(tokenIdx, 1, ...newTokens);
+          return c;
+        }
+        // Fallback: insert after
+        const c = [...prev];
+        c.splice(tokenIdx + 1, 0, { kind: "field", field: nf });
+        return c;
+      });
+      setFields((prev) => [...prev, nf]);
+      setAddMode(null);
+      setActiveFieldId(nf.id);
+    },
+    [makeNewField],
+  );
+
+  /** Move a field to an inline position within a text token at charOffset. */
+  const moveFieldInlineAt = useCallback((fid: string, tokenIdx: number, charOffset: number) => {
+    setTokens((prev) => {
+      // First remove the field from its old position
+      const fi = prev.findIndex((t) => t.kind === "field" && t.field.id === fid);
+      if (fi === -1) return prev;
+      const c = [...prev];
+      const [fieldToken] = c.splice(fi, 1);
+      if (!fieldToken) return prev;
+      // Adjust target idx if it was after the removed element
+      const adjIdx = tokenIdx > fi ? tokenIdx - 1 : tokenIdx;
+      const target = c[adjIdx];
+      if (!target) {
+        c.push(fieldToken);
+        return c;
+      }
+      if (target.kind === "text" || target.kind === "listItem") {
+        const before = target.text.slice(0, charOffset);
+        const after = target.text.slice(charOffset);
+        const newTokens: DocToken[] = [];
+        if (before) newTokens.push({ ...target, text: before });
+        newTokens.push(fieldToken);
+        if (after) newTokens.push({ ...target, text: after });
+        c.splice(adjIdx, 1, ...newTokens);
+      } else {
+        c.splice(adjIdx + 1, 0, fieldToken);
+      }
+      return c;
+    });
+  }, []);
 
   const removeField = useCallback((fid: string) => {
     setTokens((p) => p.filter((t) => !(t.kind === "field" && t.field.id === fid)));
@@ -264,26 +447,27 @@ export function DocumentEditor({
     });
   }, []);
 
-  const handleDrop = useCallback(
-    (afterIdx: number) => {
-      if (dragFieldId) moveFieldToIdx(dragFieldId, afterIdx + 1);
-      else if (dragNewType) insertFieldAfterToken(afterIdx, dragNewType, "");
-      setDragFieldId(null);
-      setDragNewType(null);
-      setDropTargetIdx(null);
-    },
-    [dragFieldId, dragNewType, moveFieldToIdx, insertFieldAfterToken],
-  );
-
   const handleDocDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const idx = dropTargetIdxRef.current;
-      if (idx !== null) handleDrop(idx - 1);
-      dropTargetIdxRef.current = null;
-      setDropTargetIdx(null);
+      const dt = dropTargetRef.current;
+      if (!dt) return;
+
+      if (dt.charOffset >= 0) {
+        // Inline drop within a text token
+        if (dragFieldId) moveFieldInlineAt(dragFieldId, dt.tokenIdx, dt.charOffset);
+        else if (dragNewType) insertFieldInlineAt(dt.tokenIdx, dt.charOffset, dragNewType, "");
+      } else {
+        // Block-level drop between tokens
+        if (dragFieldId) moveFieldToIdx(dragFieldId, dt.tokenIdx + 1);
+        else if (dragNewType) insertFieldAfterToken(dt.tokenIdx, dragNewType, "");
+      }
+      setDragFieldId(null);
+      setDragNewType(null);
+      dropTargetRef.current = null;
+      setDropTarget(null);
     },
-    [handleDrop],
+    [dragFieldId, dragNewType, moveFieldToIdx, insertFieldAfterToken, moveFieldInlineAt, insertFieldInlineAt],
   );
 
   const updateField = useCallback((fid: string, patch: Partial<InlineField>) => {
@@ -334,28 +518,24 @@ export function DocumentEditor({
     [fields],
   );
 
-  useEffect(() => {
-    setPreviewValues((current) => {
-      const nextEntries = Object.entries(current).filter(([fieldId]) => fields.some((field) => field.id === fieldId));
-      if (nextEntries.length === Object.keys(current).length) return current;
-      return Object.fromEntries(nextEntries);
-    });
-  }, [fields]);
-
-  useEffect(() => {
-    setPreviewValues((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const field of fields) {
-        const logicState = getFieldLogicState(field, next);
-        if (!logicState.visible && logicState.clearWhenHidden && field.id in next) {
-          delete next[field.id];
-          changed = true;
-        }
+  // Derived preview values: filters out deleted fields and hidden-by-logic fields.
+  // Replaces two useEffects that reacted to [fields] changes.
+  const effectivePreviewValues = useMemo(() => {
+    const fieldIds = new Set(fields.map((f) => f.id));
+    const filtered: PreviewValueMap = {};
+    for (const [id, val] of Object.entries(previewValues)) {
+      if (!fieldIds.has(id)) continue;
+      filtered[id] = val;
+    }
+    // Clear values for fields hidden by conditional logic
+    for (const field of fields) {
+      const logicState = getFieldLogicState(field, filtered);
+      if (!logicState.visible && logicState.clearWhenHidden) {
+        delete filtered[field.id];
       }
-      return changed ? next : current;
-    });
-  }, [fields]);
+    }
+    return filtered;
+  }, [fields, previewValues]);
 
   const updateSigBlock = useCallback((ti: number, patch: Partial<SignatureBlockToken>) => {
     setTokens((p) => p.map((t, i) => (i === ti && t.kind === "signatureBlock" ? { ...t, ...patch } : t)));
@@ -488,7 +668,7 @@ export function DocumentEditor({
           onDragStart: () => setDragFieldId(fid),
           onDragEnd: () => {
             setDragFieldId(null);
-            setDropTargetIdx(null);
+            setDropTarget(null);
           },
         };
         fieldCallbacks.current.set(fid, c);
@@ -532,37 +712,18 @@ export function DocumentEditor({
     setSigners((p) => p.map((s, i) => (i === idx ? { ...s, [key]: value } : s)));
   }, []);
 
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && fullscreen) {
-        setFullscreen(false);
-        return;
-      }
-      // Undo/redo keyboard shortcuts
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
-        e.preventDefault();
-        handleRedo();
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "y") {
-        e.preventDefault();
-        handleRedo();
-        return;
-      }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === "Escape") {
-        setAddMode(null);
-        setActiveFieldId(null);
-      }
-    };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [fullscreen, handleUndo, handleRedo]);
+  const handleEscape = useCallback(() => {
+    setAddMode(null);
+    setActiveFieldId(null);
+  }, []);
+
+  useEditorKeyboard({
+    fullscreen,
+    setFullscreen,
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onEscape: handleEscape,
+  });
 
   // ── Memoized document body ──
   // This is the expensive part (renders every token). We memoize it so UI-only
@@ -572,332 +733,329 @@ export function DocumentEditor({
     () => (
       <div
         ref={docContainerRef}
-        className="relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-sm"
+        className="relative rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-sm"
         onDragOver={isDragging ? handleDocDragOver : undefined}
-        onDragLeave={isDragging ? () => setDropTargetIdx(null) : undefined}
+        onDragLeave={isDragging ? () => setDropTarget(null) : undefined}
         onDrop={isDragging ? handleDocDrop : undefined}
       >
-        {isDragging && dropTargetIdx !== null && (
-          <div
-            className="pointer-events-none absolute left-6 right-6 z-40 h-0.5 rounded-full bg-[var(--accent)]"
-            style={{ top: `${dropIndicatorY}px`, transition: "top 0.08s ease" }}
-          />
-        )}
+        {isDragging &&
+          dropTarget !== null &&
+          (dropTarget.vertical ? (
+            <div
+              className="pointer-events-none absolute z-40 w-0.5 rounded-full bg-[var(--accent)]"
+              style={{
+                left: `${dropTarget.x}px`,
+                top: `${dropTarget.y}px`,
+                height: `${dropTarget.h}px`,
+                transition: "left 0.06s ease, top 0.06s ease",
+              }}
+            />
+          ) : (
+            <div
+              className="pointer-events-none absolute left-6 right-6 z-40 h-0.5 rounded-full bg-[var(--accent)]"
+              style={{ top: `${dropTarget.y}px`, transition: "top 0.08s ease" }}
+            />
+          ))}
         <div
           className="space-y-1 px-6 py-8 sm:px-12 sm:py-12"
           style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
         >
-          {tokens.map((token, i) => {
-            const canInsert = addMode && !previewMode && !isDragging;
+          {(() => {
+            const isInline = (k: string) => k === "text" || k === "field";
+            const canInsert = (addMode || showPanel) && !previewMode && !isDragging;
+            const elements: React.ReactNode[] = [];
+            let i = 0;
 
-            const insertBetween =
-              !previewMode && token.kind !== "break" && i > 0 ? (
-                <div key={`ins-${i}`} className="group/insert relative z-10 -my-px h-0">
-                  <div className="absolute left-0 right-0 top-1/2 flex -translate-y-1/2 items-center opacity-0 transition-opacity group-hover/insert:opacity-100">
-                    <div className="bg-[var(--accent)]/30 h-px flex-1" />
-                    <div className="flex items-center gap-0.5 px-1">
-                      <button
-                        onClick={() => insertTokenAfter(i - 1, { kind: "text", text: "" })}
-                        className="w3s-icon-btn !h-5 !w-5"
-                        title="Paragraph"
-                      >
-                        <Pilcrow className="h-2.5 w-2.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const n = tokens.filter((t) => t.kind === "heading").length + 1;
-                          insertTokenAfter(i - 1, { kind: "heading", text: "", sectionNum: n });
-                        }}
-                        className="w3s-icon-btn !h-5 !w-5"
-                        title="Heading"
-                      >
-                        <Heading className="h-2.5 w-2.5" />
-                      </button>
-                      <button
-                        onClick={() => insertTokenAfter(i - 1, { kind: "listItem", text: "- " })}
-                        className="w3s-icon-btn !h-5 !w-5"
-                        title="Bullet"
-                      >
-                        <List className="h-2.5 w-2.5" />
-                      </button>
-                      <button
-                        onClick={() =>
-                          insertTokenAfter(i - 1, {
-                            kind: "signatureBlock",
-                            label: "Signature",
-                            signerIdx: activeSigner,
-                          })
-                        }
-                        className="w3s-icon-btn !h-5 !w-5"
-                        title="Signature"
-                      >
-                        <PenTool className="h-2.5 w-2.5" />
-                      </button>
-                    </div>
-                    <div className="bg-[var(--accent)]/30 h-px flex-1" />
-                  </div>
-                </div>
-              ) : null;
-
-            const tokenEl = (() => {
-              switch (token.kind) {
-                case "heading":
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      <div className="group relative pb-2 pt-6" data-section={i} draggable={!previewMode}>
-                        {(token.sectionNum || 0) > 1 && (
-                          <div className="absolute left-0 right-0 top-1 h-px bg-[var(--border)]" />
-                        )}
-                        <div className="flex items-center gap-2">
-                          {!previewMode && (
-                            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                              <GripVertical className="text-muted/50 h-3.5 w-3.5 cursor-grab" />
-                              <button
-                                onClick={() => moveSection(i, "up")}
-                                className="text-muted/50 hover:text-secondary"
-                              >
-                                <ChevronUp className="h-3 w-3" />
-                              </button>
-                              <button
-                                onClick={() => moveSection(i, "down")}
-                                className="text-muted/50 hover:text-secondary"
-                              >
-                                <ChevronDown className="h-3 w-3" />
-                              </button>
-                            </div>
-                          )}
-                          {previewMode ? (
-                            <h3 className="flex-1 text-base font-bold text-primary">{token.text}</h3>
-                          ) : (
-                            <input
-                              defaultValue={token.text}
-                              onBlur={(e) => {
-                                if (e.target.value !== token.text) updateTokenText(i, e.target.value);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  (e.target as HTMLInputElement).blur();
-                                  insertTokenAfter(i, { kind: "text", text: "" });
-                                }
-                              }}
-                              className="focus:border-[var(--accent)]/30 flex-1 border-b border-transparent bg-transparent text-base font-bold text-primary outline-none transition-colors"
-                              placeholder="Section heading..."
-                            />
-                          )}
-                          {!previewMode && (
-                            <button
-                              onClick={() => removeSection(i)}
-                              className="text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                        {canInsert && (
-                          <div
-                            className="bg-[var(--accent)]/15 hover:bg-[var(--accent)]/40 absolute -bottom-1 left-0 right-0 h-1 cursor-pointer rounded transition-colors"
-                            onClick={() => insertFieldAfterToken(i, addMode, "")}
-                          />
-                        )}
-                      </div>
+            const renderInlineText = (token: DocToken & { kind: "text" }, idx: number) => {
+              // When addMode is active, show word-level insertion targets
+              if (canInsert && token.text.length > 0) {
+                // Split on word boundaries, keeping whitespace attached
+                const parts = token.text.match(/\S+\s*/g) || [token.text];
+                let charPos = 0;
+                return (
+                  <span key={`t-${idx}`} data-token-idx={idx} className="text-sm leading-relaxed text-secondary">
+                    {/* + at the very start of text */}
+                    <span
+                      className="mx-px inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-[var(--accent-10)] align-middle text-[var(--accent)] transition-colors hover:bg-[var(--accent-30)]"
+                      onClick={() => insertFieldInlineAt(idx, 0, addMode || "free-text", "")}
+                      title="Insert field here"
+                    >
+                      <Plus className="h-2 w-2" />
                     </span>
-                  );
-                case "subheading":
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      {previewMode ? (
-                        <h4 className="pb-2 pt-6 text-sm font-bold uppercase tracking-widest text-secondary">
-                          {token.text}
-                        </h4>
-                      ) : (
-                        <div className="group relative pb-2 pt-6">
+                    {parts.map((word, wi) => {
+                      const endPos = charPos + word.length;
+                      const cp = endPos; // capture for closure
+                      charPos = endPos;
+                      return (
+                        <span key={wi}>
+                          {word}
+                          <span
+                            className="mx-px inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-[var(--accent-10)] align-middle text-[var(--accent)] transition-colors hover:bg-[var(--accent-30)]"
+                            onClick={() => insertFieldInlineAt(idx, cp, addMode || "free-text", "")}
+                            title="Insert field here"
+                          >
+                            <Plus className="h-2 w-2" />
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </span>
+                );
+              }
+
+              return (
+                <span
+                  key={`t-${idx}`}
+                  data-token-idx={idx}
+                  contentEditable={!previewMode}
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    const newText = e.currentTarget.textContent || "";
+                    if (newText !== token.text) updateTokenText(idx, newText);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      (e.currentTarget as HTMLElement).blur();
+                      insertTokenAfter(idx, { kind: "text", text: "" });
+                    }
+                    if (e.key === "Backspace" && (e.currentTarget.textContent || "") === "") {
+                      e.preventDefault();
+                      removeToken(idx);
+                    }
+                  }}
+                  className={`text-sm leading-relaxed text-secondary outline-none ${!previewMode ? "rounded-sm hover:bg-[var(--bg-hover-30)] focus:bg-[var(--bg-hover-30)]" : ""}`}
+                >
+                  {token.text}
+                </span>
+              );
+            };
+
+            const renderInlineField = (token: DocToken & { kind: "field" }, idx: number) => {
+              const cbs = getCbs(token.field.id);
+              return (
+                <span key={`t-${idx}`} data-token-idx={idx} className="inline">
+                  <EditorField
+                    field={token.field}
+                    active={activeFieldId === token.field.id}
+                    previewMode={previewMode}
+                    previewValue={effectivePreviewValues[token.field.id]}
+                    previewValues={effectivePreviewValues}
+                    allFields={fields}
+                    signerCount={signers.length}
+                    signers={signers}
+                    onFocus={cbs.onFocus}
+                    onPreviewChange={(value) => setPreviewValue(token.field.id, value)}
+                    onPreviewAddressSuggestion={(suggestion) => applyPreviewAddressSuggestion(token.field, suggestion)}
+                    loadAddressSuggestions={loadAddressSuggestions}
+                    onUpdate={cbs.onUpdate}
+                    onRemove={cbs.onRemove}
+                    onDragStart={cbs.onDragStart}
+                    onDragEnd={cbs.onDragEnd}
+                  />
+                </span>
+              );
+            };
+
+            while (i < tokens.length) {
+              const token = tokens[i]!;
+
+              // Group consecutive text + field tokens into an inline-flowing paragraph
+              if (isInline(token.kind)) {
+                const groupStart = i;
+                const inlineChildren: React.ReactNode[] = [];
+                while (i < tokens.length && isInline(tokens[i]!.kind)) {
+                  const t = tokens[i]!;
+                  if (t.kind === "text") inlineChildren.push(renderInlineText(t, i));
+                  else if (t.kind === "field")
+                    inlineChildren.push(renderInlineField(t as DocToken & { kind: "field" }, i));
+                  i++;
+                }
+                elements.push(
+                  <div
+                    key={`para-${groupStart}`}
+                    className="group/para relative leading-relaxed"
+                    style={{ wordBreak: "break-word" }}
+                  >
+                    {inlineChildren}
+                  </div>,
+                );
+                continue;
+              }
+
+              // Block-level tokens rendered individually
+              // Capture loop index in block-scoped const so closures get the correct value
+              const ti = i;
+
+              if (token.kind === "heading") {
+                elements.push(
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    <div className="group relative pb-2 pt-6" data-section={ti} draggable={!previewMode}>
+                      {(token.sectionNum || 0) > 1 && (
+                        <div className="absolute left-0 right-0 top-1 h-px bg-[var(--border)]" />
+                      )}
+                      <div className="flex items-center gap-2">
+                        {!previewMode && (
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            <GripVertical className="text-muted/50 h-3.5 w-3.5 cursor-grab" />
+                            <button
+                              onClick={() => moveSection(ti, "up")}
+                              className="text-muted/50 hover:text-secondary"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => moveSection(ti, "down")}
+                              className="text-muted/50 hover:text-secondary"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
+                        {previewMode ? (
+                          <h3 className="flex-1 text-base font-bold text-primary">{token.text}</h3>
+                        ) : (
                           <input
                             defaultValue={token.text}
                             onBlur={(e) => {
-                              if (e.target.value !== token.text) updateTokenText(i, e.target.value);
+                              if (e.target.value !== token.text) updateTokenText(ti, e.target.value);
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 e.preventDefault();
                                 (e.target as HTMLInputElement).blur();
-                                insertTokenAfter(i, { kind: "text", text: "" });
+                                insertTokenAfter(ti, { kind: "text", text: "" });
                               }
                             }}
-                            className="focus:border-[var(--accent)]/30 w-full border-b border-transparent bg-transparent text-sm font-bold uppercase tracking-widest text-secondary outline-none transition-colors"
-                            placeholder="Sub-heading..."
+                            className="flex-1 border-b border-transparent bg-transparent text-base font-bold text-primary outline-none transition-colors focus:border-[var(--accent-30)]"
+                            placeholder="Section heading..."
                           />
+                        )}
+                        {!previewMode && (
                           <button
-                            onClick={() => removeToken(i)}
-                            className="absolute right-0 top-6 text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                            onClick={() => removeSection(ti)}
+                            className="text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
+                        )}
+                      </div>
+                      {canInsert && (
+                        <div
+                          className="absolute -bottom-1 left-0 right-0 flex h-5 cursor-pointer items-center justify-center rounded bg-[var(--accent-25)] transition-colors hover:bg-[var(--accent-50)]"
+                          onClick={() => insertFieldAfterToken(ti, addMode || "free-text", "")}
+                        >
+                          <Plus className="h-3 w-3 text-[var(--accent)]" />
                         </div>
                       )}
-                    </span>
-                  );
-                case "text":
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      {previewMode ? (
-                        <span className="text-sm leading-relaxed text-secondary">{token.text}</span>
-                      ) : (
-                        <span className="group/text relative block">
-                          <textarea
-                            defaultValue={token.text}
-                            onBlur={(e) => {
-                              if (e.target.value !== token.text) updateTokenText(i, e.target.value);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                (e.target as HTMLTextAreaElement).blur();
-                                insertTokenAfter(i, { kind: "text", text: "" });
-                              }
-                              if (e.key === "Backspace" && (e.target as HTMLTextAreaElement).value === "") {
-                                e.preventDefault();
-                                removeToken(i);
-                              }
-                            }}
-                            onInput={(e) => {
-                              const el = e.target as HTMLTextAreaElement;
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }}
-                            rows={1}
-                            className="focus:border-[var(--accent)]/20 -ml-2 w-full resize-none overflow-hidden border-l-2 border-transparent bg-transparent pl-2 text-sm leading-relaxed text-secondary outline-none transition-colors [field-sizing:content]"
-                            placeholder="Type paragraph text..."
-                          />
-                          {canInsert && (
-                            <span
-                              className="bg-[var(--accent)]/15 hover:bg-[var(--accent)]/40 absolute right-0 top-0 inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full text-[var(--accent)] opacity-0 transition-colors group-hover/text:opacity-100"
-                              onClick={() => insertFieldAfterToken(i, addMode, "")}
-                            >
-                              <Plus className="h-2.5 w-2.5" />
-                            </span>
-                          )}
-                          <button
-                            onClick={() => removeToken(i)}
-                            className="absolute -left-6 top-0.5 text-red-400/30 opacity-0 transition-opacity hover:text-red-400 group-hover/text:opacity-100"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                    </div>
+                  </span>,
+                );
+              } else if (token.kind === "subheading") {
+                elements.push(
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    {previewMode ? (
+                      <h4 className="pb-2 pt-6 text-sm font-bold uppercase tracking-widest text-secondary">
+                        {token.text}
+                      </h4>
+                    ) : (
+                      <div className="group relative pb-2 pt-6">
+                        <input
+                          defaultValue={token.text}
+                          onBlur={(e) => {
+                            if (e.target.value !== token.text) updateTokenText(ti, e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (e.target as HTMLInputElement).blur();
+                              insertTokenAfter(ti, { kind: "text", text: "" });
+                            }
+                          }}
+                          className="w-full border-b border-transparent bg-transparent text-sm font-bold uppercase tracking-widest text-secondary outline-none transition-colors focus:border-[var(--accent-30)]"
+                          placeholder="Sub-heading..."
+                        />
+                        <button
+                          onClick={() => removeToken(ti)}
+                          className="absolute right-0 top-6 text-red-400/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </span>,
+                );
+              } else if (token.kind === "listItem") {
+                elements.push(
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    {previewMode ? (
+                      <div className="flex items-start gap-2 py-0.5 pl-4 text-sm leading-relaxed text-secondary">
+                        <span className="mt-0.5 shrink-0 text-muted">&#8226;</span>
+                        <span>{token.text.replace(/^[-*•()\da-z]+\s*/, "")}</span>
+                      </div>
+                    ) : (
+                      <div className="group/list relative flex items-start gap-2 py-0.5 pl-4">
+                        <span className="mt-1 shrink-0 text-sm text-muted">&#8226;</span>
+                        <span
+                          contentEditable
+                          suppressContentEditableWarning
+                          data-token-idx={ti}
+                          onBlur={(e) => {
+                            const v = e.currentTarget.textContent || "";
+                            if (v !== token.text) updateTokenText(ti, `- ${v}`);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              (e.currentTarget as HTMLElement).blur();
+                              insertTokenAfter(ti, { kind: "listItem", text: "- " });
+                            }
+                            if (e.key === "Backspace" && (e.currentTarget.textContent || "") === "") {
+                              e.preventDefault();
+                              removeToken(ti);
+                            }
+                          }}
+                          className="flex-1 text-sm leading-relaxed text-secondary outline-none"
+                        >
+                          {token.text.replace(/^[-*•]\s*/, "")}
                         </span>
-                      )}
-                    </span>
-                  );
-                case "listItem":
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      {previewMode ? (
-                        <div className="flex items-start gap-2 py-0.5 pl-4 text-sm leading-relaxed text-secondary">
-                          <span className="mt-0.5 shrink-0 text-muted">&#8226;</span>
-                          <span>{token.text.replace(/^[-*•()\da-z]+\s*/, "")}</span>
-                        </div>
-                      ) : (
-                        <div className="group/list relative flex items-start gap-2 py-0.5 pl-4">
-                          <span className="mt-1 shrink-0 text-sm text-muted">&#8226;</span>
-                          <textarea
-                            defaultValue={token.text.replace(/^[-*•]\s*/, "")}
-                            onBlur={(e) => {
-                              const v = e.target.value;
-                              if (v !== token.text) updateTokenText(i, `- ${v}`);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                (e.target as HTMLTextAreaElement).blur();
-                                insertTokenAfter(i, { kind: "listItem", text: "- " });
-                              }
-                              if (e.key === "Backspace" && (e.target as HTMLTextAreaElement).value === "") {
-                                e.preventDefault();
-                                removeToken(i);
-                              }
-                            }}
-                            onInput={(e) => {
-                              const el = e.target as HTMLTextAreaElement;
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }}
-                            rows={1}
-                            className="flex-1 resize-none overflow-hidden bg-transparent text-sm leading-relaxed text-secondary outline-none [field-sizing:content]"
-                            placeholder="List item..."
-                          />
-                          <button
-                            onClick={() => removeToken(i)}
-                            className="mt-0.5 shrink-0 text-red-400/30 opacity-0 transition-opacity hover:text-red-400 group-hover/list:opacity-100"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      )}
-                    </span>
-                  );
-                case "field": {
-                  const cbs = getCbs(token.field.id);
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      <EditorField
-                        field={token.field}
-                        active={activeFieldId === token.field.id}
-                        previewMode={previewMode}
-                        previewValue={previewValues[token.field.id]}
-                        previewValues={previewValues}
-                        allFields={fields}
-                        signerCount={signers.length}
-                        signers={signers}
-                        onFocus={cbs.onFocus}
-                        onPreviewChange={(value) => setPreviewValue(token.field.id, value)}
-                        onPreviewAddressSuggestion={(suggestion) =>
-                          applyPreviewAddressSuggestion(token.field, suggestion)
-                        }
-                        loadAddressSuggestions={loadAddressSuggestions}
-                        onUpdate={cbs.onUpdate}
-                        onRemove={cbs.onRemove}
-                        onDragStart={cbs.onDragStart}
-                        onDragEnd={cbs.onDragEnd}
-                      />
-                    </span>
-                  );
-                }
-                case "break":
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      <div className="h-3" />
-                    </span>
-                  );
-                case "signatureBlock": {
-                  const sid = `sig-${i}`;
-                  return (
-                    <span key={`t-${i}`} data-token-idx={i}>
-                      <EditorSignatureBlock
-                        token={token}
-                        tokenId={sid}
-                        active={activeFieldId === sid}
-                        previewMode={previewMode}
-                        signers={signers}
-                        onFocus={() => setActiveFieldId(sid)}
-                        onUpdate={(p) => updateSigBlock(i, p)}
-                        onRemove={() => removeSigBlock(i)}
-                      />
-                    </span>
-                  );
-                }
-                default:
-                  return null;
+                        <button
+                          onClick={() => removeToken(ti)}
+                          className="mt-0.5 shrink-0 text-red-400/30 opacity-0 transition-opacity hover:text-red-400 group-hover/list:opacity-100"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </span>,
+                );
+              } else if (token.kind === "break") {
+                elements.push(
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    <div className="h-3" />
+                  </span>,
+                );
+              } else if (token.kind === "signatureBlock") {
+                const sid = `sig-${ti}`;
+                elements.push(
+                  <span key={`t-${ti}`} data-token-idx={ti}>
+                    <EditorSignatureBlock
+                      token={token}
+                      tokenId={sid}
+                      active={activeFieldId === sid}
+                      previewMode={previewMode}
+                      signers={signers}
+                      onFocus={() => setActiveFieldId(sid)}
+                      onUpdate={(p) => updateSigBlock(ti, p)}
+                      onRemove={() => removeSigBlock(ti)}
+                    />
+                  </span>,
+                );
               }
-            })();
-
-            return insertBetween ? (
-              <>
-                {insertBetween}
-                {tokenEl}
-              </>
-            ) : (
-              tokenEl
-            );
-          })}
+              i++;
+            }
+            return elements;
+          })()}
           <div data-token-idx={tokens.length} className="h-8" />
 
           {/* ── Block insert toolbar ── */}
@@ -968,17 +1126,18 @@ export function DocumentEditor({
       tokens,
       fields,
       previewMode,
-      previewValues,
+      effectivePreviewValues,
       activeFieldId,
       addMode,
+      showPanel,
       activeSigner,
       signers,
       isDragging,
-      dropTargetIdx,
-      dropIndicatorY,
+      dropTarget,
       handleDocDragOver,
       handleDocDrop,
       insertFieldAfterToken,
+      insertFieldInlineAt,
       insertTokenAfter,
       updateTokenText,
       removeToken,
@@ -1003,12 +1162,7 @@ export function DocumentEditor({
 
         <div className="hidden h-5 w-px bg-[var(--border)] sm:block" />
 
-        <W3SIconButton
-          onClick={() => setShowPanel(!showPanel)}
-          active={showPanel}
-          className="hidden sm:inline-flex"
-          title="Fields panel"
-        >
+        <W3SIconButton onClick={togglePanel} active={showPanel} className="hidden sm:inline-flex" title="Fields panel">
           {showPanel ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
         </W3SIconButton>
 
@@ -1065,7 +1219,7 @@ export function DocumentEditor({
         </W3SButton>
 
         <W3SIconButton
-          onClick={() => setFullscreen((f) => !f)}
+          onClick={() => setFullscreen(!fullscreen)}
           className="hidden sm:inline-flex"
           title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
         >
@@ -1080,6 +1234,10 @@ export function DocumentEditor({
           >
             <Save className="h-3.5 w-3.5" />
           </W3SIconButton>
+        )}
+
+        {collabSessionId && collabSession && (
+          <CollabSharePopover sessionId={collabSessionId} joinToken={collabSession.session?.joinToken ?? ""} />
         )}
 
         <W3SButton variant="primary" size="xs" onClick={() => onSubmit(buildResult())} disabled={!title.trim()}>
@@ -1217,7 +1375,7 @@ export function DocumentEditor({
                 }}
                 onDragEnd={() => {
                   setDragNewType(null);
-                  setDropTargetIdx(null);
+                  setDropTarget(null);
                 }}
                 activeSigner={activeSigner}
                 signerCount={signers.length}
@@ -1273,7 +1431,7 @@ export function DocumentEditor({
                   }}
                   onDragEnd={() => {
                     setDragNewType(null);
-                    setDropTargetIdx(null);
+                    setDropTarget(null);
                   }}
                   activeSigner={activeSigner}
                   signerCount={signers.length}
@@ -1302,7 +1460,7 @@ export function DocumentEditor({
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl"
+              className="w-full max-w-md space-y-4 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl"
             >
               <h3 className="text-lg font-semibold">Add Section</h3>
               <input
@@ -1343,26 +1501,70 @@ export function DocumentEditor({
           className="pointer-events-none fixed z-[999]"
           style={{ left: `${ghostPos.x + 16}px`, top: `${ghostPos.y - 16}px` }}
         >
-          <div className="border-[var(--accent)]/40 bg-[var(--accent)]/10 whitespace-nowrap rounded-lg border px-3 py-1.5 text-xs font-medium text-[var(--accent)] backdrop-blur-sm">
+          <div className="whitespace-nowrap rounded-lg border border-[var(--accent-40)] bg-[var(--accent-10)] px-3 py-1.5 text-xs font-medium text-[var(--accent)] backdrop-blur-sm">
             {dragGhostLabel}
           </div>
         </div>
       )}
 
-      {/* Mobile: floating add-field indicator */}
+      {/* Floating add-field indicator (mobile + desktop) */}
       {addMode && (
-        <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 sm:hidden">
-          <div className="flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-medium text-white shadow-lg">
-            <FileText className="h-3.5 w-3.5" />
-            <span>Tap in document to place field</span>
-            <button onClick={() => setAddMode(null)} className="ml-1 rounded-full p-0.5 hover:bg-surface-elevated">
+        <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-xs font-medium text-white shadow-lg">
+            <Plus className="h-3.5 w-3.5" />
+            <span>
+              Tap a <span className="font-bold">+</span> in the text to place field
+            </span>
+            <button
+              onClick={() => setAddMode(null)}
+              className="ml-1 rounded-full bg-white/20 p-1 transition-colors hover:bg-white/30"
+            >
               <X className="h-3 w-3" />
             </button>
           </div>
         </div>
       )}
 
-      {/* AI Chat Panel (premium) */}
+      {/* ── Collaboration overlays ── */}
+      {collabSessionId && collabSession && (
+        <>
+          <CollabToolbar
+            sessionId={collabSessionId}
+            sessionTitle={collabSession.session?.title ?? title}
+            joinToken={collabSession.session?.joinToken ?? ""}
+            isHost={collabSession.myRole === "host"}
+            connected={true}
+            participants={(collabSession.participants ?? []).map((p: Record<string, unknown>) => ({
+              userId: p.userId as string,
+              displayName: p.displayName as string,
+              color: p.color as string,
+              role: p.role as string,
+              isActive: Boolean(p.isActive),
+            }))}
+            remoteUsers={[]}
+            onClose={() => setCollabSessionId(null)}
+            hasDocument={!!documentId}
+          />
+
+          <CollabAnnotationSidebar
+            sessionId={collabSessionId}
+            isOpen={showAnnotations}
+            onClose={() => setShowAnnotations(false)}
+            onNavigate={() => {}}
+            currentUserId={identity.currentWallet?.address ?? identity.session?.user?.id ?? ""}
+            isHost={collabSession.myRole === "host"}
+          />
+
+          <CollabAiPanel
+            isOpen={showAiPanel}
+            onClose={() => setShowAiPanel(false)}
+            sessionId={collabSessionId}
+            displayName={displayName}
+          />
+        </>
+      )}
+
+      {/* CollabSessionPanel removed — sessions auto-start when documentId is present */}
     </div>
   );
 }

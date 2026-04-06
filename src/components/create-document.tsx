@@ -7,7 +7,14 @@ import { useWallet } from "./wallet-provider";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import { CONTRACT_TEMPLATES, type ContractTemplate } from "~/lib/document/templates";
 import { SECURITY_MODE_DESCRIPTIONS, type SecurityMode } from "~/lib/signing/document-security";
-import type { SignerTokenGate } from "~/lib/token-gates";
+import {
+  createDocumentSchema,
+  documentFieldSchema,
+  saveTemplateSchema,
+  type CreateDocumentInput,
+  type DocumentFieldInput,
+  type SaveTemplateInput,
+} from "~/lib/schemas/document";
 import { FadeIn, ScaleIn, GlassCard, W3SButton, W3SLink } from "./ui/motion";
 import { Select } from "./ui/select";
 import {
@@ -28,26 +35,82 @@ import {
 const PdfUpload = lazy(() => import("./pdf-upload").then((m) => ({ default: m.PdfUpload })));
 const DocumentEditor = lazy(() => import("./document-editor").then((m) => ({ default: m.DocumentEditor })));
 
-type SignerField = {
+type CreateSignerInput = CreateDocumentInput["signers"][number];
+type ReminderInput = NonNullable<CreateDocumentInput["reminder"]>;
+type SaveTemplateSignerInput = SaveTemplateInput["signers"][number];
+type SignerFieldLike = {
   id?: string;
   type: string;
   label: string;
-  value: string | null;
-  required: boolean;
+  value?: string | null;
+  required?: boolean;
   options?: string[];
   settings?: Record<string, unknown>;
 };
+
 type SignerRow = {
   label: string;
   email: string;
   phone?: string;
-  role?: "SIGNER" | "APPROVER" | "CC" | "WITNESS" | "OBSERVER";
-  signMethod?: "WALLET" | "EMAIL_OTP";
-  tokenGates?: SignerTokenGate | null;
-  fields?: SignerField[];
+  role?: CreateSignerInput["role"];
+  signMethod?: CreateSignerInput["signMethod"];
+  tokenGates?: CreateSignerInput["tokenGates"];
+  fields?: SignerFieldLike[];
 };
 
 const emptySigner = (): SignerRow => ({ label: "", email: "", phone: "", role: "SIGNER", tokenGates: null });
+const DEFAULT_TERM = "2 years";
+
+function getDeliveryMethods(phone?: string): Array<"EMAIL" | "SMS"> {
+  return phone?.trim() ? ["EMAIL", "SMS"] : ["EMAIL"];
+}
+
+function buildReminderInput(
+  cadence: ReminderInput["cadence"],
+  signers: Array<Pick<SignerRow, "phone">>,
+): ReminderInput | undefined {
+  if (cadence === "NONE") return undefined;
+  return {
+    cadence,
+    channels: signers.some((signer) => signer.phone?.trim()) ? ["EMAIL", "SMS"] : ["EMAIL"],
+  };
+}
+
+function normalizeSignerFields(fields?: SignerFieldLike[]): DocumentFieldInput[] | undefined {
+  if (!fields?.length) return undefined;
+  return fields.map((field) =>
+    documentFieldSchema.parse({
+      ...field,
+      required: field.required ?? true,
+      value: field.value ?? null,
+    }),
+  );
+}
+
+function mapSignerForCreate(signer: SignerRow, proofMode: CreateDocumentInput["proofMode"]): CreateSignerInput {
+  return {
+    label: signer.label,
+    email: signer.email || undefined,
+    phone: signer.phone || undefined,
+    role: signer.role ?? "SIGNER",
+    signMethod: signer.signMethod ?? (proofMode === "PRIVATE" ? "EMAIL_OTP" : "WALLET"),
+    tokenGates: signer.tokenGates ?? undefined,
+    fields: normalizeSignerFields(signer.fields),
+    deliveryMethods: getDeliveryMethods(signer.phone),
+  };
+}
+
+function mapSignerForTemplate(signer: SignerRow): SaveTemplateSignerInput {
+  return {
+    label: signer.label,
+    email: signer.email || undefined,
+    phone: signer.phone || undefined,
+    role: signer.role ?? "SIGNER",
+    tokenGates: signer.tokenGates ?? undefined,
+    deliveryMethods: getDeliveryMethods(signer.phone),
+    fields: normalizeSignerFields(signer.fields) ?? [],
+  };
+}
 
 type CreatedResult = {
   id: string;
@@ -63,24 +126,20 @@ export function CreateDocument() {
   const [creatorEmail, setCreatorEmail] = useState("");
   const [signers, setSigners] = useState<SignerRow[]>([emptySigner(), emptySigner()]);
   const [created, setCreated] = useState<CreatedResult | null>(null);
-  const [, setSelectedTemplate] = useState<ContractTemplate | null>(null);
   const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState<string | null>(null);
   const [expiresInDays, setExpiresInDays] = useState("30");
-  const [reminderCadence, setReminderCadence] = useState<"NONE" | "DAILY" | "EVERY_2_DAYS" | "EVERY_3_DAYS" | "WEEKLY">(
-    "EVERY_2_DAYS",
-  );
+  const [reminderCadence, setReminderCadence] = useState<ReminderInput["cadence"]>("EVERY_2_DAYS");
   const [automationReviewMode, setAutomationReviewMode] = useState<"FLAG" | "DENY" | "DISABLED">("FLAG");
   const [prepAutomationMode, setPrepAutomationMode] = useState<"ALLOW" | "FLAG">("ALLOW");
-  const [term] = useState("2 years");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [pdfStyleTemplateId, setPdfStyleTemplateId] = useState("");
   const [securityMode, setSecurityMode] = useState<SecurityMode>("HASH_ONLY");
-  const [proofMode, setProofMode] = useState<"HYBRID" | "PRIVATE" | "CRYPTO_NATIVE">("HYBRID");
-  const [signingOrder, setSigningOrder] = useState<"parallel" | "sequential">("parallel");
-  const [gazeTracking, setGazeTracking] = useState<"off" | "full" | "signing_only">("off");
+  const [proofMode, setProofMode] = useState<CreateDocumentInput["proofMode"]>("HYBRID");
+  const [signingOrder, setSigningOrder] = useState<CreateDocumentInput["signingOrder"]>("parallel");
+  const [gazeTracking, setGazeTracking] = useState<CreateDocumentInput["gazeTracking"]>("off");
 
   const pdfStyleTemplatesQuery = trpc.account.listPdfStyleTemplates.useQuery(undefined, {
     enabled: identity.isSignedIn,
@@ -100,24 +159,20 @@ export function CreateDocument() {
     onSuccess: () => savedTemplatesQuery.refetch(),
   });
 
-  const generateFromTemplate = useCallback(
-    (template: ContractTemplate, currentSigners: SignerRow[]) => {
-      const partyNames = currentSigners.map((s) => s.label.trim()).filter(Boolean);
-      const effectiveDate = new Date().toISOString().split("T")[0] || "";
-      const generated = template.content({
-        partyNames: partyNames.length > 0 ? partyNames : ["Party A", "Party B"],
-        effectiveDate,
-        term,
-      });
-      setTitle(template.name);
-      setContent(generated);
-      lastGeneratedRef.current = template.id;
-    },
-    [term],
-  );
+  const generateFromTemplate = useCallback((template: ContractTemplate, currentSigners: SignerRow[]) => {
+    const partyNames = currentSigners.map((s) => s.label.trim()).filter(Boolean);
+    const effectiveDate = new Date().toISOString().split("T")[0] || "";
+    const generated = template.content({
+      partyNames: partyNames.length > 0 ? partyNames : ["Party A", "Party B"],
+      effectiveDate,
+      term: DEFAULT_TERM,
+    });
+    setTitle(template.name);
+    setContent(generated);
+    lastGeneratedRef.current = template.id;
+  }, []);
 
   const handleSelectTemplate = (template: ContractTemplate) => {
-    setSelectedTemplate(template);
     setSelectedSavedTemplateId(null);
     setShowTemplates(false);
     generateFromTemplate(template, signers);
@@ -125,7 +180,6 @@ export function CreateDocument() {
   };
 
   const handleSelectSavedTemplate = (template: NonNullable<typeof savedTemplatesQuery.data>[number]) => {
-    setSelectedTemplate(null);
     setSelectedSavedTemplateId(template.id);
     setTitle(template.title);
     setContent(template.content);
@@ -143,12 +197,13 @@ export function CreateDocument() {
     );
     setExpiresInDays(template.defaults?.expiresInDays ? String(template.defaults.expiresInDays) : "30");
     setReminderCadence(template.defaults?.reminder?.cadence ?? "EVERY_2_DAYS");
+    setProofMode(template.defaults?.proofMode ?? "HYBRID");
+    setSigningOrder(template.defaults?.signingOrder ?? "parallel");
     setShowTemplates(false);
     setShowEditor(true);
   };
 
   const handleSelectBlank = () => {
-    setSelectedTemplate(null);
     setSelectedSavedTemplateId(null);
     setShowTemplates(false);
     setTitle("");
@@ -160,12 +215,11 @@ export function CreateDocument() {
   const handlePdfComplete = (result: {
     title: string;
     content: string;
-    signers: Array<{ label: string; email: string; phone?: string; fields?: SignerField[] }>;
+    signers: Array<{ label: string; email: string; phone?: string; fields?: SignerFieldLike[] }>;
   }) => {
     setTitle(result.title);
     setContent(result.content);
     setSigners(result.signers.length > 0 ? result.signers : [emptySigner(), emptySigner()]);
-    setSelectedTemplate(null);
     setSelectedSavedTemplateId(null);
     setShowPdfUpload(false);
     setShowTemplates(false);
@@ -194,7 +248,6 @@ export function CreateDocument() {
     setShowTemplates(false);
     setShowPdfUpload(false);
     setShowEditor(false);
-    setSelectedTemplate(null);
     setSelectedSavedTemplateId(null);
     lastGeneratedRef.current = null;
   };
@@ -296,7 +349,7 @@ export function CreateDocument() {
           fallback={
             <GlassCard className="p-6 text-center">
               <motion.div
-                className="border-[var(--accent)]/30 inline-block h-4 w-4 rounded-full border border-t-accent"
+                className="inline-block h-4 w-4 rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
               />
@@ -317,35 +370,20 @@ export function CreateDocument() {
             }))}
             onSubmit={(result) => {
               if (!connected || !authenticated || !address) return;
-              createMutation.mutate({
+              const parsedInput = createDocumentSchema.parse({
                 title: result.title,
                 content: result.content,
                 createdByEmail: creatorEmail || undefined,
                 proofMode,
                 signingOrder,
-                gazeTracking: gazeTracking !== "off" ? gazeTracking : undefined,
-                signers: result.signers.map((s) => ({
-                  label: s.label,
-                  email: s.email || undefined,
-                  phone: s.phone || undefined,
-                  role: s.role ?? "SIGNER",
-                  signMethod: s.signMethod ?? (proofMode === "PRIVATE" ? "EMAIL_OTP" : "WALLET"),
-                  tokenGates: s.tokenGates ?? undefined,
-                  fields: s.fields?.length ? s.fields : undefined,
-                  deliveryMethods: s.phone?.trim() ? ["EMAIL", "SMS"] : ["EMAIL"],
-                })),
+                gazeTracking,
+                signers: result.signers.map((signer) => mapSignerForCreate(signer, proofMode)),
                 templateId: selectedSavedTemplateId || undefined,
                 pdfStyleTemplateId:
                   pdfStyleTemplateId && !pdfStyleTemplateId.startsWith("__") ? pdfStyleTemplateId : undefined,
                 securityMode,
                 expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
-                reminder:
-                  reminderCadence === "NONE"
-                    ? undefined
-                    : {
-                        cadence: reminderCadence,
-                        channels: result.signers.some((signer) => signer.phone?.trim()) ? ["EMAIL", "SMS"] : ["EMAIL"],
-                      },
+                reminder: buildReminderInput(reminderCadence, result.signers),
                 automationPolicy:
                   automationReviewMode === "DISABLED"
                     ? {
@@ -363,37 +401,26 @@ export function CreateDocument() {
                         requireHumanSteps: ["signature", "consent", "final_submit", "wallet_auth"],
                       },
               });
+              createMutation.mutate(parsedInput);
             }}
             onSaveTemplate={(result) => {
               const name = window.prompt("Template name", result.title);
               if (!name) return;
-              saveTemplateMutation.mutate({
+              const parsedTemplate = saveTemplateSchema.parse({
+                id: selectedSavedTemplateId || undefined,
                 name,
                 title: result.title,
                 description: selectedSavedTemplateId ? "Updated from editor" : "Saved from editor",
                 content: result.content,
-                signers: result.signers.map((signer) => ({
-                  label: signer.label,
-                  email: signer.email || undefined,
-                  phone: signer.phone || undefined,
-                  role: signer.role ?? "SIGNER",
-                  tokenGates: signer.tokenGates ?? undefined,
-                  deliveryMethods: signer.phone?.trim() ? ["EMAIL", "SMS"] : ["EMAIL"],
-                  fields: signer.fields?.length ? signer.fields : [],
-                })),
+                signers: result.signers.map((signer) => mapSignerForTemplate(signer)),
                 defaults: {
+                  proofMode,
+                  signingOrder,
                   expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
-                  reminder:
-                    reminderCadence === "NONE"
-                      ? undefined
-                      : {
-                          cadence: reminderCadence,
-                          channels: result.signers.some((signer) => signer.phone?.trim())
-                            ? ["EMAIL", "SMS"]
-                            : ["EMAIL"],
-                        },
+                  reminder: buildReminderInput(reminderCadence, result.signers),
                 },
               });
+              saveTemplateMutation.mutate(parsedTemplate);
             }}
             onBack={resetToHome}
           />
@@ -411,7 +438,7 @@ export function CreateDocument() {
           fallback={
             <GlassCard className="p-6 text-center">
               <motion.div
-                className="border-[var(--accent)]/30 inline-block h-4 w-4 rounded-full border border-t-accent"
+                className="inline-block h-4 w-4 rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
               />
@@ -489,15 +516,17 @@ export function CreateDocument() {
           </div>
           {/* Row 1: Creator email + basic delivery settings */}
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="space-y-1">
-              <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Creator Email</span>
+            <div>
+              <span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+                Creator Email
+              </span>
               <input
                 value={creatorEmail}
                 onChange={(event) => setCreatorEmail(event.target.value)}
                 placeholder="ops@company.com"
-                className="w-full rounded-sm border border-[var(--border)] bg-[var(--bg-inset)] px-2.5 py-1.5 text-[12px] outline-none transition-colors focus:border-[var(--accent)]"
+                className="w-full rounded-sm border border-[var(--border)] bg-[var(--bg-inset)] px-2.5 py-1.5 text-[12px] leading-[18px] outline-none transition-colors hover:border-[var(--border-accent)] focus:border-[var(--accent)]"
               />
-            </label>
+            </div>
             <Select
               label="Expires In"
               value={expiresInDays}

@@ -31,9 +31,7 @@ use sections::*;
 use theme::*;
 use types::*;
 
-// ══════════════════════════════════════════════════════════════════════════════
 // Main PDF generator
-// ══════════════════════════════════════════════════════════════════════════════
 
 pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::Error> {
     let (doc, page, layer) =
@@ -68,7 +66,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
         _ => parse_content_to_segments(&req.content, &req.signers),
     };
 
-    // ═══ COVER PAGE ══════════════════════════════════════════════════════════
+    // COVER PAGE
 
     ctx.draw_text("Proofmark", MARGIN_MM, ctx.y, 11.0, &ctx.font_bold.clone(), ACCENT);
     ctx.y -= pt_to_mm(40.0);
@@ -180,7 +178,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
     }
     ctx.y = verification_top - verification_card_h - pt_to_mm(12.0);
 
-    // ═══ DOCUMENT CONTENT ════════════════════════════════════════════════════
+    // DOCUMENT CONTENT
 
     ctx.ensure_space(pt_to_mm(56.0));
     { let l = ctx.layer(); draw_hline(&l, ctx.y, BORDER); }
@@ -235,7 +233,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
         render_completed_fields(&mut ctx, &field_summary, req.field_summary_style.as_deref().unwrap_or("hybrid"));
     }
 
-    // ═══ SIGNATURES ══════════════════════════════════════════════════════════
+    // SIGNATURES
 
     ctx.ensure_space(pt_to_mm(120.0));
     { let l = ctx.layer(); draw_hline(&l, ctx.y, BORDER); }
@@ -349,7 +347,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
         ctx.y -= card_h + pt_to_mm(8.0);
     }
 
-    // ═══ FORENSIC EVIDENCE ═══════════════════════════════════════════════════
+    // FORENSIC EVIDENCE
 
     let forensic_signers: Vec<&SignerInfo> = req.signers.iter()
         .filter(|s| s.status == "SIGNED" && s.forensic_evidence.is_some())
@@ -389,7 +387,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
         }
     }
 
-    // ═══ VERIFICATION ════════════════════════════════════════════════════════
+    // VERIFICATION
 
     ctx.ensure_space(pt_to_mm(90.0));
     { let l = ctx.layer(); draw_hline(&l, ctx.y, BORDER); }
@@ -435,7 +433,7 @@ pub fn generate_signed_pdf(req: &PdfGenerateRequest) -> Result<Vec<u8>, anyhow::
         }
     }
 
-    // ═══ SAVE ════════════════════════════════════════════════════════════════
+    // SAVE
 
     stamp_footers(&ctx, &req.content_hash);
 

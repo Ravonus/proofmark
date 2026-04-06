@@ -1,10 +1,39 @@
-//! Crypto endpoints — hashing, encryption, signing message construction.
-
 use actix_web::{web, HttpResponse, Responder};
+use serde::Deserialize;
 
 use super::error;
-use super::types::*;
 use crate::crypto;
+
+#[derive(Deserialize)]
+pub struct HashDocReq {
+    pub content: String,
+}
+
+#[derive(Deserialize)]
+pub struct HashHandSigReq {
+    pub data_url: String,
+}
+
+#[derive(Deserialize)]
+pub struct BuildSigningMsgReq {
+    pub content_hash: String,
+    pub address: String,
+    pub signer_label: String,
+    pub hand_signature_hash: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct EncryptReq {
+    pub content: String,
+    pub master_secret: String,
+}
+
+#[derive(Deserialize)]
+pub struct DecryptReq {
+    pub encrypted_content: String,
+    pub wrapped_key: String,
+    pub master_secret: String,
+}
 
 pub async fn hash_document(body: web::Json<HashDocReq>) -> impl Responder {
     let hash = crypto::hash_document(&body.content);

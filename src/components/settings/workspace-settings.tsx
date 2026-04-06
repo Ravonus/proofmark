@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium router stubs expose `any` types */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { trpc } from "~/lib/trpc";
-import { FadeIn, GlassCard, AnimatedButton } from "~/components/ui/motion";
+import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
 import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 
@@ -32,7 +33,9 @@ const EMPTY_BRANDING: BrandingForm = {
   emailIntro: "",
 };
 
-export function WorkspaceSettings() {
+export type WorkspaceSection = "all" | "branding" | "integrations" | "webhooks" | "templates" | "collab";
+
+export function WorkspaceSettings({ section = "all" }: { section?: WorkspaceSection } = {}) {
   const utils = trpc.useUtils();
   const identity = useConnectedIdentity();
   const statusQuery = trpc.account.operatorStatus.useQuery(undefined, { enabled: identity.isSignedIn });
@@ -55,7 +58,29 @@ export function WorkspaceSettings() {
     onSuccess: () => utils.account.workspace.invalidate(),
   });
 
+  // Initialize branding from server data (replaces useEffect hydration)
+  const hydratedRef = useRef(false);
+  const serverProfile = workspaceQuery.data?.branding[0];
+  const initialBranding = useMemo<BrandingForm>(() => {
+    if (!serverProfile) return EMPTY_BRANDING;
+    return {
+      name: serverProfile.name,
+      brandName: serverProfile.settings.brandName || "Proofmark",
+      logoUrl: serverProfile.settings.logoUrl || "",
+      primaryColor: serverProfile.settings.primaryColor || "#6366f1",
+      accentColor: serverProfile.settings.accentColor || "#22c55e",
+      emailFromName: serverProfile.settings.emailFromName || serverProfile.settings.brandName || "Proofmark",
+      emailReplyTo: serverProfile.settings.emailReplyTo || "",
+      emailFooter: serverProfile.settings.emailFooter || "",
+      signingIntro: serverProfile.settings.signingIntro || "",
+      emailIntro: serverProfile.settings.emailIntro || "",
+    };
+  }, [serverProfile]);
   const [branding, setBranding] = useState<BrandingForm>(EMPTY_BRANDING);
+  if (serverProfile && !hydratedRef.current) {
+    hydratedRef.current = true;
+    setBranding(initialBranding);
+  }
   const [smsProvider, setSmsProvider] = useState("TWILIO");
   const [smsLabel, setSmsLabel] = useState("Primary SMS");
   const [smsFrom, setSmsFrom] = useState("");
@@ -73,23 +98,6 @@ export function WorkspaceSettings() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [webhookEvents, setWebhookEvents] = useState("DOCUMENT_COMPLETED,SIGNER_SIGNED,SIGNER_DECLINED");
-
-  useEffect(() => {
-    const profile = workspaceQuery.data?.branding[0];
-    if (!profile) return;
-    setBranding({
-      name: profile.name,
-      brandName: profile.settings.brandName || "Proofmark",
-      logoUrl: profile.settings.logoUrl || "",
-      primaryColor: profile.settings.primaryColor || "#6366f1",
-      accentColor: profile.settings.accentColor || "#22c55e",
-      emailFromName: profile.settings.emailFromName || profile.settings.brandName || "Proofmark",
-      emailReplyTo: profile.settings.emailReplyTo || "",
-      emailFooter: profile.settings.emailFooter || "",
-      signingIntro: profile.settings.signingIntro || "",
-      emailIntro: profile.settings.emailIntro || "",
-    });
-  }, [workspaceQuery.data]);
 
   const groupedFeatures = useMemo(() => {
     const catalog = featuresQuery.data ?? [];
@@ -151,370 +159,446 @@ export function WorkspaceSettings() {
 
   const workspace = workspaceQuery.data;
 
+  const all = section === "all";
+
   return (
     <div className="space-y-6">
-      {currentWallet ? (
+      {all && currentWallet ? (
         <FadeIn>
           <OperatorConsole currentAddress={currentWallet.address} currentChain={currentWallet.chain} />
         </FadeIn>
       ) : null}
 
-      <FadeIn>
-        <GlassCard className="space-y-3">
-          <div>
-            <h3 className="text-lg font-semibold">Open-source by default</h3>
-            <p className="mt-1 text-sm text-muted">
-              Most features stay self-hostable, including the encrypted vault. Premium is reserved for blockchain-backed
-              and other heavy managed services, not for locking the platform.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <FeatureColumn title="Free" items={groupedFeatures.free.map((item) => item.label)} tone="free" />
-            <FeatureColumn
-              title="Bring Your Own API"
-              items={groupedFeatures.byo.map((item) => item.label)}
-              tone="byo"
-            />
-            <FeatureColumn
-              title="Premium App"
-              items={groupedFeatures.premium.map((item) => item.label)}
-              tone="premium"
-            />
-          </div>
-        </GlassCard>
-      </FadeIn>
-
-      <FadeIn delay={0.06}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">Branding</h3>
-            <p className="mt-1 text-sm text-muted">
-              Apply a logo, colors, and sender identity across emails and signing flows.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <TextField
-              label="Profile name"
-              value={branding.name}
-              onChange={(value) => setBranding((current) => ({ ...current, name: value }))}
-            />
-            <TextField
-              label="Brand name"
-              value={branding.brandName}
-              onChange={(value) => setBranding((current) => ({ ...current, brandName: value }))}
-            />
-            <TextField
-              label="Logo URL"
-              value={branding.logoUrl}
-              onChange={(value) => setBranding((current) => ({ ...current, logoUrl: value }))}
-            />
-            <TextField
-              label="Reply-to email"
-              value={branding.emailReplyTo}
-              onChange={(value) => setBranding((current) => ({ ...current, emailReplyTo: value }))}
-            />
-            <ColorField
-              label="Primary color"
-              value={branding.primaryColor}
-              onChange={(value) => setBranding((current) => ({ ...current, primaryColor: value }))}
-            />
-            <ColorField
-              label="Accent color"
-              value={branding.accentColor}
-              onChange={(value) => setBranding((current) => ({ ...current, accentColor: value }))}
-            />
-            <TextField
-              label="From name"
-              value={branding.emailFromName}
-              onChange={(value) => setBranding((current) => ({ ...current, emailFromName: value }))}
-            />
-            <TextField
-              label="Signing intro"
-              value={branding.signingIntro}
-              onChange={(value) => setBranding((current) => ({ ...current, signingIntro: value }))}
-            />
-          </div>
-          <TextareaField
-            label="Email intro"
-            value={branding.emailIntro}
-            onChange={(value) => setBranding((current) => ({ ...current, emailIntro: value }))}
-          />
-          <TextareaField
-            label="Email footer"
-            value={branding.emailFooter}
-            onChange={(value) => setBranding((current) => ({ ...current, emailFooter: value }))}
-          />
-          <AnimatedButton
-            className="px-4 py-2"
-            onClick={() =>
-              upsertBranding.mutate({
-                name: branding.name,
-                isDefault: true,
-                settings: {
-                  brandName: branding.brandName,
-                  logoUrl: branding.logoUrl || undefined,
-                  primaryColor: branding.primaryColor,
-                  accentColor: branding.accentColor,
-                  emailFromName: branding.emailFromName,
-                  emailReplyTo: branding.emailReplyTo || undefined,
-                  emailFooter: branding.emailFooter || undefined,
-                  signingIntro: branding.signingIntro || undefined,
-                  emailIntro: branding.emailIntro || undefined,
-                },
-              })
-            }
-            disabled={upsertBranding.isPending}
-          >
-            Save Branding
-          </AnimatedButton>
-        </GlassCard>
-      </FadeIn>
-
-      <FadeIn delay={0.12}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">SMS Provider</h3>
-            <p className="mt-1 text-sm text-muted">
-              Bring your own Twilio, Vonage, or Telnyx account for SMS invites and reminders.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <SelectField
-              label="Provider"
-              value={smsProvider}
-              onChange={setSmsProvider}
-              options={["TWILIO", "VONAGE", "TELNYX"]}
-            />
-            <TextField label="Label" value={smsLabel} onChange={setSmsLabel} />
-            <TextField label="From number / sender" value={smsFrom} onChange={setSmsFrom} />
-            {smsProvider === "TWILIO" && (
-              <>
-                <TextField label="Account SID" value={smsAccountSid} onChange={setSmsAccountSid} />
-                <TextField label="Auth token" value={smsAuthToken} onChange={setSmsAuthToken} password />
-              </>
-            )}
-            {smsProvider === "VONAGE" && (
-              <>
-                <TextField label="API key" value={smsApiKey} onChange={setSmsApiKey} />
-                <TextField label="API secret" value={smsApiSecret} onChange={setSmsApiSecret} password />
-              </>
-            )}
-            {smsProvider === "TELNYX" && (
-              <TextField label="API key" value={smsApiKey} onChange={setSmsApiKey} password />
-            )}
-          </div>
-          <AnimatedButton
-            className="px-4 py-2"
-            onClick={() =>
-              upsertIntegration.mutate({
-                kind: "SMS",
-                provider: smsProvider,
-                label: smsLabel,
-                isDefault: true,
-                config: {
-                  provider: smsProvider,
-                  enabled: true,
-                  from: smsFrom,
-                  accountSid: smsProvider === "TWILIO" ? smsAccountSid : undefined,
-                  authToken: smsProvider === "TWILIO" ? smsAuthToken : undefined,
-                  apiKey: smsProvider === "TWILIO" ? undefined : smsApiKey || undefined,
-                  apiSecret: smsProvider === "VONAGE" ? smsApiSecret || undefined : undefined,
-                },
-              })
-            }
-            disabled={upsertIntegration.isPending || !smsFrom}
-          >
-            Save SMS Provider
-          </AnimatedButton>
-          {workspace?.integrations.filter((entry) => entry.kind === "SMS").length ? (
-            <div className="space-y-2">
-              {workspace.integrations
-                .filter((entry) => entry.kind === "SMS")
-                .map((entry) => (
-                  <div key={entry.id} className="bg-surface/30 rounded-xl border border-border p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{entry.label}</p>
-                        <p className="text-muted">
-                          {entry.provider} · {entry.isDefault ? "Default" : "Secondary"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+      {all && (
+        <FadeIn>
+          <GlassCard className="space-y-3">
+            <div>
+              <h3 className="text-lg font-semibold">Open-source by default</h3>
+              <p className="mt-1 text-sm text-muted">
+                Most features stay self-hostable, including the encrypted vault. Premium is reserved for
+                blockchain-backed and other heavy managed services, not for locking the platform.
+              </p>
             </div>
-          ) : null}
-        </GlassCard>
-      </FadeIn>
+            <div className="grid gap-3 md:grid-cols-3">
+              <FeatureColumn title="Free" items={groupedFeatures.free.map((item) => item.label)} tone="free" />
+              <FeatureColumn
+                title="Bring Your Own API"
+                items={groupedFeatures.byo.map((item) => item.label)}
+                tone="byo"
+              />
+              <FeatureColumn
+                title="Premium App"
+                items={groupedFeatures.premium.map((item) => item.label)}
+                tone="premium"
+              />
+            </div>
+          </GlassCard>
+        </FadeIn>
+      )}
 
-      <FadeIn delay={0.18}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">Address Autocomplete</h3>
-            <p className="mt-1 text-sm text-muted">
-              Bring your own geocoder for signer-side address suggestions and multi-field autofill.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <SelectField
-              label="Provider"
-              value={addressProvider}
-              onChange={setAddressProvider}
-              options={["MAPBOX", "GEOAPIFY", "CUSTOM"]}
+      {(all || section === "branding") && (
+        <FadeIn delay={0.06}>
+          <GlassCard className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Branding</h3>
+              <p className="mt-1 text-sm text-muted">
+                Apply a logo, colors, and sender identity across emails and signing flows.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <TextField
+                label="Profile name"
+                value={branding.name}
+                onChange={(value) => setBranding((current) => ({ ...current, name: value }))}
+              />
+              <TextField
+                label="Brand name"
+                value={branding.brandName}
+                onChange={(value) => setBranding((current) => ({ ...current, brandName: value }))}
+              />
+              <TextField
+                label="Logo URL"
+                value={branding.logoUrl}
+                onChange={(value) => setBranding((current) => ({ ...current, logoUrl: value }))}
+              />
+              <TextField
+                label="Reply-to email"
+                value={branding.emailReplyTo}
+                onChange={(value) => setBranding((current) => ({ ...current, emailReplyTo: value }))}
+              />
+              <ColorField
+                label="Primary color"
+                value={branding.primaryColor}
+                onChange={(value) => setBranding((current) => ({ ...current, primaryColor: value }))}
+              />
+              <ColorField
+                label="Accent color"
+                value={branding.accentColor}
+                onChange={(value) => setBranding((current) => ({ ...current, accentColor: value }))}
+              />
+              <TextField
+                label="From name"
+                value={branding.emailFromName}
+                onChange={(value) => setBranding((current) => ({ ...current, emailFromName: value }))}
+              />
+              <TextField
+                label="Signing intro"
+                value={branding.signingIntro}
+                onChange={(value) => setBranding((current) => ({ ...current, signingIntro: value }))}
+              />
+            </div>
+            <TextareaField
+              label="Email intro"
+              value={branding.emailIntro}
+              onChange={(value) => setBranding((current) => ({ ...current, emailIntro: value }))}
             />
-            <TextField label="Label" value={addressLabel} onChange={setAddressLabel} />
-            {addressProvider !== "CUSTOM" ? (
-              <TextField label="API key" value={addressApiKey} onChange={setAddressApiKey} password />
-            ) : (
-              <TextField label="Endpoint" value={addressEndpoint} onChange={setAddressEndpoint} />
-            )}
-            <TextField label="Country codes" value={addressCountryCodes} onChange={setAddressCountryCodes} />
-            {addressProvider === "CUSTOM" && (
-              <TextareaField label="Custom headers (JSON)" value={addressHeaders} onChange={setAddressHeaders} />
-            )}
-          </div>
-          <AnimatedButton
-            className="px-4 py-2"
-            onClick={() => {
-              let parsedHeaders: Record<string, string> | undefined;
-              if (addressProvider === "CUSTOM" && addressHeaders.trim()) {
-                try {
-                  parsedHeaders = JSON.parse(addressHeaders) as Record<string, string>;
-                } catch {
-                  return;
-                }
+            <TextareaField
+              label="Email footer"
+              value={branding.emailFooter}
+              onChange={(value) => setBranding((current) => ({ ...current, emailFooter: value }))}
+            />
+            <W3SButton
+              className="px-4 py-2"
+              onClick={() =>
+                upsertBranding.mutate({
+                  name: branding.name,
+                  isDefault: true,
+                  settings: {
+                    brandName: branding.brandName,
+                    logoUrl: branding.logoUrl || undefined,
+                    primaryColor: branding.primaryColor,
+                    accentColor: branding.accentColor,
+                    emailFromName: branding.emailFromName,
+                    emailReplyTo: branding.emailReplyTo || undefined,
+                    emailFooter: branding.emailFooter || undefined,
+                    signingIntro: branding.signingIntro || undefined,
+                    emailIntro: branding.emailIntro || undefined,
+                  },
+                })
               }
+              disabled={upsertBranding.isPending}
+            >
+              Save Branding
+            </W3SButton>
+          </GlassCard>
+        </FadeIn>
+      )}
 
-              upsertIntegration.mutate({
-                kind: "ADDRESS",
-                provider: addressProvider,
-                label: addressLabel,
-                isDefault: true,
-                config: {
-                  provider: addressProvider,
-                  enabled: true,
-                  apiKey: addressProvider === "CUSTOM" ? undefined : addressApiKey || undefined,
-                  endpoint: addressProvider === "CUSTOM" ? addressEndpoint || undefined : undefined,
-                  headers: parsedHeaders,
-                  metadata: addressCountryCodes.trim() ? { countryCodes: addressCountryCodes } : undefined,
-                },
-              });
-            }}
-            disabled={upsertIntegration.isPending || (addressProvider === "CUSTOM" ? !addressEndpoint : !addressApiKey)}
-          >
-            Save Address Provider
-          </AnimatedButton>
-          {workspace?.integrations.filter((entry) => entry.kind === "ADDRESS").length ? (
-            <div className="space-y-2">
-              {workspace.integrations
-                .filter((entry) => entry.kind === "ADDRESS")
-                .map((entry) => (
-                  <div key={entry.id} className="bg-surface/30 rounded-xl border border-border p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{entry.label}</p>
-                        <p className="text-muted">
-                          {entry.provider} · {entry.isDefault ? "Default" : "Secondary"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          ) : null}
-        </GlassCard>
-      </FadeIn>
-
-      <FadeIn delay={0.24}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">Webhooks</h3>
-            <p className="mt-1 text-sm text-muted">
-              Forward signed lifecycle events to your own systems with HMAC signatures.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <TextField label="Label" value={webhookLabel} onChange={setWebhookLabel} />
-            <TextField label="Webhook URL" value={webhookUrl} onChange={setWebhookUrl} />
-          </div>
-          <TextField label="Shared secret" value={webhookSecret} onChange={setWebhookSecret} password />
-          <TextareaField label="Events (comma separated)" value={webhookEvents} onChange={setWebhookEvents} />
-          <AnimatedButton
-            className="px-4 py-2"
-            onClick={() =>
-              upsertWebhook.mutate({
-                label: webhookLabel,
-                url: webhookUrl,
-                secret: webhookSecret || undefined,
-                active: true,
-                events: webhookEvents
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              })
-            }
-            disabled={upsertWebhook.isPending || !webhookLabel || !webhookUrl}
-          >
-            Save Webhook
-          </AnimatedButton>
-          <div className="space-y-2">
-            {workspace?.webhooks.map((hook) => (
-              <div key={hook.id} className="bg-surface/30 rounded-xl border border-border p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium">{hook.label}</p>
-                    <p className="text-sm text-muted">{hook.url}</p>
-                    <p className="mt-1 text-xs text-muted">{hook.events.join(", ") || "All events"}</p>
-                  </div>
-                  <AnimatedButton
-                    variant="danger"
-                    className="px-3 py-1.5 text-xs"
-                    onClick={() => deleteWebhook.mutate({ id: hook.id })}
-                  >
-                    Remove
-                  </AnimatedButton>
-                </div>
+      {(all || section === "integrations") && (
+        <>
+          <FadeIn delay={0.12}>
+            <GlassCard className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">SMS Provider</h3>
+                <p className="mt-1 text-sm text-muted">
+                  Bring your own Twilio, Vonage, or Telnyx account for SMS invites and reminders.
+                </p>
               </div>
-            ))}
-          </div>
-        </GlassCard>
-      </FadeIn>
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectField
+                  label="Provider"
+                  value={smsProvider}
+                  onChange={setSmsProvider}
+                  options={["TWILIO", "VONAGE", "TELNYX"]}
+                />
+                <TextField label="Label" value={smsLabel} onChange={setSmsLabel} />
+                <TextField label="From number / sender" value={smsFrom} onChange={setSmsFrom} />
+                {smsProvider === "TWILIO" && (
+                  <>
+                    <TextField label="Account SID" value={smsAccountSid} onChange={setSmsAccountSid} />
+                    <TextField label="Auth token" value={smsAuthToken} onChange={setSmsAuthToken} password />
+                  </>
+                )}
+                {smsProvider === "VONAGE" && (
+                  <>
+                    <TextField label="API key" value={smsApiKey} onChange={setSmsApiKey} />
+                    <TextField label="API secret" value={smsApiSecret} onChange={setSmsApiSecret} password />
+                  </>
+                )}
+                {smsProvider === "TELNYX" && (
+                  <TextField label="API key" value={smsApiKey} onChange={setSmsApiKey} password />
+                )}
+              </div>
+              <W3SButton
+                className="px-4 py-2"
+                onClick={() =>
+                  upsertIntegration.mutate({
+                    kind: "SMS",
+                    provider: smsProvider,
+                    label: smsLabel,
+                    isDefault: true,
+                    config: {
+                      provider: smsProvider,
+                      enabled: true,
+                      from: smsFrom,
+                      accountSid: smsProvider === "TWILIO" ? smsAccountSid : undefined,
+                      authToken: smsProvider === "TWILIO" ? smsAuthToken : undefined,
+                      apiKey: smsProvider === "TWILIO" ? undefined : smsApiKey || undefined,
+                      apiSecret: smsProvider === "VONAGE" ? smsApiSecret || undefined : undefined,
+                    },
+                  })
+                }
+                disabled={upsertIntegration.isPending || !smsFrom}
+              >
+                Save SMS Provider
+              </W3SButton>
+              {workspace?.integrations.filter((entry) => entry.kind === "SMS").length ? (
+                <div className="space-y-2">
+                  {workspace.integrations
+                    .filter((entry) => entry.kind === "SMS")
+                    .map((entry) => (
+                      <div key={entry.id} className="bg-surface/30 rounded-xl border border-border p-3 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{entry.label}</p>
+                            <p className="text-muted">
+                              {entry.provider} · {entry.isDefault ? "Default" : "Secondary"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+            </GlassCard>
+          </FadeIn>
 
-      <FadeIn delay={0.24}>
-        <GlassCard className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold">Reusable Templates</h3>
-            <p className="mt-1 text-sm text-muted">
-              Save templates directly from the document editor, then reuse them when creating new packets.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {workspace?.templates.length ? (
-              workspace.templates.map((template) => (
-                <div key={template.id} className="bg-surface/30 rounded-xl border border-border p-4">
+          <FadeIn delay={0.18}>
+            <GlassCard className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Address Autocomplete</h3>
+                <p className="mt-1 text-sm text-muted">
+                  Bring your own geocoder for signer-side address suggestions and multi-field autofill.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectField
+                  label="Provider"
+                  value={addressProvider}
+                  onChange={setAddressProvider}
+                  options={["MAPBOX", "GEOAPIFY", "CUSTOM"]}
+                />
+                <TextField label="Label" value={addressLabel} onChange={setAddressLabel} />
+                {addressProvider !== "CUSTOM" ? (
+                  <TextField label="API key" value={addressApiKey} onChange={setAddressApiKey} password />
+                ) : (
+                  <TextField label="Endpoint" value={addressEndpoint} onChange={setAddressEndpoint} />
+                )}
+                <TextField label="Country codes" value={addressCountryCodes} onChange={setAddressCountryCodes} />
+                {addressProvider === "CUSTOM" && (
+                  <TextareaField label="Custom headers (JSON)" value={addressHeaders} onChange={setAddressHeaders} />
+                )}
+              </div>
+              <W3SButton
+                className="px-4 py-2"
+                onClick={() => {
+                  let parsedHeaders: Record<string, string> | undefined;
+                  if (addressProvider === "CUSTOM" && addressHeaders.trim()) {
+                    try {
+                      parsedHeaders = JSON.parse(addressHeaders) as Record<string, string>;
+                    } catch {
+                      return;
+                    }
+                  }
+
+                  upsertIntegration.mutate({
+                    kind: "ADDRESS",
+                    provider: addressProvider,
+                    label: addressLabel,
+                    isDefault: true,
+                    config: {
+                      provider: addressProvider,
+                      enabled: true,
+                      apiKey: addressProvider === "CUSTOM" ? undefined : addressApiKey || undefined,
+                      endpoint: addressProvider === "CUSTOM" ? addressEndpoint || undefined : undefined,
+                      headers: parsedHeaders,
+                      metadata: addressCountryCodes.trim() ? { countryCodes: addressCountryCodes } : undefined,
+                    },
+                  });
+                }}
+                disabled={
+                  upsertIntegration.isPending || (addressProvider === "CUSTOM" ? !addressEndpoint : !addressApiKey)
+                }
+              >
+                Save Address Provider
+              </W3SButton>
+              {workspace?.integrations.filter((entry) => entry.kind === "ADDRESS").length ? (
+                <div className="space-y-2">
+                  {workspace.integrations
+                    .filter((entry) => entry.kind === "ADDRESS")
+                    .map((entry) => (
+                      <div key={entry.id} className="bg-surface/30 rounded-xl border border-border p-3 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{entry.label}</p>
+                            <p className="text-muted">
+                              {entry.provider} · {entry.isDefault ? "Default" : "Secondary"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+            </GlassCard>
+          </FadeIn>
+        </>
+      )}
+
+      {(all || section === "webhooks") && (
+        <FadeIn delay={0.24}>
+          <GlassCard className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Webhooks</h3>
+              <p className="mt-1 text-sm text-muted">
+                Forward signed lifecycle events to your own systems with HMAC signatures.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <TextField label="Label" value={webhookLabel} onChange={setWebhookLabel} />
+              <TextField label="Webhook URL" value={webhookUrl} onChange={setWebhookUrl} />
+            </div>
+            <TextField label="Shared secret" value={webhookSecret} onChange={setWebhookSecret} password />
+            <TextareaField label="Events (comma separated)" value={webhookEvents} onChange={setWebhookEvents} />
+            <W3SButton
+              className="px-4 py-2"
+              onClick={() =>
+                upsertWebhook.mutate({
+                  label: webhookLabel,
+                  url: webhookUrl,
+                  secret: webhookSecret || undefined,
+                  active: true,
+                  events: webhookEvents
+                    .split(",")
+                    .map((item) => item.trim())
+                    .filter(Boolean),
+                })
+              }
+              disabled={upsertWebhook.isPending || !webhookLabel || !webhookUrl}
+            >
+              Save Webhook
+            </W3SButton>
+            <div className="space-y-2">
+              {workspace?.webhooks.map((hook) => (
+                <div key={hook.id} className="bg-surface/30 rounded-xl border border-border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium">{template.name}</p>
-                      <p className="text-sm text-muted">{template.title}</p>
-                      {template.description ? <p className="mt-1 text-xs text-muted">{template.description}</p> : null}
+                      <p className="font-medium">{hook.label}</p>
+                      <p className="text-sm text-muted">{hook.url}</p>
+                      <p className="mt-1 text-xs text-muted">{hook.events.join(", ") || "All events"}</p>
                     </div>
-                    <AnimatedButton
+                    <W3SButton
                       variant="danger"
                       className="px-3 py-1.5 text-xs"
-                      onClick={() => deleteTemplate.mutate({ id: template.id })}
+                      onClick={() => deleteWebhook.mutate({ id: hook.id })}
                     >
-                      Delete
-                    </AnimatedButton>
+                      Remove
+                    </W3SButton>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted">No saved templates yet.</p>
-            )}
-          </div>
-        </GlassCard>
-      </FadeIn>
+              ))}
+            </div>
+          </GlassCard>
+        </FadeIn>
+      )}
+
+      {(all || section === "collab") && (
+        <FadeIn delay={0.28}>
+          <CollabSettingsCard />
+        </FadeIn>
+      )}
+
+      {(all || section === "templates") && (
+        <FadeIn delay={0.3}>
+          <GlassCard className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold">Reusable Templates</h3>
+              <p className="mt-1 text-sm text-muted">
+                Save templates directly from the document editor, then reuse them when creating new packets.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {workspace?.templates.length ? (
+                workspace.templates.map((template) => (
+                  <div key={template.id} className="bg-surface/30 rounded-xl border border-border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{template.name}</p>
+                        <p className="text-sm text-muted">{template.title}</p>
+                        {template.description ? (
+                          <p className="mt-1 text-xs text-muted">{template.description}</p>
+                        ) : null}
+                      </div>
+                      <W3SButton
+                        variant="danger"
+                        className="px-3 py-1.5 text-xs"
+                        onClick={() => deleteTemplate.mutate({ id: template.id })}
+                      >
+                        Delete
+                      </W3SButton>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted">No saved templates yet.</p>
+              )}
+            </div>
+          </GlassCard>
+        </FadeIn>
+      )}
     </div>
+  );
+}
+
+function CollabSettingsCard() {
+  const capabilities = trpc.collab.capabilities.useQuery();
+  const available = capabilities.data?.available ?? false;
+  const sessions = trpc.collab.list.useQuery({ status: "active" }, { enabled: available });
+  const sessionCount = (sessions.data as unknown[] | undefined)?.length ?? 0;
+
+  return (
+    <GlassCard className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold">Collaboration</h3>
+        <p className="mt-1 text-sm text-muted">
+          Real-time co-editing with CRDT sync, shared AI conversations, and annotation tools.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className={`rounded-xl border p-4 ${available ? "border-emerald-400/20 bg-emerald-400/10" : "border-zinc-700/30 bg-zinc-800/20"}`}
+        >
+          <p className="text-xs font-medium text-muted">Status</p>
+          <p className={`mt-1 text-sm font-semibold ${available ? "text-emerald-300" : "text-zinc-400"}`}>
+            {available ? "Available" : "Premium Required"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-zinc-700/30 bg-zinc-800/20 p-4">
+          <p className="text-xs font-medium text-muted">Active Sessions</p>
+          <p className="mt-1 text-sm font-semibold">{sessionCount}</p>
+        </div>
+      </div>
+
+      {available ? (
+        <div className="rounded-lg bg-[var(--bg-surface)] p-4 text-sm text-secondary">
+          <p className="text-xs font-medium text-muted">Configuration</p>
+          <ul className="mt-2 space-y-1 text-xs text-muted">
+            <li>
+              WebSocket server: Rust engine on port 9090 at{" "}
+              <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono">/ws/collab/&#123;sessionId&#125;</code>
+            </li>
+            <li>CRDT: Yjs/Yrs with binary sync protocol</li>
+            <li>Start sessions from the document editor via the Collab button</li>
+          </ul>
+        </div>
+      ) : (
+        <p className="text-xs text-muted">
+          Run <code className="rounded bg-zinc-800 px-1 py-0.5 font-mono">npm run paid</code> with the premium directory
+          to enable collaboration features.
+        </p>
+      )}
+    </GlassCard>
   );
 }
 
@@ -689,7 +773,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <AnimatedButton
+                  <W3SButton
                     variant="primary"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending || !statusQuery.data.premiumRuntimeAvailable}
@@ -703,8 +787,8 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Enable All Premium
-                  </AnimatedButton>
-                  <AnimatedButton
+                  </W3SButton>
+                  <W3SButton
                     variant="danger"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending}
@@ -718,8 +802,8 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Disable All Premium
-                  </AnimatedButton>
-                  <AnimatedButton
+                  </W3SButton>
+                  <W3SButton
                     variant="secondary"
                     className="px-3 py-1.5 text-xs"
                     disabled={setOverrides.isPending}
@@ -733,7 +817,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                     }
                   >
                     Clear Overrides
-                  </AnimatedButton>
+                  </W3SButton>
                 </div>
               </div>
 
@@ -763,7 +847,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                         </div>
                         <p className="text-sm text-muted">{feature.summary}</p>
                       </div>
-                      <AnimatedButton
+                      <W3SButton
                         variant={feature.effectiveEnabled ? "secondary" : "primary"}
                         className="px-3 py-2 text-xs"
                         disabled={setOverrides.isPending || (!feature.deploymentEnabled && !feature.oss)}
@@ -777,7 +861,7 @@ function OperatorConsole({ currentAddress, currentChain }: { currentAddress: str
                         }
                       >
                         {feature.effectiveEnabled ? "Turn Off" : feature.deploymentEnabled ? "Turn On" : "Runtime Off"}
-                      </AnimatedButton>
+                      </W3SButton>
                     </div>
                   </div>
                 ))}

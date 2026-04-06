@@ -47,7 +47,7 @@ type EditorState = {
   addMode: string | null;
   activeFieldId: string | null;
   activeSigner: number;
-  mobilePanel: string | null;
+  mobilePanel: boolean;
 
   // Undo/redo
   history: HistoryState;
@@ -78,7 +78,7 @@ type EditorActions = {
   setFullscreen: (on: boolean) => void;
   setAddMode: (mode: string | null) => void;
   setActiveSigner: (index: number) => void;
-  setMobilePanel: (panel: string | null) => void;
+  setMobilePanel: (on: boolean) => void;
 
   // Undo/redo
   pushSnapshot: () => void;
@@ -91,13 +91,11 @@ type EditorActions = {
 
 const DEFAULT_SIGNER: SignerDef = {
   label: "Signer 1",
-  address: "",
-  chain: "ETH",
   email: "",
   phone: "",
-  role: "signer",
+  role: "SIGNER",
   signMethod: "WALLET",
-  deliveryMethod: "link",
+  tokenGates: null,
 };
 
 const INITIAL: EditorState = {
@@ -114,7 +112,7 @@ const INITIAL: EditorState = {
   addMode: null,
   activeFieldId: null,
   activeSigner: 0,
-  mobilePanel: null,
+  mobilePanel: false,
   history: { past: [], future: [] },
   canUndo: false,
   canRedo: false,
@@ -175,7 +173,7 @@ export const useEditorStore = create<EditorState & EditorActions>()((set) => ({
   setFullscreen: (on) => set({ fullscreen: on }),
   setAddMode: (mode) => set({ addMode: mode }),
   setActiveSigner: (index) => set({ activeSigner: index }),
-  setMobilePanel: (panel) => set({ mobilePanel: panel }),
+  setMobilePanel: (on) => set({ mobilePanel: on }),
 
   // ── Undo/Redo ──────────────────────────────────────────────────────────────
 

@@ -43,14 +43,7 @@ import {
   getOwnedWalletContextFromRequest,
   requireOwnedWalletActor,
 } from "~/server/owned-wallet-context";
-import { optionalSignerTokenGateSchema } from "~/lib/token-gates";
-
-const deliveryMethodSchema = z.enum(["EMAIL", "SMS"]);
-
-const reminderSchema = z.object({
-  cadence: z.enum(["NONE", "DAILY", "EVERY_2_DAYS", "EVERY_3_DAYS", "WEEKLY"]).default("NONE"),
-  channels: z.array(deliveryMethodSchema).default(["EMAIL"]),
-});
+import { saveTemplateSchema, type SaveTemplateInput } from "~/lib/schemas/document";
 
 const brandingSchema = z.object({
   brandName: z.string().min(1).max(80).optional(),
@@ -84,29 +77,7 @@ const pdfStyleSettingsSchema = z.object({
   fieldIndexCombined: z.boolean().optional(),
 });
 
-const templateSignerSchema = z.object({
-  label: z.string().min(1).max(100),
-  email: z.string().email().optional().or(z.literal("")),
-  phone: z.string().max(30).optional().or(z.literal("")),
-  role: z.enum(["SIGNER", "APPROVER", "CC", "WITNESS", "OBSERVER"]).default("SIGNER"),
-  deliveryMethods: z.array(deliveryMethodSchema).default(["EMAIL"]),
-  tokenGates: optionalSignerTokenGateSchema,
-  fields: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        type: z.string().min(1),
-        label: z.string().min(1),
-        value: z.string().nullable().optional(),
-        required: z.boolean().default(true),
-        options: z.array(z.string().min(1)).optional(),
-        settings: z.record(z.unknown()).optional(),
-      }),
-    )
-    .default([]),
-});
-
-function normalizeTemplateSigners(signers: Array<z.infer<typeof templateSignerSchema>>) {
+function normalizeTemplateSigners(signers: SaveTemplateInput["signers"]) {
   return signers.map((signer) => ({
     label: signer.label,
     email: signer.email || undefined,
@@ -424,80 +395,61 @@ export const accountRouter = createTRPCRouter({
     return { ok: true };
   }),
 
-  saveTemplate: publicProcedure
-    .input(
-      z.object({
-        id: z.string().optional(),
-        name: z.string().min(1).max(100),
-        description: z.string().max(240).optional(),
-        title: z.string().min(1).max(200),
-        content: z.string().min(1),
-        signers: z.array(templateSignerSchema).min(1).max(20),
-        defaults: z
-          .object({
-            proofMode: z.enum(["PRIVATE", "HYBRID", "CRYPTO_NATIVE"]).default("HYBRID").optional(),
-            signingOrder: z.enum(["parallel", "sequential"]).default("parallel").optional(),
-            expiresInDays: z.number().int().min(1).max(365).optional(),
-            reminder: reminderSchema.optional(),
-          })
-          .optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { ownedAddresses, primaryOwnerAddress } = await getOwnedWalletContextFromRequest(ctx.req ?? null);
-      const normalizedSigners = normalizeTemplateSigners(input.signers);
-      const defaults = input.defaults
-        ? {
-            ...input.defaults,
-            reminder: input.defaults.reminder
-              ? (createReminderConfig(input.defaults.reminder.cadence, input.defaults.reminder.channels) ?? undefined)
-              : undefined,
-          }
-        : null;
+  saveTemplate: publicProcedure.input(saveTemplateSchema).mutation(async ({ ctx, input }) => {
+    const { ownedAddresses, primaryOwnerAddress } = await getOwnedWalletContextFromRequest(ctx.req ?? null);
+    const normalizedSigners = normalizeTemplateSigners(input.signers);
+    const defaults = input.defaults
+      ? {
+          ...input.defaults,
+          reminder: input.defaults.reminder
+            ? (createReminderConfig(input.defaults.reminder.cadence, input.defaults.reminder.channels) ?? undefined)
+            : undefined,
+        }
+      : null;
 
-      if (input.id) {
-        if (ownedAddresses.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
+    if (input.id) {
+      if (ownedAddresses.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
 
-        const existing = await ctx.db.query.documentTemplates.findFirst({
-          where:
-            ownedAddresses.length === 1
-              ? and(eq(documentTemplates.id, input.id), eq(documentTemplates.ownerAddress, ownedAddresses[0]!))
-              : and(eq(documentTemplates.id, input.id), inArray(documentTemplates.ownerAddress, ownedAddresses)),
-        });
-        if (!existing) throw new TRPCError({ code: "NOT_FOUND" });
-
-        const [template] = await ctx.db
-          .update(documentTemplates)
-          .set({
-            name: input.name,
-            description: input.description ?? null,
-            title: input.title,
-            content: input.content,
-            signers: normalizedSigners,
-            defaults,
-            updatedAt: new Date(),
-          })
-          .where(eq(documentTemplates.id, input.id))
-          .returning();
-        return template;
-      }
-
-      const ownerAddress = requirePrimaryOwnerAddress(primaryOwnerAddress);
+      const existing = await ctx.db.query.documentTemplates.findFirst({
+        where:
+          ownedAddresses.length === 1
+            ? and(eq(documentTemplates.id, input.id), eq(documentTemplates.ownerAddress, ownedAddresses[0]!))
+            : and(eq(documentTemplates.id, input.id), inArray(documentTemplates.ownerAddress, ownedAddresses)),
+      });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND" });
 
       const [template] = await ctx.db
-        .insert(documentTemplates)
-        .values({
-          ownerAddress,
+        .update(documentTemplates)
+        .set({
           name: input.name,
           description: input.description ?? null,
           title: input.title,
           content: input.content,
           signers: normalizedSigners,
           defaults,
+          updatedAt: new Date(),
         })
+        .where(eq(documentTemplates.id, input.id))
         .returning();
       return template;
-    }),
+    }
+
+    const ownerAddress = requirePrimaryOwnerAddress(primaryOwnerAddress);
+
+    const [template] = await ctx.db
+      .insert(documentTemplates)
+      .values({
+        ownerAddress,
+        name: input.name,
+        description: input.description ?? null,
+        title: input.title,
+        content: input.content,
+        signers: normalizedSigners,
+        defaults,
+      })
+      .returning();
+    return template;
+  }),
 
   deleteTemplate: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
     const { ownedAddresses } = await getOwnedWalletContextFromRequest(ctx.req ?? null);

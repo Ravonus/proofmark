@@ -66,7 +66,7 @@ export function TokenGateEditor({ value, onChange }: Props) {
   };
 
   return (
-    <div className="bg-[var(--bg-hover)]/40 rounded-lg border border-[var(--border)] p-3">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-hover)] p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-[11px] font-medium text-secondary">

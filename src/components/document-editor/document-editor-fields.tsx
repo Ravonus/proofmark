@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, memo } from "react";
+import { useState, useRef, useCallback, memo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select } from "../ui/select";
 import type { AddressSuggestion } from "~/lib/address-autocomplete";
@@ -323,6 +324,18 @@ export const EditorField = memo(
     const sc = getSignerColor(field.signerIdx ?? 0);
     const FieldIcon = getFieldIcon(field.type);
     const [showPopover, setShowPopover] = useState(false);
+    const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+    const fieldRef = useRef<HTMLSpanElement>(null);
+    const updatePopoverPos = useCallback(() => {
+      if (!fieldRef.current) return;
+      const rect = fieldRef.current.getBoundingClientRect();
+      const popW = 288; // w-72 = 18rem = 288px
+      const popH = 400; // approximate max height
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < popH && rect.top > spaceBelow ? Math.max(8, rect.top - popH - 4) : rect.bottom + 8;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - popW - 8));
+      setPopoverPos({ top, left });
+    }, []);
     const runtimeSettings = getRuntimeFieldSettings(field);
     const inputType = resolveFieldInputType(field);
     const placeholder = resolveFieldPlaceholder(field);
@@ -367,7 +380,7 @@ export const EditorField = memo(
     }
 
     return (
-      <span className="group/field relative mx-0.5 my-0.5 inline-flex items-center" id={field.id}>
+      <span className="group/field relative mx-0.5 my-0.5 inline-flex items-center" id={field.id} ref={fieldRef}>
         <span
           draggable
           onDragStart={(e) => {
@@ -382,10 +395,11 @@ export const EditorField = memo(
           }}
           onDragEnd={() => onDragEnd?.()}
           className={`inline-flex cursor-grab items-center gap-1.5 rounded-md border px-2.5 py-1 transition-all active:cursor-grabbing ${sc.border} ${sc.bg} ${
-            active ? "ring-[var(--accent)]/30 shadow-sm ring-2" : "hover:shadow-sm"
+            active ? "shadow-sm ring-2 ring-[var(--accent-30)]" : "hover:shadow-sm"
           }`}
           onClick={() => {
             onFocus();
+            if (!showPopover) updatePopoverPos();
             setShowPopover(!showPopover);
           }}
         >
@@ -402,445 +416,452 @@ export const EditorField = memo(
         </span>
 
         {/* Field settings popover */}
-        <AnimatePresence>
-          {showPopover && active && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowPopover(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.12 }}
-                className="absolute left-0 top-full z-50 mt-2 w-72 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-primary">Field Settings</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        onRemove();
-                        setShowPopover(false);
-                      }}
-                      className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="h-3 w-3" /> Remove
-                    </button>
-                    <button onClick={() => setShowPopover(false)} className="text-muted hover:text-secondary">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+        {showPopover &&
+          active &&
+          popoverPos &&
+          createPortal(
+            <AnimatePresence>
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={() => setShowPopover(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.12 }}
+                  className="fixed z-[9999] w-72 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-xl"
+                  style={{ top: popoverPos.top, left: popoverPos.left, maxHeight: "80vh", overflowY: "auto" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-primary">Field Settings</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          onRemove();
+                          setShowPopover(false);
+                        }}
+                        className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="h-3 w-3" /> Remove
+                      </button>
+                      <button onClick={() => setShowPopover(false)} className="text-muted hover:text-secondary">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted">Label</label>
-                  <input
-                    defaultValue={field.label}
-                    onBlur={(e) => onUpdate({ label: e.target.value })}
-                    placeholder="Field label"
-                    className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted">Placeholder</label>
-                  <input
-                    defaultValue={placeholder}
-                    onBlur={(e) => onUpdate({ placeholder: e.target.value })}
-                    placeholder="Placeholder"
-                    className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted">Type</label>
-                  <SearchDropdown
-                    items={fieldDropdownItems}
-                    value={field.type}
-                    onSelect={(item) => {
-                      const nextField = getField(item.id);
-                      onUpdate({
-                        type: item.id,
-                        placeholder: nextField?.placeholder || "Enter value",
-                        options: nextField?.validation?.options,
-                        settings:
-                          item.id === "custom-field"
-                            ? { inputType: "text", validation: {}, logic: {}, display: {} }
-                            : field.settings,
-                      });
-                    }}
-                    placeholder="Search field types..."
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Input Mode</label>
-                    <Select
-                      value={inputType}
-                      onChange={(v) => updateSettings({ inputType: v as RuntimeInputType })}
-                      size="sm"
-                      options={INPUT_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Autocomplete</label>
+                    <label className="text-[11px] font-medium text-muted">Label</label>
                     <input
-                      defaultValue={runtimeSettings.autocomplete ?? resolveFieldAutocomplete(field) ?? ""}
-                      onBlur={(e) => updateSettings({ autocomplete: e.target.value.trim() || undefined })}
-                      placeholder="street-address, email, cc-number"
+                      defaultValue={field.label}
+                      onBlur={(e) => onUpdate({ label: e.target.value })}
+                      placeholder="Field label"
                       className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                     />
                   </div>
-                </div>
 
-                <label className="flex items-center justify-between text-[11px] text-secondary">
-                  Required
-                  <input
-                    type="checkbox"
-                    defaultChecked={field.required ?? true}
-                    onChange={(e) => onUpdate({ required: e.target.checked })}
-                    className="rounded accent-[var(--accent)]"
-                  />
-                </label>
-
-                {(inputType === "select" || inputType === "radio") && (
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Options</label>
-                    <textarea
-                      defaultValue={resolveFieldOptions(field).join("\n")}
-                      onBlur={(e) =>
+                    <label className="text-[11px] font-medium text-muted">Placeholder</label>
+                    <input
+                      defaultValue={placeholder}
+                      onBlur={(e) => onUpdate({ placeholder: e.target.value })}
+                      placeholder="Placeholder"
+                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted">Type</label>
+                    <SearchDropdown
+                      items={fieldDropdownItems}
+                      value={field.type}
+                      onSelect={(item) => {
+                        const nextField = getField(item.id);
                         onUpdate({
-                          options: e.target.value
-                            .split("\n")
-                            .map((o) => o.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      rows={3}
-                      placeholder="One option per line"
-                      className="w-full resize-none rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                          type: item.id,
+                          placeholder: nextField?.placeholder || "Enter value",
+                          options: nextField?.validation?.options,
+                          settings:
+                            item.id === "custom-field"
+                              ? { inputType: "text", validation: {}, logic: {}, display: {} }
+                              : field.settings,
+                        });
+                      }}
+                      placeholder="Search field types..."
+                      className="w-full"
                     />
                   </div>
-                )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Prefix</label>
-                    <input
-                      defaultValue={runtimeSettings.prefix ?? ""}
-                      onBlur={(e) => updateSettings({ prefix: e.target.value || undefined })}
-                      placeholder="$  @  №"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Suffix</label>
-                    <input
-                      defaultValue={runtimeSettings.suffix ?? ""}
-                      onBlur={(e) => updateSettings({ suffix: e.target.value || undefined })}
-                      placeholder="%  days"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Badge</label>
-                    <input
-                      defaultValue={runtimeSettings.display?.badge ?? ""}
-                      onBlur={(e) => updateNestedSettings("display", { badge: e.target.value || undefined })}
-                      placeholder="KYC, Visa, PO"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted">Logo / Mark</label>
-                    <input
-                      defaultValue={runtimeSettings.display?.logo ?? ""}
-                      onBlur={(e) => updateNestedSettings("display", { logo: e.target.value || undefined })}
-                      placeholder="VISA, ◎, 🏦"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted">Help Text</label>
-                  <input
-                    defaultValue={helpText ?? ""}
-                    onBlur={(e) => updateNestedSettings("display", { helpText: e.target.value || undefined })}
-                    placeholder="Shown under the field while signing"
-                    className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-medium text-muted">Validation</label>
                   <div className="grid grid-cols-2 gap-2">
-                    <Select
-                      value={runtimeSettings.validation?.kind ?? ""}
-                      onChange={(v) => updateNestedSettings("validation", { kind: v || undefined })}
-                      size="sm"
-                      options={VALIDATION_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                    />
-                    <input
-                      defaultValue={runtimeSettings.validation?.message ?? ""}
-                      onBlur={(e) => updateNestedSettings("validation", { message: e.target.value || undefined })}
-                      placeholder="Custom error message"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                  <input
-                    defaultValue={runtimeSettings.validation?.pattern ?? ""}
-                    onBlur={(e) => updateNestedSettings("validation", { pattern: e.target.value || undefined })}
-                    placeholder="Regex pattern"
-                    className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      defaultValue={String(runtimeSettings.validation?.minLength ?? "")}
-                      onBlur={(e) =>
-                        updateNestedSettings("validation", {
-                          minLength: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
-                      placeholder="Min length"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                    <input
-                      type="number"
-                      defaultValue={String(runtimeSettings.validation?.maxLength ?? "")}
-                      onBlur={(e) =>
-                        updateNestedSettings("validation", {
-                          maxLength: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
-                      placeholder="Max length"
-                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                    />
-                  </div>
-                  {inputType === "number" && (
-                    <div className="grid grid-cols-3 gap-2">
-                      <input
-                        type="number"
-                        defaultValue={String(runtimeSettings.validation?.min ?? "")}
-                        onBlur={(e) =>
-                          updateNestedSettings("validation", {
-                            min: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
-                        placeholder="Min"
-                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Input Mode</label>
+                      <Select
+                        value={inputType}
+                        onChange={(v) => updateSettings({ inputType: v as RuntimeInputType })}
+                        size="sm"
+                        options={INPUT_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Autocomplete</label>
                       <input
-                        type="number"
-                        defaultValue={String(runtimeSettings.validation?.max ?? "")}
-                        onBlur={(e) =>
-                          updateNestedSettings("validation", {
-                            max: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
-                        placeholder="Max"
-                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                      />
-                      <input
-                        type="number"
-                        defaultValue={String(runtimeSettings.validation?.step ?? "")}
-                        onBlur={(e) =>
-                          updateNestedSettings("validation", {
-                            step: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
-                        placeholder="Step"
+                        defaultValue={runtimeSettings.autocomplete ?? resolveFieldAutocomplete(field) ?? ""}
+                        onBlur={(e) => updateSettings({ autocomplete: e.target.value.trim() || undefined })}
+                        placeholder="street-address, email, cc-number"
                         className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                       />
                     </div>
-                  )}
-                  {inputType === "textarea" && (
+                  </div>
+
+                  <label className="flex items-center justify-between text-[11px] text-secondary">
+                    Required
                     <input
-                      type="number"
-                      min="2"
-                      max="12"
-                      defaultValue={String(runtimeSettings.rows ?? 3)}
-                      onBlur={(e) => updateSettings({ rows: e.target.value ? Number(e.target.value) : undefined })}
-                      placeholder="Rows"
+                      type="checkbox"
+                      defaultChecked={field.required ?? true}
+                      onChange={(e) => onUpdate({ required: e.target.checked })}
+                      className="rounded accent-[var(--accent)]"
+                    />
+                  </label>
+
+                  {(inputType === "select" || inputType === "radio") && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Options</label>
+                      <textarea
+                        defaultValue={resolveFieldOptions(field).join("\n")}
+                        onBlur={(e) =>
+                          onUpdate({
+                            options: e.target.value
+                              .split("\n")
+                              .map((o) => o.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                        rows={3}
+                        placeholder="One option per line"
+                        className="w-full resize-none rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Prefix</label>
+                      <input
+                        defaultValue={runtimeSettings.prefix ?? ""}
+                        onBlur={(e) => updateSettings({ prefix: e.target.value || undefined })}
+                        placeholder="$  @  №"
+                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Suffix</label>
+                      <input
+                        defaultValue={runtimeSettings.suffix ?? ""}
+                        onBlur={(e) => updateSettings({ suffix: e.target.value || undefined })}
+                        placeholder="%  days"
+                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Badge</label>
+                      <input
+                        defaultValue={runtimeSettings.display?.badge ?? ""}
+                        onBlur={(e) => updateNestedSettings("display", { badge: e.target.value || undefined })}
+                        placeholder="KYC, Visa, PO"
+                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted">Logo / Mark</label>
+                      <input
+                        defaultValue={runtimeSettings.display?.logo ?? ""}
+                        onBlur={(e) => updateNestedSettings("display", { logo: e.target.value || undefined })}
+                        placeholder="VISA, ◎, 🏦"
+                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted">Help Text</label>
+                    <input
+                      defaultValue={helpText ?? ""}
+                      onBlur={(e) => updateNestedSettings("display", { helpText: e.target.value || undefined })}
+                      placeholder="Shown under the field while signing"
                       className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                     />
-                  )}
-                  {inputType === "file" && (
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-medium text-muted">Validation</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select
+                        value={runtimeSettings.validation?.kind ?? ""}
+                        onChange={(v) => updateNestedSettings("validation", { kind: v || undefined })}
+                        size="sm"
+                        options={VALIDATION_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                      />
+                      <input
+                        defaultValue={runtimeSettings.validation?.message ?? ""}
+                        onBlur={(e) => updateNestedSettings("validation", { message: e.target.value || undefined })}
+                        placeholder="Custom error message"
+                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                    <input
+                      defaultValue={runtimeSettings.validation?.pattern ?? ""}
+                      onBlur={(e) => updateNestedSettings("validation", { pattern: e.target.value || undefined })}
+                      placeholder="Regex pattern"
+                      className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                    />
                     <div className="grid grid-cols-2 gap-2">
                       <input
-                        defaultValue={runtimeSettings.accept ?? ""}
-                        onBlur={(e) => updateSettings({ accept: e.target.value || undefined })}
-                        placeholder=".pdf,.png,.jpg"
+                        type="number"
+                        defaultValue={String(runtimeSettings.validation?.minLength ?? "")}
+                        onBlur={(e) =>
+                          updateNestedSettings("validation", {
+                            minLength: e.target.value ? Number(e.target.value) : undefined,
+                          })
+                        }
+                        placeholder="Min length"
                         className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                       />
                       <input
                         type="number"
-                        min="1"
-                        defaultValue={String(runtimeSettings.maxSizeMb ?? "")}
+                        defaultValue={String(runtimeSettings.validation?.maxLength ?? "")}
                         onBlur={(e) =>
-                          updateSettings({ maxSizeMb: e.target.value ? Number(e.target.value) : undefined })
+                          updateNestedSettings("validation", {
+                            maxLength: e.target.value ? Number(e.target.value) : undefined,
+                          })
                         }
-                        placeholder="Max MB"
+                        placeholder="Max length"
                         className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                       />
                     </div>
-                  )}
-                  {inputType === "payment" && (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
+                    {inputType === "number" && (
+                      <div className="grid grid-cols-3 gap-2">
                         <input
                           type="number"
-                          min="0"
-                          step="0.01"
-                          defaultValue={String(runtimeSettings.amount ?? "")}
+                          defaultValue={String(runtimeSettings.validation?.min ?? "")}
                           onBlur={(e) =>
-                            updateSettings({ amount: e.target.value ? Number(e.target.value) : undefined })
+                            updateNestedSettings("validation", {
+                              min: e.target.value ? Number(e.target.value) : undefined,
+                            })
                           }
-                          placeholder="Amount"
+                          placeholder="Min"
                           className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                         />
                         <input
-                          defaultValue={runtimeSettings.currency ?? "usd"}
-                          onBlur={(e) => updateSettings({ currency: e.target.value || undefined })}
-                          placeholder="usd"
-                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm uppercase outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                          type="number"
+                          defaultValue={String(runtimeSettings.validation?.max ?? "")}
+                          onBlur={(e) =>
+                            updateNestedSettings("validation", {
+                              max: e.target.value ? Number(e.target.value) : undefined,
+                            })
+                          }
+                          placeholder="Max"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                        <input
+                          type="number"
+                          defaultValue={String(runtimeSettings.validation?.step ?? "")}
+                          onBlur={(e) =>
+                            updateNestedSettings("validation", {
+                              step: e.target.value ? Number(e.target.value) : undefined,
+                            })
+                          }
+                          placeholder="Step"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                         />
                       </div>
+                    )}
+                    {inputType === "textarea" && (
                       <input
-                        defaultValue={runtimeSettings.description ?? ""}
-                        onBlur={(e) => updateSettings({ description: e.target.value || undefined })}
-                        placeholder="What the payment is for"
-                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-medium text-muted">Logic & Conditions</label>
-                  <Select
-                    value={runtimeSettings.logic?.showWhenFieldId ?? ""}
-                    onChange={(v) => updateNestedSettings("logic", { showWhenFieldId: v || undefined })}
-                    size="sm"
-                    options={[
-                      { value: "", label: "Always show" },
-                      ...logicFields.map((c) => ({ value: c.id, label: `${c.label} (${c.id})` })),
-                    ]}
-                  />
-                  <Select
-                    value={runtimeSettings.logic?.effect ?? "show"}
-                    onChange={(v) => updateNestedSettings("logic", { effect: v as LogicEffect })}
-                    size="sm"
-                    options={LOGIC_EFFECT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select
-                      value={runtimeSettings.logic?.operator ?? "equals"}
-                      onChange={(v) =>
-                        updateNestedSettings("logic", {
-                          operator: v as VisibilityOperator,
-                          values: v === "one_of" ? runtimeSettings.logic?.values : undefined,
-                        })
-                      }
-                      size="sm"
-                      options={VISIBILITY_OPERATOR_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                    />
-                    {runtimeSettings.logic?.operator === "one_of" ? (
-                      <input
-                        defaultValue={(runtimeSettings.logic?.values ?? []).join(", ")}
-                        onBlur={(e) =>
-                          updateNestedSettings("logic", {
-                            values: e.target.value
-                              .split(/[,\n]/)
-                              .map((entry) => entry.trim())
-                              .filter(Boolean),
-                            value: undefined,
-                          })
-                        }
-                        placeholder="approved, pending"
-                        className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
-                      />
-                    ) : (
-                      <input
-                        defaultValue={runtimeSettings.logic?.value ?? ""}
-                        onBlur={(e) =>
-                          updateNestedSettings("logic", {
-                            value: e.target.value || undefined,
-                            values: undefined,
-                          })
-                        }
-                        placeholder="Match value"
+                        type="number"
+                        min="2"
+                        max="12"
+                        defaultValue={String(runtimeSettings.rows ?? 3)}
+                        onBlur={(e) => updateSettings({ rows: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="Rows"
                         className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
                       />
                     )}
+                    {inputType === "file" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          defaultValue={runtimeSettings.accept ?? ""}
+                          onBlur={(e) => updateSettings({ accept: e.target.value || undefined })}
+                          placeholder=".pdf,.png,.jpg"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          defaultValue={String(runtimeSettings.maxSizeMb ?? "")}
+                          onBlur={(e) =>
+                            updateSettings({ maxSizeMb: e.target.value ? Number(e.target.value) : undefined })
+                          }
+                          placeholder="Max MB"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                      </div>
+                    )}
+                    {inputType === "payment" && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={String(runtimeSettings.amount ?? "")}
+                            onBlur={(e) =>
+                              updateSettings({ amount: e.target.value ? Number(e.target.value) : undefined })
+                            }
+                            placeholder="Amount"
+                            className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                          />
+                          <input
+                            defaultValue={runtimeSettings.currency ?? "usd"}
+                            onBlur={(e) => updateSettings({ currency: e.target.value || undefined })}
+                            placeholder="usd"
+                            className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm uppercase outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                          />
+                        </div>
+                        <input
+                          defaultValue={runtimeSettings.description ?? ""}
+                          onBlur={(e) => updateSettings({ description: e.target.value || undefined })}
+                          placeholder="What the payment is for"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
-                      Make required on match
-                      <input
-                        type="checkbox"
-                        defaultChecked={runtimeSettings.logic?.requireOnMatch ?? false}
-                        onChange={(e) =>
-                          updateNestedSettings("logic", { requireOnMatch: e.target.checked || undefined })
-                        }
-                        className="rounded accent-[var(--accent)]"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
-                      Lock field on match
-                      <input
-                        type="checkbox"
-                        defaultChecked={runtimeSettings.logic?.lockOnMatch ?? false}
-                        onChange={(e) => updateNestedSettings("logic", { lockOnMatch: e.target.checked || undefined })}
-                        className="rounded accent-[var(--accent)]"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
-                      Clear value when hidden
-                      <input
-                        type="checkbox"
-                        defaultChecked={runtimeSettings.logic?.clearWhenHidden ?? false}
-                        onChange={(e) =>
-                          updateNestedSettings("logic", { clearWhenHidden: e.target.checked || undefined })
-                        }
-                        className="rounded accent-[var(--accent)]"
-                      />
-                    </label>
-                  </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted">Assign to signer</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Array.from({ length: signerCount }, (_, i) => {
-                      const sColor = getSignerColor(i);
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => onUpdate({ signerIdx: i })}
-                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${
-                            field.signerIdx === i
-                              ? `${sColor.border} ${sColor.bg} ${sColor.text} font-medium`
-                              : "border-[var(--border)] text-muted hover:text-secondary"
-                          }`}
-                        >
-                          <span className={`h-2 w-2 rounded-full ${sColor.dot}`} />
-                          {signers[i]?.label || `Party ${String.fromCharCode(65 + i)}`}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-medium text-muted">Logic & Conditions</label>
+                    <Select
+                      value={runtimeSettings.logic?.showWhenFieldId ?? ""}
+                      onChange={(v) => updateNestedSettings("logic", { showWhenFieldId: v || undefined })}
+                      size="sm"
+                      options={[
+                        { value: "", label: "Always show" },
+                        ...logicFields.map((c) => ({ value: c.id, label: `${c.label} (${c.id})` })),
+                      ]}
+                    />
+                    <Select
+                      value={runtimeSettings.logic?.effect ?? "show"}
+                      onChange={(v) => updateNestedSettings("logic", { effect: v as LogicEffect })}
+                      size="sm"
+                      options={LOGIC_EFFECT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select
+                        value={runtimeSettings.logic?.operator ?? "equals"}
+                        onChange={(v) =>
+                          updateNestedSettings("logic", {
+                            operator: v as VisibilityOperator,
+                            values: v === "one_of" ? runtimeSettings.logic?.values : undefined,
+                          })
+                        }
+                        size="sm"
+                        options={VISIBILITY_OPERATOR_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                      />
+                      {runtimeSettings.logic?.operator === "one_of" ? (
+                        <input
+                          defaultValue={(runtimeSettings.logic?.values ?? []).join(", ")}
+                          onBlur={(e) =>
+                            updateNestedSettings("logic", {
+                              values: e.target.value
+                                .split(/[,\n]/)
+                                .map((entry) => entry.trim())
+                                .filter(Boolean),
+                              value: undefined,
+                            })
+                          }
+                          placeholder="approved, pending"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                      ) : (
+                        <input
+                          defaultValue={runtimeSettings.logic?.value ?? ""}
+                          onBlur={(e) =>
+                            updateNestedSettings("logic", {
+                              value: e.target.value || undefined,
+                              values: undefined,
+                            })
+                          }
+                          placeholder="Match value"
+                          className="w-full rounded-lg bg-[var(--bg-surface)] px-3 py-2 text-sm outline-none ring-1 ring-[var(--border)] focus:ring-[var(--accent)]"
+                        />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
+                        Make required on match
+                        <input
+                          type="checkbox"
+                          defaultChecked={runtimeSettings.logic?.requireOnMatch ?? false}
+                          onChange={(e) =>
+                            updateNestedSettings("logic", { requireOnMatch: e.target.checked || undefined })
+                          }
+                          className="rounded accent-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
+                        Lock field on match
+                        <input
+                          type="checkbox"
+                          defaultChecked={runtimeSettings.logic?.lockOnMatch ?? false}
+                          onChange={(e) =>
+                            updateNestedSettings("logic", { lockOnMatch: e.target.checked || undefined })
+                          }
+                          className="rounded accent-[var(--accent)]"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[11px] text-secondary">
+                        Clear value when hidden
+                        <input
+                          type="checkbox"
+                          defaultChecked={runtimeSettings.logic?.clearWhenHidden ?? false}
+                          onChange={(e) =>
+                            updateNestedSettings("logic", { clearWhenHidden: e.target.checked || undefined })
+                          }
+                          className="rounded accent-[var(--accent)]"
+                        />
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            </>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium text-muted">Assign to signer</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from({ length: signerCount }, (_, i) => {
+                        const sColor = getSignerColor(i);
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => onUpdate({ signerIdx: i })}
+                            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${
+                              field.signerIdx === i
+                                ? `${sColor.border} ${sColor.bg} ${sColor.text} font-medium`
+                                : "border-[var(--border)] text-muted hover:text-secondary"
+                            }`}
+                          >
+                            <span className={`h-2 w-2 rounded-full ${sColor.dot}`} />
+                            {signers[i]?.label || `Party ${String.fromCharCode(65 + i)}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            </AnimatePresence>,
+            document.body,
           )}
-        </AnimatePresence>
       </span>
     );
   },
@@ -883,6 +904,18 @@ export const EditorSignatureBlock = memo(
     const sc = getSignerColor(safeIdx);
     const name = signers[safeIdx]?.label || `Party ${String.fromCharCode(65 + safeIdx)}`;
     const [showPopover, setShowPopover] = useState(false);
+    const [sigPopoverPos, setSigPopoverPos] = useState<{ top: number; left: number } | null>(null);
+    const sigBlockRef = useRef<HTMLDivElement>(null);
+    const updateSigPopoverPos = useCallback(() => {
+      if (!sigBlockRef.current) return;
+      const rect = sigBlockRef.current.getBoundingClientRect();
+      const popW = 256; // w-64
+      const popH = 200;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow < popH && rect.top > spaceBelow ? Math.max(8, rect.top - popH - 4) : rect.bottom + 8;
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - popW - 8));
+      setSigPopoverPos({ top, left });
+    }, []);
 
     if (previewMode) {
       return (
@@ -897,22 +930,24 @@ export const EditorSignatureBlock = memo(
     }
 
     return (
-      <div id={tokenId} className="group relative pb-4 pt-8">
+      <div id={tokenId} className="group relative pb-4 pt-8" ref={sigBlockRef}>
         <div
           role="button"
           tabIndex={0}
           onClick={() => {
             onFocus();
+            if (!showPopover) updateSigPopoverPos();
             setShowPopover((s) => !s);
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onFocus();
+              if (!showPopover) updateSigPopoverPos();
               setShowPopover((s) => !s);
             }
           }}
-          className={`w-full cursor-pointer rounded-lg border-2 border-dashed px-6 py-4 text-left transition-all ${sc.border} ${sc.bg} ${active ? "ring-[var(--accent)]/20 ring-2" : "hover:shadow-sm"}`}
+          className={`w-full cursor-pointer rounded-lg border-2 border-dashed px-6 py-4 text-left transition-all ${sc.border} ${sc.bg} ${active ? "ring-2 ring-[var(--accent-20)]" : "hover:shadow-sm"}`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -935,45 +970,50 @@ export const EditorSignatureBlock = memo(
           <div className="mt-2 h-12 border-b-2 border-current opacity-10" />
           <p className="mt-1.5 text-[11px] text-muted">Click to configure</p>
         </div>
-        <AnimatePresence>
-          {showPopover && active && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowPopover(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                className="absolute left-0 top-full z-50 mt-2 w-64 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-primary">Signature Spot</span>
-                  <button onClick={() => setShowPopover(false)} className="text-muted hover:text-secondary">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted">Assigned to</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {signers.map((signer, idx) => {
-                      const c = getSignerColor(idx);
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => onUpdate({ signerIdx: idx })}
-                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${safeIdx === idx ? `${c.border} ${c.bg} ${c.text} font-medium` : "border-[var(--border)] text-muted hover:text-secondary"}`}
-                        >
-                          <span className={`h-2 w-2 rounded-full ${c.dot}`} />
-                          {signer.label || `Party ${String.fromCharCode(65 + idx)}`}
-                        </button>
-                      );
-                    })}
+        {showPopover &&
+          active &&
+          sigPopoverPos &&
+          createPortal(
+            <AnimatePresence>
+              <>
+                <div className="fixed inset-0 z-[9998]" onClick={() => setShowPopover(false)} />
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  className="fixed z-[9999] w-64 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 shadow-xl"
+                  style={{ top: sigPopoverPos.top, left: sigPopoverPos.left }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-primary">Signature Spot</span>
+                    <button onClick={() => setShowPopover(false)} className="text-muted hover:text-secondary">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </div>
-              </motion.div>
-            </>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium text-muted">Assigned to</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {signers.map((signer, idx) => {
+                        const c = getSignerColor(idx);
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => onUpdate({ signerIdx: idx })}
+                            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${safeIdx === idx ? `${c.border} ${c.bg} ${c.text} font-medium` : "border-[var(--border)] text-muted hover:text-secondary"}`}
+                          >
+                            <span className={`h-2 w-2 rounded-full ${c.dot}`} />
+                            {signer.label || `Party ${String.fromCharCode(65 + idx)}`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            </AnimatePresence>,
+            document.body,
           )}
-        </AnimatePresence>
       </div>
     );
   },

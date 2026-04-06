@@ -132,11 +132,15 @@ type Props = {
   onSignerChange: (idx: number) => void;
 };
 
+const isTouchDevice = () => typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+
 function makeDragHandlers(
   fieldId: string,
   onDragNewField: ((id: FieldTypeId) => void) | undefined,
   onDragEnd: (() => void) | undefined,
 ) {
+  // Disable drag on touch devices — use tap-to-place instead
+  if (isTouchDevice()) return {};
   return {
     draggable: true,
     onDragStart: (e: React.DragEvent) => {

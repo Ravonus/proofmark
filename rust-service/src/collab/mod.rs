@@ -1,13 +1,4 @@
-//! Real-time collaboration engine — multi-threaded WebSocket gateway with
-//! Yrs (Rust Yjs) CRDT operations for document merging, compaction, and
-//! conflict resolution.
-//!
-//! Architecture:
-//!   - Room manager: lock-free concurrent rooms via DashMap
-//!   - Yrs documents: native CRDT merge/compact/diff
-//!   - Binary protocol: compatible with existing MSG_SYNC/MSG_AWARENESS/MSG_CUSTOM
-//!   - Awareness: presence tracking with stale cleanup
-//!   - WebSocket: actix-ws for multi-threaded connection handling
+//! Real-time collaboration engine — Yrs CRDT, WebSocket gateway, presence tracking.
 
 pub mod awareness;
 pub mod crdt;

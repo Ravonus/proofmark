@@ -5,9 +5,8 @@ use super::draw::*;
 use super::theme::*;
 use super::types::*;
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Field value formatting
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn format_calendar_date(raw_value: &str) -> String {
     if let Ok(date) = chrono::NaiveDate::parse_from_str(raw_value, "%Y-%m-%d") {
@@ -123,9 +122,8 @@ pub(super) fn guess_field_type(label: &str, line_context: &str) -> String {
     "other".to_string()
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Field rendering styles
-// ══════════════════════════════════════════════════════════════════════════════
+
+
 
 pub(super) fn render_completed_field_cards(ctx: &mut PdfCtx, field_summary: &[FieldSummaryEntry]) {
     let layer = ctx.layer();

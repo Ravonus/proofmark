@@ -1,6 +1,4 @@
-//! Audit chain hashing and verification.
-//!
-//! Mirrors src/server/audit.ts — computes chained SHA-256 hashes for
+//! Audit chain hashing and verification — chained SHA-256 hashes for
 //! tamper detection in the audit trail.
 
 use crate::crypto::sha256_hex;

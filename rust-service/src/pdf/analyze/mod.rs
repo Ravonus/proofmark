@@ -1,6 +1,4 @@
-//! PDF analysis engine — extracts text, detects fields, signature blocks, and signers.
-//!
-//! Mirrors src/server/pdf-analyze.ts with identical detection logic.
+//! PDF analysis — extracts text, detects fields, signature blocks, and signers.
 //! Uses rayon for parallel regex passes over large documents.
 
 pub mod fields;
@@ -21,10 +19,6 @@ use signers::{
 };
 use util::{clean_content, extract_title, normalize_text, strip_headers_footers};
 use wallets::find_wallet_addresses;
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Document type detection
-// ══════════════════════════════════════════════════════════════════════════════
 
 fn detect_document_type(text: &str) -> Option<String> {
     let sample = if text.len() > 2000 {
@@ -71,10 +65,6 @@ fn detect_document_type(text: &str) -> Option<String> {
     }
     None
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Main entry point
-// ══════════════════════════════════════════════════════════════════════════════
 
 /// Analyze a PDF buffer: extract text, detect fields, signers, and addresses.
 ///
