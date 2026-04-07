@@ -114,59 +114,99 @@ for (const { file, real, named } of components) {
   }
 }
 
-// ── Server-side TypeScript stubs ────────────────────────────────────────────
-// These serve as tsconfig path fallback when premium/ is absent.
-// In premium builds, TypeScript resolves ~/premium/* to ./premium/* directly
-// and never reaches these files.
+// ── Server-side AI module bridges ────────────────────────────────────────────
+// In premium: re-exports from real modules. In OSS: typed Zod stubs.
+// Consuming code imports from ~/generated/premium/ai/* so eslint can
+// resolve types through the standard ~/* path.
 
-write(
-  "ai/automation-review.ts",
-  `import { z } from "zod";
+if (PREMIUM) {
+  write(
+    "ai/automation-review.ts",
+    `export { reviewAutomationEvidence } from "../../../../premium/ai/automation-review";
+export type { AutomationReviewResult } from "../../../../premium/ai/automation-review";
+`,
+  );
+  write(
+    "ai/key-resolver.ts",
+    `export { getPlatformProviders, resolveKeyWithFallback } from "../../../../premium/ai/key-resolver";
+export type { ResolvedKeyWithModel } from "../../../../premium/ai/key-resolver";
+`,
+  );
+  write(
+    "ai/forensic-queue.ts",
+    `export { enqueueForensicReview } from "../../../../premium/ai/forensic-queue";
+`,
+  );
+} else {
+  write(
+    "ai/automation-review.ts",
+    `import { z } from "zod";
 
-const evidenceSchema = z.record(z.unknown());
-type Evidence = z.infer<typeof evidenceSchema>;
+const reviewSchema = z.object({
+  verdict: z.string(),
+  confidence: z.number(),
+  automationScore: z.number(),
+  signals: z.array(z.unknown()).optional(),
+});
 
-export function reviewAutomationEvidence(_evidence: Evidence): { review: unknown } {
+export interface AutomationReviewResult {
+  review: z.infer<typeof reviewSchema>;
+  usage: { inputTokens: number; outputTokens: number; model: string };
+}
+
+export async function reviewAutomationEvidence(
+  _params: Record<string, unknown>,
+): Promise<AutomationReviewResult> {
   throw new Error("Premium module not available");
 }
 `,
-);
+  );
 
-write(
-  "ai/key-resolver.ts",
-  `import { z } from "zod";
+  write(
+    "ai/key-resolver.ts",
+    `import { z } from "zod";
 
 const providerSchema = z.object({
   provider: z.string(),
   available: z.boolean(),
-  defaultModel: z.string().optional(),
+  label: z.string(),
+  defaultModel: z.string(),
 });
-type Provider = z.infer<typeof providerSchema>;
 
-const envSchema = z.object({
-  apiKey: z.string().optional(),
-  baseUrl: z.string().optional(),
-  organizationId: z.string().optional(),
-});
-type ProviderEnv = z.infer<typeof envSchema>;
+export interface ResolvedKeyWithModel {
+  key: {
+    apiKey: string;
+    source: string;
+    provider: string;
+    ownerAddress?: string;
+    baseUrl?: string;
+    organizationId?: string;
+  };
+  model: string;
+}
 
-export function getPlatformProviders(): Provider[] {
+export function getPlatformProviders(): z.infer<typeof providerSchema>[] {
   return [];
 }
-export function readPlatformEnv(_provider: string): ProviderEnv {
-  return {};
+
+export async function resolveKeyWithFallback(
+  _ownerAddress: string,
+  _provider: string,
+): Promise<ResolvedKeyWithModel | null> {
+  return null;
 }
 `,
-);
+  );
 
-write(
-  "ai/forensic-queue.ts",
-  `export function enqueueAiForensicReview(
-  _signerId: string,
-  _documentId: string,
-): void {}
+  write(
+    "ai/forensic-queue.ts",
+    `export function enqueueForensicReview(_params: {
+  signerId: string;
+  documentId: string;
+}): void {}
 `,
-);
+  );
+}
 
 // ── Index marker ────────────────────────────────────────────────────────────
 write(

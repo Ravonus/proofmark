@@ -213,34 +213,27 @@ export async function enrichForensicEvidence(
 
   if (policy.aiReviewInline) {
     try {
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- dynamic premium imports are untyped */
-      const { reviewAutomationEvidence } = await import(/* webpackIgnore: true */ "~/premium/ai/automation-review");
-      const { getPlatformProviders, readPlatformEnv } = await import(
-        /* webpackIgnore: true */ "~/premium/ai/key-resolver"
-      );
-      const providers = getPlatformProviders().filter((p: { available: boolean }) => p.available);
+      const automationMod = await import("~/generated/premium/ai/automation-review");
+      const keyMod = await import("~/generated/premium/ai/key-resolver");
+      const providers = keyMod.getPlatformProviders().filter((p) => p.available);
       const first = providers[0];
       if (first) {
-        const env = readPlatformEnv(first.provider);
-        const result = await reviewAutomationEvidence({
-          ownerAddress: params.aiReviewContext?.ownerAddress ?? "system",
-          documentId: params.aiReviewContext?.documentId,
-          provider: first.provider,
-          model: first.defaultModel,
-          key: {
-            apiKey: env.apiKey ?? "",
-            source: "platform" as const,
+        const ownerAddress = params.aiReviewContext?.ownerAddress ?? "system";
+        const resolved = await keyMod.resolveKeyWithFallback(ownerAddress, first.provider);
+        if (resolved) {
+          const result = await automationMod.reviewAutomationEvidence({
+            ownerAddress,
+            documentId: params.aiReviewContext?.documentId,
             provider: first.provider,
-            baseUrl: env.baseUrl,
-            organizationId: env.organizationId,
-          },
-          documentTitle: params.aiReviewContext?.documentTitle,
-          signerLabel: params.aiReviewContext?.signerLabel,
-          evidence: { ...enrichedBaseEvidence, automationReview: heuristicReview } as EnhancedForensicEvidence,
-          policy: params.automationPolicy,
-        });
-        aiReview = result.review as AutomationReview;
-        /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+            model: resolved.model,
+            key: resolved.key,
+            documentTitle: params.aiReviewContext?.documentTitle,
+            signerLabel: params.aiReviewContext?.signerLabel,
+            evidence: { ...enrichedBaseEvidence, automationReview: heuristicReview } as EnhancedForensicEvidence,
+            policy: params.automationPolicy,
+          });
+          aiReview = result.review as AutomationReview;
+        }
         // Use the stricter verdict between heuristic and AI
         if (aiReview.automationScore > heuristicReview.automationScore) {
           review = { ...aiReview, source: "hybrid" as const };

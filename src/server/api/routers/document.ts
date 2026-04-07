@@ -1549,10 +1549,8 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking, runs in background)
       try {
-        const forensicQueueModule = (await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue")) as {
-          enqueueAiForensicReview: (signerId: string, documentId: string) => void;
-        };
-        forensicQueueModule.enqueueAiForensicReview(signer.id, doc.id);
+        const forensicQueueModule = await import("~/generated/premium/ai/forensic-queue");
+        forensicQueueModule.enqueueForensicReview({ signerId: signer.id, documentId: doc.id });
       } catch {}
 
       return { ok: true, allSigned };
@@ -2458,10 +2456,8 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking)
       try {
-        const forensicQueueModule = (await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue")) as {
-          enqueueAiForensicReview: (signerId: string, documentId: string) => void;
-        };
-        forensicQueueModule.enqueueAiForensicReview(signer.id, doc.id);
+        const forensicQueueModule = await import("~/generated/premium/ai/forensic-queue");
+        forensicQueueModule.enqueueForensicReview({ signerId: signer.id, documentId: doc.id });
       } catch {}
 
       return { ok: true, allSigned };
