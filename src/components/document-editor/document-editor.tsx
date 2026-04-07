@@ -68,7 +68,6 @@ const CollabAiPanel = dynamic(
   { ssr: false, loading: () => null },
 );
 const CollabSharePopover = dynamic(
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   () => import("../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
   { ssr: false, loading: () => null },
 );
@@ -360,7 +359,7 @@ export function DocumentEditor({
       setAddMode(null);
       setActiveFieldId(nf.id);
     },
-    [makeNewField],
+    [makeNewField, setActiveFieldId, setAddMode],
   );
 
   /** Insert a field inline within a text token, splitting the text at charOffset. */
@@ -392,7 +391,7 @@ export function DocumentEditor({
       setAddMode(null);
       setActiveFieldId(nf.id);
     },
-    [makeNewField],
+    [makeNewField, setActiveFieldId, setAddMode],
   );
 
   /** Move a field to an inline position within a text token at charOffset. */
@@ -426,16 +425,19 @@ export function DocumentEditor({
     });
   }, []);
 
-  const removeField = useCallback((fid: string) => {
-    setTokens((p) => p.filter((t) => !(t.kind === "field" && t.field.id === fid)));
-    setFields((p) => p.filter((f) => f.id !== fid));
-    setPreviewValues((current) => {
-      const next = { ...current };
-      delete next[fid];
-      return next;
-    });
-    setActiveFieldId(null);
-  }, []);
+  const removeField = useCallback(
+    (fid: string) => {
+      setTokens((p) => p.filter((t) => !(t.kind === "field" && t.field.id === fid)));
+      setFields((p) => p.filter((f) => f.id !== fid));
+      setPreviewValues((current) => {
+        const next = { ...current };
+        delete next[fid];
+        return next;
+      });
+      setActiveFieldId(null);
+    },
+    [setActiveFieldId],
+  );
 
   const moveFieldToIdx = useCallback((fid: string, toIdx: number) => {
     setTokens((prev) => {
@@ -541,10 +543,13 @@ export function DocumentEditor({
   const updateSigBlock = useCallback((ti: number, patch: Partial<SignatureBlockToken>) => {
     setTokens((p) => p.map((t, i) => (i === ti && t.kind === "signatureBlock" ? { ...t, ...patch } : t)));
   }, []);
-  const removeSigBlock = useCallback((ti: number) => {
-    setTokens((p) => p.filter((_, i) => i !== ti));
-    setActiveFieldId(null);
-  }, []);
+  const removeSigBlock = useCallback(
+    (ti: number) => {
+      setTokens((p) => p.filter((_, i) => i !== ti));
+      setActiveFieldId(null);
+    },
+    [setActiveFieldId],
+  );
 
   // ── Text editing helpers ──
   const updateTokenText = useCallback((idx: number, text: string) => {
@@ -558,17 +563,20 @@ export function DocumentEditor({
     );
   }, []);
 
-  const removeToken = useCallback((idx: number) => {
-    setTokens((p) => {
-      const t = p[idx];
-      if (!t) return p;
-      if (t.kind === "field") {
-        setFields((f) => f.filter((ff) => ff.id !== t.field.id));
-      }
-      return p.filter((_, i) => i !== idx);
-    });
-    setActiveFieldId(null);
-  }, []);
+  const removeToken = useCallback(
+    (idx: number) => {
+      setTokens((p) => {
+        const t = p[idx];
+        if (!t) return p;
+        if (t.kind === "field") {
+          setFields((f) => f.filter((ff) => ff.id !== t.field.id));
+        }
+        return p.filter((_, i) => i !== idx);
+      });
+      setActiveFieldId(null);
+    },
+    [setActiveFieldId],
+  );
 
   const insertTokenAfter = useCallback((afterIdx: number, token: DocToken) => {
     setTokens((p) => {
@@ -676,7 +684,7 @@ export function DocumentEditor({
       }
       return c;
     },
-    [updateField, removeField],
+    [removeField, setActiveFieldId, updateField],
   );
 
   const buildResult = (): EditorResult => {
@@ -716,7 +724,7 @@ export function DocumentEditor({
   const handleEscape = useCallback(() => {
     setAddMode(null);
     setActiveFieldId(null);
-  }, []);
+  }, [setActiveFieldId, setAddMode]);
 
   useEditorKeyboard({
     fullscreen,
@@ -1150,6 +1158,7 @@ export function DocumentEditor({
       setPreviewValue,
       applyPreviewAddressSuggestion,
       loadAddressSuggestions,
+      setActiveFieldId,
     ],
   );
 

@@ -43,7 +43,6 @@ const CollabAiPanel = dynamic(
   { ssr: false, loading: () => null },
 );
 const CollabSharePopover = dynamic(
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   () => import("../../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
   { ssr: false, loading: () => null },
 );
