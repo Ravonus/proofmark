@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { preferredConnectorToolForProvider, selectConnectorTool } from "../../ai/connector-client";
+import { preferredConnectorToolForProvider, selectConnectorTool } from "~/premium/ai/connector-client";
 
 // Cast imported functions to known signatures (premium module may not exist in OSS builds)
 const preferredFn = preferredConnectorToolForProvider as (provider: string) => string;

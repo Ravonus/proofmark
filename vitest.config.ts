@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "~/premium": path.resolve(__dirname, "premium"),
       "~": path.resolve(__dirname, "src"),
     },
   },
