@@ -70,7 +70,7 @@ for (const { file, real } of pages) {
   if (PREMIUM) {
     write(file, `export { default } from "${real}";\n`);
   } else {
-    write(file, `/* eslint-disable @typescript-eslint/no-explicit-any */\nexport default function PremiumStub(_props?: any) {\n  return null;\n}\n`);
+    write(file, `export default function PremiumStub(_props?: Record<string, unknown>) {\n  return null;\n}\n`);
   }
 }
 
@@ -109,7 +109,7 @@ for (const { file, real, named } of components) {
   } else {
     write(
       file,
-      `/* eslint-disable @typescript-eslint/no-explicit-any */\nexport default function PremiumStub(_props?: any) {\n  return null;\n}\n`,
+      `export default function PremiumStub(_props?: Record<string, unknown>) {\n  return null;\n}\n`,
     );
   }
 }
@@ -121,8 +121,12 @@ for (const { file, real, named } of components) {
 
 write(
   "ai/automation-review.ts",
-  `/* eslint-disable @typescript-eslint/no-explicit-any */
-export function reviewAutomationEvidence(..._args: any[]): any {
+  `import { z } from "zod";
+
+const evidenceSchema = z.record(z.unknown());
+type Evidence = z.infer<typeof evidenceSchema>;
+
+export function reviewAutomationEvidence(_evidence: Evidence): { review: unknown } {
   throw new Error("Premium module not available");
 }
 `,
@@ -130,11 +134,26 @@ export function reviewAutomationEvidence(..._args: any[]): any {
 
 write(
   "ai/key-resolver.ts",
-  `/* eslint-disable @typescript-eslint/no-explicit-any */
-export function getPlatformProviders(): any[] {
+  `import { z } from "zod";
+
+const providerSchema = z.object({
+  provider: z.string(),
+  available: z.boolean(),
+  defaultModel: z.string().optional(),
+});
+type Provider = z.infer<typeof providerSchema>;
+
+const envSchema = z.object({
+  apiKey: z.string().optional(),
+  baseUrl: z.string().optional(),
+  organizationId: z.string().optional(),
+});
+type ProviderEnv = z.infer<typeof envSchema>;
+
+export function getPlatformProviders(): Provider[] {
   return [];
 }
-export function readPlatformEnv(_provider: string): any {
+export function readPlatformEnv(_provider: string): ProviderEnv {
   return {};
 }
 `,
