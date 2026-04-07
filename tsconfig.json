@@ -20,7 +20,7 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "~/*": ["./src/*"],
-      "~/premium/*": ["./premium/*"]
+      "~/premium/*": ["./premium/*", "./src/generated/premium/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

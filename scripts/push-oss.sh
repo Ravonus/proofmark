@@ -3,7 +3,7 @@
 #
 # Usage:   ./scripts/push-oss.sh
 #
-# Creates a temp clone, removes premium files + deps, regenerates lock file,
+# Creates a temp clone, removes premium files + deps, materializes OSS stubs,
 # commits, and pushes to the 'oss' remote. Your working tree is unchanged.
 
 set -euo pipefail
@@ -19,29 +19,28 @@ echo "Preparing OSS snapshot..."
 git clone --shared --quiet "$REPO_ROOT" "$TMPDIR/oss"
 cd "$TMPDIR/oss"
 
-# Remove premium source files
+# ── 1. Remove premium-only source files ──────────────────────────────────────
+# These are files that live in src/ for premium-build convenience but are
+# NOT referenced by any shared code. The router stubs (ai.ts, collab.ts,
+# escrow.ts, runtime.ts, connector.ts) are intentionally KEPT — they
+# provide OSS-safe stub routers that root.ts already imports.
 rm -rf \
+  premium \
   src/components/ai \
   src/components/collab \
   src/components/escrow \
   src/components/gaze-gate.tsx \
   src/components/gaze-gate-mobile.tsx \
-  src/app/escrow \
   src/stores/ai-chat.ts \
   src/lib/gaze-loader.ts \
   src/lib/forensic/gaze-analysis.ts \
   src/lib/forensic/gaze-liveness.ts \
-  src/server/api/routers/ai.ts \
-  src/server/api/routers/collab.ts \
-  src/server/api/routers/escrow.ts \
-  src/server/api/routers/runtime.ts \
   2>/dev/null || true
 
-# Strip premium routers from root.ts
-sed -i '' '/aiRouter/d; /collabRouter/d; /escrowRouter/d; /runtimeRouter/d' src/server/api/root.ts 2>/dev/null || \
-sed -i '/aiRouter/d; /collabRouter/d; /escrowRouter/d; /runtimeRouter/d' src/server/api/root.ts 2>/dev/null || true
+# ── 2. Materialize premium surface as OSS stubs ─────────────────────────────
+node scripts/materialize-premium.mjs --force-stubs
 
-# Strip premium deps from package.json and regenerate lock file
+# ── 3. Strip premium-only deps from package.json ────────────────────────────
 python3 -c "
 import json
 pkg = json.load(open('package.json'))
@@ -57,6 +56,7 @@ with open('package.json','w') as f:
 
 npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund --quiet 2>/dev/null || true
 
+# ── 4. Commit and push ──────────────────────────────────────────────────────
 git add -A
 git commit --quiet --allow-empty --no-verify -m "OSS sync: $(git log -1 --format=%s)"
 

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { isPremiumBuild } from "~/lib/auth/premium-client";
 
-const PremiumEscrowPage = dynamic(() => import("../../../premium/pages/escrow/page"), { ssr: false });
+const PremiumEscrowPage = dynamic(() => import("~/generated/premium/pages/escrow-dashboard"), { ssr: false });
 
 export default function EscrowPage() {
   if (!isPremiumBuild) return <PremiumNotAvailable feature="Escrow" />;

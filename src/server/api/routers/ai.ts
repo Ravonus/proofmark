@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * AI router — OSS stub.
  *
@@ -11,10 +11,8 @@
 import { z } from "zod";
 import { isPremiumAvailable } from "~/lib/platform/premium";
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const premiumRouter = isPremiumAvailable()
-  ? // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-    (require("../../../../premium/server/routers/ai") as { aiRouter: unknown }).aiRouter
+  ? (require("../../../../premium/server/routers/ai") as { aiRouter: unknown }).aiRouter
   : null;
 
 // Fall back to a minimal stub if premium is not available

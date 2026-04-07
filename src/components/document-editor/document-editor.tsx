@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-empty-function, @typescript-eslint/consistent-type-imports -- premium router stubs expose `any` types and dynamic premium loaders use exact import() return types */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-empty-function -- premium router stubs expose `any` types */
 "use client";
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
@@ -53,39 +53,23 @@ import { useEditorKeyboard } from "./use-editor-keyboard";
 import { useEditorStore } from "~/stores/editor";
 import { TokenGateEditor } from "../settings/token-gate-editor";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
-// Premium collab components — loaded dynamically to keep OSS bundle clean
-// CollabSessionPanel removed — sessions auto-start when documentId is present
-type CollabToolbarComponent = (typeof import("../../../premium/components/collab/collab-toolbar"))["CollabToolbar"];
-type CollabAnnotationSidebarComponent =
-  (typeof import("../../../premium/components/collab/collab-annotations"))["CollabAnnotationSidebar"];
-type CollabAiPanelComponent = (typeof import("../../../premium/components/collab/collab-ai-panel"))["CollabAiPanel"];
-type CollabSharePopoverComponent =
-  (typeof import("../../../premium/components/collab/collab-share-popover"))["CollabSharePopover"];
-
-const loadCollabToolbar = async (): Promise<CollabToolbarComponent> => {
-  const premiumModule = await import("../../../premium/components/collab/collab-toolbar");
-  return premiumModule.CollabToolbar;
-};
-
-const loadCollabAnnotationSidebar = async (): Promise<CollabAnnotationSidebarComponent> => {
-  const premiumModule = await import("../../../premium/components/collab/collab-annotations");
-  return premiumModule.CollabAnnotationSidebar;
-};
-
-const loadCollabAiPanel = async (): Promise<CollabAiPanelComponent> => {
-  const premiumModule = await import("../../../premium/components/collab/collab-ai-panel");
-  return premiumModule.CollabAiPanel;
-};
-
-const loadCollabSharePopover = async (): Promise<CollabSharePopoverComponent> => {
-  const premiumModule = await import("../../../premium/components/collab/collab-share-popover");
-  return premiumModule.CollabSharePopover;
-};
-
-const CollabToolbar = dynamic(loadCollabToolbar, { ssr: false, loading: () => null });
-const CollabAnnotationSidebar = dynamic(loadCollabAnnotationSidebar, { ssr: false, loading: () => null });
-const CollabAiPanel = dynamic(loadCollabAiPanel, { ssr: false, loading: () => null });
-const CollabSharePopover = dynamic(loadCollabSharePopover, { ssr: false, loading: () => null });
+// Premium collab components — loaded via generated bridge (stubs in OSS, real in premium)
+const CollabToolbar = dynamic(() => import("~/generated/premium/components/collab-toolbar"), {
+  ssr: false,
+  loading: () => null,
+});
+const CollabAnnotationSidebar = dynamic(() => import("~/generated/premium/components/collab-annotations"), {
+  ssr: false,
+  loading: () => null,
+});
+const CollabAiPanel = dynamic(() => import("~/generated/premium/components/collab-ai-panel"), {
+  ssr: false,
+  loading: () => null,
+});
+const CollabSharePopover = dynamic(() => import("~/generated/premium/components/collab-share-popover"), {
+  ssr: false,
+  loading: () => null,
+});
 
 export type { EditorResult, SignerDef } from "./document-editor-types";
 
