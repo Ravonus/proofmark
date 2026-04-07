@@ -15,9 +15,13 @@ import { User, ToggleRight, Palette, Bot, PaintBucket, Plug, Webhook, FileText, 
 // Premium AI settings — dynamically loaded, absent in OSS builds
 type AiProviderSettingsComponent =
   (typeof import("../../../premium/components/ai/ai-provider-settings"))["AiProviderSettings"];
+type AiProviderSettingsModule = {
+  AiProviderSettings: AiProviderSettingsComponent;
+};
 
 const loadAiProviderSettings = async (): Promise<AiProviderSettingsComponent> => {
-  const premiumModule = await import("../../../premium/components/ai/ai-provider-settings");
+  const premiumModule =
+    (await import("../../../premium/components/ai/ai-provider-settings")) as AiProviderSettingsModule;
   return premiumModule.AiProviderSettings;
 };
 

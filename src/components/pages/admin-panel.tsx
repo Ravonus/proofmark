@@ -61,6 +61,21 @@ type OperatorStatus = {
   }>;
 };
 
+type CollabCapabilitiesQuery = {
+  data?: { available?: boolean };
+};
+
+type ActiveCollabSession = {
+  session: { id: string; title: string; createdAt: string | number | Date; hostUserId: string };
+  participants: Array<{ isActive: boolean }>;
+};
+
+type CollabSessionsQuery = {
+  data?: ActiveCollabSession[];
+  refetch: () => Promise<unknown>;
+  isFetching: boolean;
+};
+
 type AdminTab =
   | "overview"
   | "users"
@@ -1749,13 +1764,10 @@ function SystemSection({ status }: { status?: OperatorStatus | null }) {
 // ── Premium Section ──
 
 function CollabSessionsAdmin() {
-  const capabilities = trpc.collab.capabilities.useQuery();
+  const capabilities = trpc.collab.capabilities.useQuery() as CollabCapabilitiesQuery;
   const available = capabilities.data?.available ?? false;
-  const sessionsQuery = trpc.collab.list.useQuery({ status: "active" }, { enabled: available });
-  const sessions = (sessionsQuery.data ?? []) as Array<{
-    session: { id: string; title: string; createdAt: string | number | Date; hostUserId: string };
-    participants: Array<{ isActive: boolean }>;
-  }>;
+  const sessionsQuery = trpc.collab.list.useQuery({ status: "active" }, { enabled: available }) as CollabSessionsQuery;
+  const sessions = sessionsQuery.data ?? [];
 
   return (
     <GlassCard className="space-y-4">

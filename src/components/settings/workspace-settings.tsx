@@ -19,6 +19,14 @@ type BrandingForm = {
   emailIntro: string;
 };
 
+type CollabCapabilitiesQuery = {
+  data?: { available?: boolean };
+};
+
+type CollabSessionsQuery = {
+  data?: unknown[];
+};
+
 const EMPTY_BRANDING: BrandingForm = {
   name: "Default Branding",
   brandName: "Proofmark",
@@ -550,10 +558,10 @@ export function WorkspaceSettings({ section = "all" }: { section?: WorkspaceSect
 }
 
 function CollabSettingsCard() {
-  const capabilities = trpc.collab.capabilities.useQuery();
+  const capabilities = trpc.collab.capabilities.useQuery() as CollabCapabilitiesQuery;
   const available = capabilities.data?.available ?? false;
-  const sessions = trpc.collab.list.useQuery({ status: "active" }, { enabled: available });
-  const sessionCount = (sessions.data as unknown[] | undefined)?.length ?? 0;
+  const sessions = trpc.collab.list.useQuery({ status: "active" }, { enabled: available }) as CollabSessionsQuery;
+  const sessionCount = sessions.data?.length ?? 0;
 
   return (
     <GlassCard className="space-y-4">

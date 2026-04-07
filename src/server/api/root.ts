@@ -21,10 +21,8 @@ export const appRouter = createTRPCRouter({
   connector: connectorRouter,
   ai: aiRouter,
   collab: collabRouter,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium stub router is typed as `any`
-  escrow: escrowRouter,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium stub router is typed as `any`
-  runtime: runtimeRouter,
+  escrow: escrowRouter as ReturnType<typeof createTRPCRouter>,
+  runtime: runtimeRouter as ReturnType<typeof createTRPCRouter>,
 });
 
 export type AppRouter = typeof appRouter;
