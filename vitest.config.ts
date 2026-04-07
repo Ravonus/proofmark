@@ -3,10 +3,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "~/premium": path.resolve(__dirname, "premium"),
-      "~": path.resolve(__dirname, "src"),
-    },
+    alias: [
+      { find: "~/premium", replacement: path.resolve(__dirname, "premium") },
+      { find: "~", replacement: path.resolve(__dirname, "src") },
+    ],
   },
   test: {
     environment: "node",
