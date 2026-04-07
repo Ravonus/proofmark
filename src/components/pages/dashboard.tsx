@@ -285,25 +285,35 @@ export function Dashboard() {
 
   // Derive filtered docs with useMemo instead of useEffect for page reset
   const { filtered, counts } = useMemo(() => {
-    const docs = docsQuery.data ?? [];
+    const docs = (docsQuery.data ?? []) as unknown as DocWithSigners[];
+    // Group documents by groupId before counting/filtering
+    const items = groupDocuments(docs);
     const c = {
-      ALL: docs.length,
-      PENDING: docs.filter((d) => d.status === "PENDING").length,
-      COMPLETED: docs.filter((d) => d.status === "COMPLETED").length,
+      ALL: items.length,
+      PENDING: items.filter((d) => d.status === "PENDING").length,
+      COMPLETED: items.filter((d) => d.status === "COMPLETED").length,
     };
 
-    let result = docs;
+    let result = items;
     if (statusFilter !== "ALL") {
       result = result.filter((d) => d.status === statusFilter);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (d) =>
+      result = result.filter((d) => {
+        if (isGroup(d)) {
+          return (
+            d.title.toLowerCase().includes(q) ||
+            d.recipients.some((r) => r.label.toLowerCase().includes(q)) ||
+            (d.discloser?.label.toLowerCase().includes(q) ?? false)
+          );
+        }
+        return (
           d.title.toLowerCase().includes(q) ||
           d.contentHash.toLowerCase().includes(q) ||
-          d.signers.some((s) => s.label.toLowerCase().includes(q)),
-      );
+          d.signers.some((s) => s.label.toLowerCase().includes(q))
+        );
+      });
     }
     return { filtered: result, counts: c };
   }, [docsQuery.data, statusFilter, search]);
@@ -424,9 +434,9 @@ export function Dashboard() {
       {paginatedDocs.length > 0 && (
         <FadeIn>
           <div className="overflow-hidden rounded-lg border border-[var(--border)]">
-            {paginatedDocs.map((doc, i) => (
+            {paginatedDocs.map((item, i) => (
               <motion.div
-                key={doc.id}
+                key={isGroup(item) ? item.groupId : item.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
@@ -435,7 +445,11 @@ export function Dashboard() {
                   delay: i < 5 ? i * 0.04 : 0,
                 }}
               >
-                <DocCard doc={doc} isLast={i === paginatedDocs.length - 1} />
+                {isGroup(item) ? (
+                  <GroupCard group={item} isLast={i === paginatedDocs.length - 1} />
+                ) : (
+                  <DocCard doc={item} isLast={i === paginatedDocs.length - 1} />
+                )}
               </motion.div>
             ))}
           </div>
@@ -457,6 +471,7 @@ type DocWithSigners = {
   createdBy: string;
   viewerIsCreator: boolean;
   contentHash: string;
+  groupId: string | null;
   expiresAt: Date | null;
   postSignReveal: {
     enabled: boolean;
@@ -490,8 +505,94 @@ type DocWithSigners = {
     signedAt: Date | null;
     isYou: boolean;
     signUrl: string | null;
+    groupRole: string | null;
   }>;
 };
+
+/** A group of docs collapsed into a single dashboard row. */
+type GroupedDoc = {
+  kind: "group";
+  groupId: string;
+  title: string;
+  createdAt: Date;
+  createdBy: string;
+  viewerIsCreator: boolean;
+  expiresAt: Date | null;
+  status: string;
+  postSignReveal: DocWithSigners["postSignReveal"];
+  /** The first doc in the group — used for links/actions */
+  primaryDoc: DocWithSigners;
+  /** All docs in the group */
+  docs: DocWithSigners[];
+  /** All recipient signers across all docs in the group */
+  recipients: Array<DocWithSigners["signers"][number] & { documentId: string }>;
+  /** The discloser signer (from the first doc) */
+  discloser: DocWithSigners["signers"][number] | null;
+};
+
+type DashboardItem = (DocWithSigners & { kind?: "single" }) | GroupedDoc;
+
+function isGroup(item: DashboardItem): item is GroupedDoc {
+  return (item as GroupedDoc).kind === "group";
+}
+
+/** Collapse documents that share a groupId into a single GroupedDoc. */
+function groupDocuments(docs: DocWithSigners[]): DashboardItem[] {
+  const groups = new Map<string, DocWithSigners[]>();
+  const singles: DocWithSigners[] = [];
+
+  for (const doc of docs) {
+    if (doc.groupId) {
+      const list = groups.get(doc.groupId) ?? [];
+      list.push(doc);
+      groups.set(doc.groupId, list);
+    } else {
+      singles.push(doc);
+    }
+  }
+
+  const items: DashboardItem[] = [];
+
+  for (const [groupId, groupDocs] of groups) {
+    groupDocs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const primary = groupDocs[0]!;
+    const allPending = groupDocs.every((d) => d.status === "PENDING");
+    const allCompleted = groupDocs.every((d) => d.status === "COMPLETED");
+    const discloser = primary.signers.find((s) => s.groupRole === "discloser") ?? null;
+
+    const recipients: GroupedDoc["recipients"] = [];
+    for (const d of groupDocs) {
+      for (const s of d.signers) {
+        if (s.groupRole !== "discloser") {
+          recipients.push({ ...s, documentId: d.id });
+        }
+      }
+    }
+
+    items.push({
+      kind: "group",
+      groupId,
+      title: primary.title,
+      createdAt: primary.createdAt,
+      createdBy: primary.createdBy,
+      viewerIsCreator: primary.viewerIsCreator,
+      expiresAt: primary.expiresAt,
+      status: allCompleted ? "COMPLETED" : allPending ? "PENDING" : "PENDING",
+      postSignReveal: primary.postSignReveal,
+      primaryDoc: primary,
+      docs: groupDocs,
+      recipients,
+      discloser,
+    });
+  }
+
+  for (const doc of singles) {
+    items.push(doc);
+  }
+
+  items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return items;
+}
 
 function ExpirationBadge({ expiresAt }: { expiresAt: Date }) {
   const now = new Date();
@@ -695,6 +796,180 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
       {isCreator && showDownloadsManager && (
         <div className="border-t border-[var(--border-subtle)] px-4 py-3">
           <PostSignDownloadManager documentId={doc.id} documentTitle={doc.title} reveal={doc.postSignReveal} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Group Card (collapsed view of a document group) ──────────────────────── */
+
+function GroupCard({ group, isLast }: { group: GroupedDoc; isLast: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+  const resendMut = trpc.document.resendInvite.useMutation();
+  const voidMut = trpc.document.voidDocument.useMutation({
+    onSuccess: () => utils.document.listByAddress.invalidate(),
+  });
+
+  const copyUrl = useCallback((url: string, id: string) => {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }, []);
+
+  const signedRecipients = group.recipients.filter((r) => r.status === "SIGNED").length;
+  const totalRecipients = group.recipients.length;
+  const discloserSigned = group.discloser?.status === "SIGNED";
+  const progress = ((signedRecipients + (discloserSigned ? 1 : 0)) / (totalRecipients + 1)) * 100;
+
+  return (
+    <div className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""}`}>
+      {/* Header — click to expand/collapse */}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="group block w-full px-4 py-3 text-left transition-colors hover:bg-[var(--bg-hover)]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h4 className="truncate text-[13px] font-medium">{group.title}</h4>
+              <span className="shrink-0 rounded-xs border border-[var(--border)] bg-[var(--bg-inset)] px-1.5 py-px text-[9px] font-medium text-muted">
+                {totalRecipients} recipients
+              </span>
+            </div>
+            <p className="mt-0.5 text-[10px] text-muted">
+              {new Date(group.createdAt).toLocaleDateString()} &bull; Created by you
+              {group.expiresAt && group.status === "PENDING" && (
+                <>
+                  {" "}
+                  &bull; <ExpirationBadge expiresAt={new Date(group.expiresAt)} />
+                </>
+              )}
+            </p>
+          </div>
+          <StatusBadge status={group.status} />
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-2 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[var(--border)]">
+            <motion.div
+              className={`h-full ${signedRecipients === totalRecipients && discloserSigned ? "bg-[var(--success)]" : "bg-accent"}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1], delay: 0.15 }}
+            />
+          </div>
+          <span className="shrink-0 text-[10px] text-muted">
+            {signedRecipients + (discloserSigned ? 1 : 0)}/{totalRecipients + 1}
+          </span>
+        </div>
+
+        {/* Discloser chip + summary */}
+        <div className="mt-2 flex flex-wrap gap-1">
+          {group.discloser && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${
+                discloserSigned
+                  ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
+                  : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
+              }`}
+            >
+              {group.discloser.label}
+              {discloserSigned && <CheckCircle className="h-2 w-2" />}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 rounded-xs border border-[var(--border)] bg-[var(--bg-inset)] px-1.5 py-px text-[9px] text-muted">
+            {signedRecipients}/{totalRecipients} recipients signed
+          </span>
+          <span className="ml-auto text-[9px] text-muted">{expanded ? "▲ Collapse" : "▼ Expand"}</span>
+        </div>
+      </button>
+
+      {/* Expanded: individual recipient rows */}
+      {expanded && (
+        <div className="border-t border-[var(--border-subtle)]">
+          {group.recipients.map((r) => {
+            const meta = CHAIN_META[r.chain as WalletChain];
+            return (
+              <div
+                key={r.id}
+                className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2 last:border-b-0"
+              >
+                <span
+                  className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] ${
+                    r.status === "SIGNED"
+                      ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
+                      : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
+                  }`}
+                >
+                  {meta && <span style={{ color: meta.color }}>{meta.icon}</span>}
+                  {r.label}
+                  {r.status === "SIGNED" && <CheckCircle className="h-2 w-2" />}
+                </span>
+
+                <div className="flex-1" />
+
+                {r.status === "SIGNED" && (
+                  <Link
+                    href={`/sign/${r.documentId}`}
+                    className="inline-flex items-center gap-1 rounded-xs bg-[var(--bg-inset)] px-2 py-1 text-[9px] font-medium text-secondary transition-colors hover:bg-[var(--bg-hover)]"
+                  >
+                    <Eye className="h-2.5 w-2.5" />
+                    View
+                  </Link>
+                )}
+
+                {r.signUrl && r.status === "PENDING" && (
+                  <button
+                    onClick={() => copyUrl(r.signUrl!, r.id)}
+                    className="bg-accent/[0.08] hover:bg-accent/[0.15] inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-accent transition-colors"
+                  >
+                    {copiedId === r.id ? <Check className="h-2.5 w-2.5" /> : <Link2 className="h-2.5 w-2.5" />}
+                    {copiedId === r.id ? "Copied!" : "Copy Link"}
+                  </button>
+                )}
+
+                {r.status === "PENDING" && (
+                  <button
+                    onClick={() => resendMut.mutate({ documentId: r.documentId, signerId: r.id })}
+                    disabled={resendMut.isPending}
+                    className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
+                  >
+                    <Send className="h-2.5 w-2.5" />
+                    Resend
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Footer actions */}
+      {group.viewerIsCreator && (
+        <div className="border-t border-[var(--border-subtle)] px-4 py-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {group.status === "PENDING" && (
+              <button
+                onClick={() => {
+                  if (confirm("Void ALL contracts in this group? All pending signatures will be cancelled.")) {
+                    for (const d of group.docs) {
+                      if (d.status === "PENDING") voidMut.mutate({ documentId: d.id });
+                    }
+                  }
+                }}
+                disabled={voidMut.isPending}
+                className="ml-auto inline-flex items-center gap-1 rounded-xs bg-[var(--danger-subtle)] px-2 py-1 text-[9px] font-medium text-[var(--danger)] transition-colors hover:bg-red-500/15 disabled:opacity-40"
+              >
+                <Ban className="h-2.5 w-2.5" />
+                Void Group
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

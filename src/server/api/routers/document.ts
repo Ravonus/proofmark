@@ -1640,6 +1640,7 @@ export const documentRouter = createTRPCRouter({
           signedAt: s.signedAt,
           isYou: viewerAccess.matchingSigner?.id === s.id,
           signUrl: viewerAccess.isCreator ? `${baseUrl}/sign/${docId}?claim=${s.claimToken}` : null,
+          groupRole: s.groupRole ?? null,
         })),
       });
     }
