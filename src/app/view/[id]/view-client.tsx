@@ -30,22 +30,37 @@ import { ForensicReplayPanel } from "~/components/forensic/forensic-replay-panel
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 // Premium collab components — loaded dynamically to keep OSS bundle clean
-const CollabToolbar = dynamic(
-  () => import("../../../../premium/components/collab/collab-toolbar").then((m) => m.CollabToolbar),
-  { ssr: false, loading: () => null },
-);
-const CollabAnnotationSidebar = dynamic(
-  () => import("../../../../premium/components/collab/collab-annotations").then((m) => m.CollabAnnotationSidebar),
-  { ssr: false, loading: () => null },
-);
-const CollabAiPanel = dynamic(
-  () => import("../../../../premium/components/collab/collab-ai-panel").then((m) => m.CollabAiPanel),
-  { ssr: false, loading: () => null },
-);
-const CollabSharePopover = dynamic(
-  () => import("../../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
-  { ssr: false, loading: () => null },
-);
+type CollabToolbarComponent = (typeof import("../../../../premium/components/collab/collab-toolbar"))["CollabToolbar"];
+type CollabAnnotationSidebarComponent =
+  (typeof import("../../../../premium/components/collab/collab-annotations"))["CollabAnnotationSidebar"];
+type CollabAiPanelComponent = (typeof import("../../../../premium/components/collab/collab-ai-panel"))["CollabAiPanel"];
+type CollabSharePopoverComponent =
+  (typeof import("../../../../premium/components/collab/collab-share-popover"))["CollabSharePopover"];
+
+const loadCollabToolbar = async (): Promise<CollabToolbarComponent> => {
+  const premiumModule = await import("../../../../premium/components/collab/collab-toolbar");
+  return premiumModule.CollabToolbar;
+};
+
+const loadCollabAnnotationSidebar = async (): Promise<CollabAnnotationSidebarComponent> => {
+  const premiumModule = await import("../../../../premium/components/collab/collab-annotations");
+  return premiumModule.CollabAnnotationSidebar;
+};
+
+const loadCollabAiPanel = async (): Promise<CollabAiPanelComponent> => {
+  const premiumModule = await import("../../../../premium/components/collab/collab-ai-panel");
+  return premiumModule.CollabAiPanel;
+};
+
+const loadCollabSharePopover = async (): Promise<CollabSharePopoverComponent> => {
+  const premiumModule = await import("../../../../premium/components/collab/collab-share-popover");
+  return premiumModule.CollabSharePopover;
+};
+
+const CollabToolbar = dynamic(loadCollabToolbar, { ssr: false, loading: () => null });
+const CollabAnnotationSidebar = dynamic(loadCollabAnnotationSidebar, { ssr: false, loading: () => null });
+const CollabAiPanel = dynamic(loadCollabAiPanel, { ssr: false, loading: () => null });
+const CollabSharePopover = dynamic(loadCollabSharePopover, { ssr: false, loading: () => null });
 
 type Props = { documentId: string };
 

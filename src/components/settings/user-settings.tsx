@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports -- dynamic premium loaders use exact import() return types */
 "use client";
 
 import { useRef, useState, useMemo } from "react";
@@ -12,10 +13,18 @@ import { WorkspaceSettings } from "./workspace-settings";
 import { User, ToggleRight, Palette, Bot, PaintBucket, Plug, Webhook, FileText, Users } from "lucide-react";
 
 // Premium AI settings — dynamically loaded, absent in OSS builds
-const AiProviderSettings = dynamic(
-  () => import("../../../premium/components/ai/ai-provider-settings").then((m) => m.AiProviderSettings),
-  { ssr: false, loading: () => <p className="p-4 text-xs text-muted">Loading AI settings...</p> },
-);
+type AiProviderSettingsComponent =
+  (typeof import("../../../premium/components/ai/ai-provider-settings"))["AiProviderSettings"];
+
+const loadAiProviderSettings = async (): Promise<AiProviderSettingsComponent> => {
+  const premiumModule = await import("../../../premium/components/ai/ai-provider-settings");
+  return premiumModule.AiProviderSettings;
+};
+
+const AiProviderSettings = dynamic(loadAiProviderSettings, {
+  ssr: false,
+  loading: () => <p className="p-4 text-xs text-muted">Loading AI settings...</p>,
+});
 
 type SettingsTab =
   | "account"

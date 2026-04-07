@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium router stubs expose `any` types */
 "use client";
 
 import { useEffect, useRef, useMemo, useState } from "react";

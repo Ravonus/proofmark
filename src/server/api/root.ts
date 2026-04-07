@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- premium router stubs are typed as `any` */
 import { createTRPCRouter } from "~/server/api/trpc";
 import { authRouter } from "~/server/api/routers/auth";
 import { accountRouter } from "~/server/api/routers/account";
@@ -22,7 +21,9 @@ export const appRouter = createTRPCRouter({
   connector: connectorRouter,
   ai: aiRouter,
   collab: collabRouter,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium stub router is typed as `any`
   escrow: escrowRouter,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium stub router is typed as `any`
   runtime: runtimeRouter,
 });
 
