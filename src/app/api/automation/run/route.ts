@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { env } from "~/env";
-import { runDocumentAutomationSweep } from "~/server/automation";
+import { runDocumentAutomationSweep } from "~/server/forensic/automation";
 
 export const dynamic = "force-dynamic";
 

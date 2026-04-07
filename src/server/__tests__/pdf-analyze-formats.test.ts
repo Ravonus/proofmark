@@ -4,7 +4,7 @@
  * notary/witness blocks, and edge cases.
  */
 import { describe, it, expect } from "vitest";
-import { analyzePdf, type PdfAnalysisResult } from "../pdf-analyze";
+import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

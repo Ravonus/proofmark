@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Providers } from "~/components/providers";
-import { AmbientBackground } from "~/components/ambient-bg";
+import { Providers } from "~/components/layout/providers";
+import { AmbientBackground } from "~/components/layout/ambient-bg";
 import "~/styles/globals.css";
 
 export const metadata: Metadata = {

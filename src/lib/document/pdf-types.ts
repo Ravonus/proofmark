@@ -1,4 +1,4 @@
-import type { WalletChain } from "~/lib/chains";
+import type { WalletChain } from "~/lib/crypto/chains";
 
 export type FieldType =
   | "name"

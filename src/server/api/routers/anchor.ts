@@ -10,12 +10,12 @@
 
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, authedProcedure } from "~/server/api/trpc";
-import { resolveUnifiedRequestIdentity } from "~/server/auth-identity";
-import { loadPremiumChains, getPremiumFeatures } from "~/lib/premium";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
+import { loadPremiumChains, getPremiumFeatures } from "~/lib/platform/premium";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { documents } from "~/server/db/schema";
-import { requireFeatureForWallet, resolveWalletIdentity } from "~/server/operator-access";
+import { requireFeatureForWallet, resolveWalletIdentity } from "~/server/crypto/operator-access";
 
 export const anchorRouter = createTRPCRouter({
   /** Check premium feature availability. */
@@ -90,7 +90,7 @@ export const anchorRouter = createTRPCRouter({
     }
 
     try {
-      const { computeAuditTrailHash } = await import("~/server/audit");
+      const { computeAuditTrailHash } = await import("~/server/audit/audit");
       const auditHash = await computeAuditTrailHash(input.documentId);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
       const result = await chains.autoAnchorToAllChains(auditHash);

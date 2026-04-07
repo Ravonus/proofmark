@@ -1,7 +1,7 @@
 "use client";
 
-import { Nav } from "~/components/nav";
-import { VerifyDocument } from "~/components/verify-document";
+import { Nav } from "~/components/layout/nav";
+import { VerifyDocument } from "~/components/pages/verify-document";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export function VerifyPageClient({ hash }: { hash: string }) {

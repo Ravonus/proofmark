@@ -3,7 +3,7 @@ import {
   dismissMergeRequest,
   mergeCurrentIdentityAccounts,
   syncCurrentIdentityFromRequest,
-} from "~/server/auth-identity";
+} from "~/server/auth/auth-identity";
 
 export const dynamic = "force-dynamic";
 

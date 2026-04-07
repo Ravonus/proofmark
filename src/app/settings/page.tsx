@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav } from "~/components/nav";
+import { Nav } from "~/components/layout/nav";
 import { UserSettings } from "~/components/settings/user-settings";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 

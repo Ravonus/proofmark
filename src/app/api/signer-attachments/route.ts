@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
 import { tokenizeDocument } from "~/lib/document/document-tokens";
-import { saveSignerAttachment } from "~/server/attachments";
-import { decryptDocument as decryptContent } from "~/server/rust-engine";
+import { saveSignerAttachment } from "~/server/documents/attachments";
+import { decryptDocument as decryptContent } from "~/server/crypto/rust-engine";
 
 export const dynamic = "force-dynamic";
 

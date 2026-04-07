@@ -4,7 +4,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { Select } from "../ui/select";
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
 import {
@@ -68,6 +68,7 @@ const CollabAiPanel = dynamic(
   { ssr: false, loading: () => null },
 );
 const CollabSharePopover = dynamic(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   () => import("../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
   { ssr: false, loading: () => null },
 );

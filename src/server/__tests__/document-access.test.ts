@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { resolveDocumentViewerAccess, viewerMatchesSigner } from "~/server/document-access";
-import type { UnifiedRequestIdentity } from "~/server/auth-identity";
+import { resolveDocumentViewerAccess, viewerMatchesSigner } from "~/server/documents/document-access";
+import type { UnifiedRequestIdentity } from "~/server/auth/auth-identity";
 
 function createIdentity(overrides: Partial<UnifiedRequestIdentity> = {}): UnifiedRequestIdentity {
   const wallets = overrides.wallets ?? [];

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { env } from "~/env";
-import { analyzePdf } from "~/server/rust-engine";
+import { analyzePdf } from "~/server/crypto/rust-engine";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Wallet, Shield, ArrowRight, Loader2, Sparkles, Eye, EyeOff, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp, useSession, twoFactor } from "~/lib/auth-client";
-import { useWallet } from "~/components/wallet-provider";
-import { CHAIN_META, addressPreview } from "~/lib/chains";
-import { trpc } from "~/lib/trpc";
+import { signIn, signUp, useSession, twoFactor } from "~/lib/auth/auth-client";
+import { useWallet } from "~/components/layout/wallet-provider";
+import { CHAIN_META, addressPreview } from "~/lib/crypto/chains";
+import { trpc } from "~/lib/platform/trpc";
 import { FadeIn, GlassCard } from "~/components/ui/motion";
 
 type AuthTab = "email" | "magic" | "wallet" | "sso";

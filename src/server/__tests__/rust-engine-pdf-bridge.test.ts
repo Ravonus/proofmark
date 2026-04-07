@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { generateSignedPDF } from "~/server/rust-engine";
+import { generateSignedPDF } from "~/server/crypto/rust-engine";
 
 describe("rust-engine pdf bridge", () => {
   afterEach(() => {

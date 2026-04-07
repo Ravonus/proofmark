@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as verifyLib from "~/lib/signing/verify";
-import { evaluateSignerTokenGate, evaluateSignerTokenGateWithProofs } from "~/server/token-gates";
+import { evaluateSignerTokenGate, evaluateSignerTokenGateWithProofs } from "~/server/crypto/token-gates";
 
 const BTC_WALLET = "bc1ptestwallet000000000000000000000000000000000000000000000000000";
 const OTHER_BTC_WALLET = "bc1potherwallet0000000000000000000000000000000000000000000000000";

@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { existsSync, readFileSync } from "fs";
 import { extname } from "path";
-import { resolveUnifiedRequestIdentity } from "~/server/auth-identity";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { db } from "~/server/db";
 import { findDocumentById, findSignersByDocumentId } from "~/server/db/compat";
-import { resolveDocumentViewerAccess } from "~/server/document-access";
-import { getPostSignDownloadPath, sanitizeDownloadName } from "~/server/post-sign-downloads";
+import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
+import { getPostSignDownloadPath, sanitizeDownloadName } from "~/server/documents/post-sign-downloads";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

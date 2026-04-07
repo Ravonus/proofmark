@@ -9,7 +9,7 @@
  */
 
 import { create } from "zustand";
-import type { WalletChain } from "~/lib/chains";
+import type { WalletChain } from "~/lib/crypto/chains";
 
 // ── Session cookie helpers (pure functions, no React) ────────────────────────
 

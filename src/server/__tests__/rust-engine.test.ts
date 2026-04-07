@@ -1,7 +1,7 @@
 /**
  * Integration tests for the Rust engine bridge.
  *
- * These tests verify every function in ~/server/rust-engine hits the Rust
+ * These tests verify every function in ~/server/crypto/rust-engine hits the Rust
  * microservice and returns correct results. The Rust engine MUST be running
  * on localhost:9090 for these to pass.
  *
@@ -26,7 +26,7 @@ import {
   hashForensicEvidence,
   analyzeForensicFlags,
   getEngineStatus,
-} from "~/server/rust-engine";
+} from "~/server/crypto/rust-engine";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 // ── Preflight: ensure engine is running ──────────────────────────────────────
@@ -341,7 +341,7 @@ import {
   verifySignatureProof,
   createFieldProof,
   verifyFieldProof,
-} from "~/server/rust-engine";
+} from "~/server/crypto/rust-engine";
 
 describe("post-quantum encryption", () => {
   it("generates ML-KEM-768 keypair", async () => {

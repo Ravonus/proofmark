@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
 import { decodeStructuredFieldValue, type AttachmentFieldValue } from "~/lib/document/field-values";
-import { loadSignerAttachment } from "~/server/attachments";
+import { loadSignerAttachment } from "~/server/documents/attachments";
 
 export const dynamic = "force-dynamic";
 

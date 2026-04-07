@@ -4,8 +4,8 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { getRecipientActionLabel } from "~/lib/signing/recipient-roles";
-import { useWallet } from "../wallet-provider";
-import { CHAIN_META, addressPreview } from "~/lib/chains";
+import { useWallet } from "../layout/wallet-provider";
+import { CHAIN_META, addressPreview } from "~/lib/crypto/chains";
 import { SignaturePad } from "./signature-pad";
 import { isFieldVisible, isFieldLocked, isFieldRequired } from "~/lib/document/field-runtime";
 import {

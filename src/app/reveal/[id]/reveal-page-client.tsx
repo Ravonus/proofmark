@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav } from "~/components/nav";
+import { Nav } from "~/components/layout/nav";
 import { PostSignReveal } from "~/components/post-sign/post-sign-reveal";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 

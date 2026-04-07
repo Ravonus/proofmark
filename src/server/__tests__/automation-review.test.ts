@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DeterministicReplayRecorder } from "~/lib/forensic";
-import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/automation-review";
+import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/forensic/automation-review";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type { TimedSignatureStroke } from "~/lib/forensic/types";
 

@@ -3,8 +3,8 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { eq, and, gt } from "drizzle-orm";
 import { type createTRPCContext, createTRPCRouter, publicProcedure, authedProcedure } from "~/server/api/trpc";
-import { resolveUnifiedRequestIdentity, type UnifiedRequestIdentity } from "~/server/auth-identity";
-import { resolveDocumentViewerAccess } from "~/server/document-access";
+import { resolveUnifiedRequestIdentity, type UnifiedRequestIdentity } from "~/server/auth/auth-identity";
+import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
 import {
   issueLivenessChallenge,
   verifyLivenessChallenge,
@@ -13,7 +13,7 @@ import {
   issueCanvasChallenge,
   verifyCanvasChallenge,
   type LivenessResponse,
-} from "~/server/signing-challenges";
+} from "~/server/crypto/signing-challenges";
 import {
   documents,
   signers,
@@ -22,31 +22,31 @@ import {
   auditEvents,
   type ReminderConfig,
 } from "~/server/db/schema";
-import { hashDocument, hashHandSignature, buildSigningMessage, verifySignature } from "~/server/rust-engine";
+import { hashDocument, hashHandSignature, buildSigningMessage, verifySignature } from "~/server/crypto/rust-engine";
 import { computeIpfsCid } from "~/lib/ipfs";
-import { normalizeAddress } from "~/lib/chains";
+import { normalizeAddress } from "~/lib/crypto/chains";
 import { isAddressLikeField } from "~/lib/address-autocomplete";
 import { isActionableRecipientRole } from "~/lib/signing/recipient-roles";
-import { sendAutomationAlertEmail, sendSignerConfirmation } from "~/server/email";
-import { sendSignerInvite, resolveDocumentBranding } from "~/server/delivery";
-import { addProxyIp } from "~/server/proxy";
+import { sendAutomationAlertEmail, sendSignerConfirmation } from "~/server/messaging/email";
+import { sendSignerInvite, resolveDocumentBranding } from "~/server/messaging/delivery";
+import { addProxyIp } from "~/server/workspace/proxy";
 import {
   encryptDocument as encryptContent,
   decryptDocument as decryptContent,
   isEncryptionAvailable,
-} from "~/server/rust-engine";
+} from "~/server/crypto/rust-engine";
 import {
   createReminderConfig,
   getDefaultIntegration,
   getDefaultReminderChannels,
   normalizeOwnerAddress,
-} from "~/server/workspace";
-import { evaluateIdentityVerification } from "~/server/id-verification";
-import { searchAddressSuggestions } from "~/server/address-autocomplete";
+} from "~/server/workspace/workspace";
+import { evaluateIdentityVerification } from "~/server/auth/id-verification";
+import { searchAddressSuggestions } from "~/server/messaging/address-autocomplete";
 import {
   createPaymentCheckout as createPaymentCheckoutSession,
   verifyPaymentCheckout as verifyPaymentCheckoutSession,
-} from "~/server/payments";
+} from "~/server/workspace/payments";
 import {
   findDocumentByContentHash,
   findDocumentById,
@@ -76,8 +76,8 @@ import {
   type PostSignReveal,
 } from "./document-helpers";
 import { VERIFY_FIELD_TYPES, GROUP_ROLE, getBaseUrl } from "~/lib/signing/signing-constants";
-import { logger } from "~/lib/logger";
-import { assembleForensicEvidence } from "~/server/rust-engine";
+import { logger } from "~/lib/utils/logger";
+import { assembleForensicEvidence } from "~/server/crypto/rust-engine";
 import type { ClientFingerprint, BehavioralSignals } from "~/lib/forensic/types";
 import { extractReplaySignatureAnalysis } from "~/lib/forensic/signature-analysis";
 import { deriveSecurityMode } from "~/lib/signing/document-security";
@@ -87,9 +87,9 @@ import {
   type DocumentAutomationPolicy,
   type EnhancedForensicEvidence,
 } from "~/lib/forensic/premium";
-import { enrichForensicEvidence } from "~/server/forensic-proof";
+import { enrichForensicEvidence } from "~/server/forensic/forensic-proof";
 import { getSignerTokenGateChains, normalizeSignerTokenGate, tokenGateWalletProofListSchema } from "~/lib/token-gates";
-import { evaluateSignerTokenGate, evaluateSignerTokenGateWithProofs } from "~/server/token-gates";
+import { evaluateSignerTokenGate, evaluateSignerTokenGateWithProofs } from "~/server/crypto/token-gates";
 
 /** Zod schema for client-side forensic data sent with sign requests */
 const forensicInputSchema = z
@@ -959,7 +959,7 @@ export const documentRouter = createTRPCRouter({
   claimDocuments: authedProcedure.mutation(async ({ ctx }) => {
     try {
       const { claimSignerDocuments, getVerificationSessionsForIdentifiers } =
-        await import("~/server/verification-sessions");
+        await import("~/server/auth/verification-sessions");
       const addr = ctx.session.address.toLowerCase();
 
       const sessions = await getVerificationSessionsForIdentifiers([addr]);
@@ -1001,7 +1001,7 @@ export const documentRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       try {
-        const { getVerificationSessionsForIdentifiers } = await import("~/server/verification-sessions");
+        const { getVerificationSessionsForIdentifiers } = await import("~/server/auth/verification-sessions");
         const sessions = await getVerificationSessionsForIdentifiers(input.identifiers);
         return sessions.map((s) => ({
           identifier: s.identifier,
@@ -1537,7 +1537,7 @@ export const documentRouter = createTRPCRouter({
       // Store wallet verification session for reuse across contracts
       void (async () => {
         try {
-          const { storeVerificationSession } = await import("~/server/verification-sessions");
+          const { storeVerificationSession } = await import("~/server/auth/verification-sessions");
           await storeVerificationSession({
             identifier: address,
             provider: "wallet",
@@ -1549,7 +1549,7 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking, runs in background)
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
+         
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);
@@ -2133,7 +2133,9 @@ export const documentRouter = createTRPCRouter({
       const proxyDomain = reveal?.testbedAccess?.proxyEndpoint;
 
       if (proxyDomain && mySigner.lastIp) {
-        void import("~/server/proxy").then((m) => m.removeProxyIp({ domain: proxyDomain, ip: mySigner.lastIp! }));
+        void import("~/server/workspace/proxy").then((m) =>
+          m.removeProxyIp({ domain: proxyDomain, ip: mySigner.lastIp! }),
+        );
       }
 
       // Grab current IP from request
@@ -2445,7 +2447,7 @@ export const documentRouter = createTRPCRouter({
       // Store email verification session for reuse across contracts
       void (async () => {
         try {
-          const { storeVerificationSession } = await import("~/server/verification-sessions");
+          const { storeVerificationSession } = await import("~/server/auth/verification-sessions");
           await storeVerificationSession({
             identifier: input.email,
             provider: "email",
@@ -2456,7 +2458,7 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking)
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
+         
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);
@@ -2481,7 +2483,7 @@ export const documentRouter = createTRPCRouter({
       throw new Error("Access denied");
     }
 
-    const { generateProofPacket } = await import("~/server/proof-packet");
+    const { generateProofPacket } = await import("~/server/documents/proof-packet");
     const { manifest, pdf } = await generateProofPacket(input.documentId);
     const { actor, actorType } = getIdentityActor(identity);
 
@@ -2518,7 +2520,7 @@ export const documentRouter = createTRPCRouter({
       throw new Error("Access denied");
     }
 
-    const { getAuditTrail, verifyAuditChain } = await import("~/server/audit");
+    const { getAuditTrail, verifyAuditChain } = await import("~/server/audit/audit");
     const events = await getAuditTrail(input.documentId);
     const chainValidity = await verifyAuditChain(input.documentId);
 
@@ -2569,7 +2571,7 @@ export const documentRouter = createTRPCRouter({
     }> = [];
     let auditChainValid = false;
     try {
-      const { getAuditTrail, verifyAuditChain } = await import("~/server/audit");
+      const { getAuditTrail, verifyAuditChain } = await import("~/server/audit/audit");
       const events = await getAuditTrail(doc.id);
       auditEvents = events.map((e) => ({
         eventType: e.eventType,

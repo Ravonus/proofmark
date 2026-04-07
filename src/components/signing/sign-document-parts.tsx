@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { trpc } from "~/lib/trpc";
-import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
+import { trpc } from "~/lib/platform/trpc";
+import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/crypto/chains";
 import { getRecipientCompletedLabel, isViewOnlyRecipientRole } from "~/lib/signing/recipient-roles";
 import { describeSignerTokenGate } from "~/lib/token-gates";
 import { AlertCircle, Check } from "lucide-react";
@@ -176,4 +176,4 @@ export function CreatorClaimSlot({ documentId, signers }: { documentId: string; 
   );
 }
 
-export { WalletPicker as ChainButtons } from "~/components/wallet-provider";
+export { WalletPicker as ChainButtons } from "~/components/layout/wallet-provider";

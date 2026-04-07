@@ -2,9 +2,9 @@
 "use client";
 
 import { useEffect, useRef, useMemo, useState } from "react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
-import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/chains";
+import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/crypto/chains";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 
 type BrandingForm = {

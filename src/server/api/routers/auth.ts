@@ -10,11 +10,11 @@ import {
   linkWalletToUser,
   mergeCurrentIdentityAccounts,
   syncCurrentIdentityFromRequest,
-} from "~/server/auth-identity";
+} from "~/server/auth/auth-identity";
 import { authChallenges, walletSessions } from "~/server/db/schema";
-import { verifySignature } from "~/server/rust-engine";
-import { normalizeAddress, type WalletChain } from "~/lib/chains";
-import { getConfiguredProviders } from "~/server/auth";
+import { verifySignature } from "~/server/crypto/rust-engine";
+import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
+import { getConfiguredProviders } from "~/server/auth/auth";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 min
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

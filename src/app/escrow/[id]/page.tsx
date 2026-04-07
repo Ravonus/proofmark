@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { isPremiumBuild } from "~/lib/premium-client";
+import { isPremiumBuild } from "~/lib/auth/premium-client";
 
 const PremiumPage = dynamic(() => import("../../../../premium/pages/escrow/[id]/page"), { ssr: false });
 

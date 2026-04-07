@@ -1,7 +1,7 @@
 "use client";
 
-import { Nav } from "~/components/nav";
-import { Dashboard } from "~/components/dashboard";
+import { Nav } from "~/components/layout/nav";
+import { Dashboard } from "~/components/pages/dashboard";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export default function DashboardPage() {

@@ -13,15 +13,15 @@ export {
   documentReminderSchema as reminderInput,
   createDocumentSchema as createDocumentInput,
 } from "~/lib/schemas/document";
-import { decryptDocument as decryptContent, hashDocument } from "~/server/rust-engine";
-import { evaluateIdentityVerification } from "~/server/id-verification";
+import { decryptDocument as decryptContent, hashDocument } from "~/server/crypto/rust-engine";
+import { evaluateIdentityVerification } from "~/server/auth/id-verification";
 import type { InlineField } from "~/lib/document/document-tokens";
 import { findSignersByDocumentId, findDocumentsByGroupId } from "~/server/db/compat";
-import { sendCompletionEmail, sendFinalizationEmail } from "~/server/email";
-import { resolveDocumentBranding, sendSignerInvite } from "~/server/delivery";
+import { sendCompletionEmail, sendFinalizationEmail } from "~/server/messaging/email";
+import { resolveDocumentBranding, sendSignerInvite } from "~/server/messaging/delivery";
 import { GROUP_ROLE, getBaseUrl, type SignData } from "~/lib/signing/signing-constants";
 import type { db as _dbInstance } from "~/server/db";
-import type { AuditLogParams } from "~/server/audit";
+import type { AuditLogParams } from "~/server/audit/audit";
 import type { BrandingSettings } from "~/server/db/schema";
 
 /** Type alias for the Drizzle database client used throughout document helpers. */
@@ -31,7 +31,7 @@ type Db = typeof _dbInstance;
 
 export async function safeLogAudit(params: AuditLogParams) {
   try {
-    const { logAuditEvent } = await import("~/server/audit");
+    const { logAuditEvent } = await import("~/server/audit/audit");
     await logAuditEvent(params);
   } catch (e) {
     console.warn("[audit] Failed to log event (run db:push?):", (e as Error).message);
@@ -40,7 +40,7 @@ export async function safeLogAudit(params: AuditLogParams) {
 
 export async function safeIndexDocument(documentId: string) {
   try {
-    const { indexDocument } = await import("~/server/search-index");
+    const { indexDocument } = await import("~/server/documents/search-index");
     await indexDocument(documentId);
   } catch (e) {
     console.warn("[search-index] Failed to index (run db:push?):", (e as Error).message);
@@ -55,12 +55,12 @@ export async function safeSendSigningOtp(params: {
   branding?: BrandingSettings;
   replyTo?: string;
 }) {
-  const { sendSigningOtp } = await import("~/server/otp");
+  const { sendSigningOtp } = await import("~/server/auth/otp");
   return sendSigningOtp(params);
 }
 
 export async function safeVerifySigningOtp(params: { signerId: string; code: string }) {
-  const { verifySigningOtp } = await import("~/server/otp");
+  const { verifySigningOtp } = await import("~/server/auth/otp");
   return verifySigningOtp(params);
 }
 // ── Utility functions ──

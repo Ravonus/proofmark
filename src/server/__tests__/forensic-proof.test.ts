@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { enrichForensicEvidence } from "~/server/forensic-proof";
-import { loadPremiumChains } from "~/lib/premium";
+import { enrichForensicEvidence } from "~/server/forensic/forensic-proof";
+import { loadPremiumChains } from "~/lib/platform/premium";
 import type { ForensicEvidence } from "~/lib/forensic/types";
 
-vi.mock("~/lib/premium", () => ({
+vi.mock("~/lib/platform/premium", () => ({
   loadPremiumChains: vi.fn(async () => null),
 }));
 

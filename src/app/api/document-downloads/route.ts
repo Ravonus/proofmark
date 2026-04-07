@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { resolveUnifiedRequestIdentity } from "~/server/auth-identity";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { db } from "~/server/db";
 import { documents } from "~/server/db/schema";
-import { resolveDocumentViewerAccess } from "~/server/document-access";
+import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
 import { findDocumentById, findSignersByDocumentId } from "~/server/db/compat";
 import {
   MAX_POST_SIGN_DOWNLOAD_BYTES,
@@ -13,7 +13,7 @@ import {
   savePostSignDownloadFile,
   removePostSignRevealDownload,
   upsertPostSignRevealDownload,
-} from "~/server/post-sign-downloads";
+} from "~/server/documents/post-sign-downloads";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

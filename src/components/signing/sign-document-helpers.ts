@@ -8,7 +8,7 @@ import {
   isImageDataUrl,
 } from "~/lib/document/field-values";
 import { resolveFieldInputType, resolveFieldPlaceholder, validateFieldValue } from "~/lib/document/field-runtime";
-import { normalizeAddress, type WalletChain } from "~/lib/chains";
+import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
 import type { SignerTokenGate, TokenGateEvaluation } from "~/lib/token-gates";
 import { type InlineField as SharedInlineField, type DocToken as SharedDocToken } from "~/lib/document/document-tokens";
 import { getField } from "../fields";
