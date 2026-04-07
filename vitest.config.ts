@@ -20,6 +20,7 @@ export default defineConfig({
       "src/server/__tests__/pdf-analyze-parity.test.ts",
       "src/server/__tests__/pdf-analyze-stress.test.ts",
     ],
+    setupFiles: ["./src/test-setup.ts"],
     env: {
       SKIP_ENV_VALIDATION: "1",
     },
