@@ -22,7 +22,7 @@ const completeViaConnector = vi.fn(async () => ({
   },
 }));
 
-vi.mock("../../../premium/ai/connector-client", () => ({
+vi.mock("../../ai/connector-client", () => ({
   completeViaConnector,
 }));
 
@@ -49,7 +49,7 @@ type CompleteFn = (request: unknown, key: unknown) => Promise<CompletionResponse
 
 describe("AI provider client connector fallback", () => {
   it("routes connector-sourced completions through the local connector bridge", async () => {
-    const mod = (await import("../../../premium/ai/provider-client")) as { complete: CompleteFn };
+    const mod = (await import("../../ai/provider-client")) as { complete: CompleteFn };
     const { complete } = mod;
 
     const request = {
