@@ -38,18 +38,38 @@ services:
     ports:
       - "3100:3000"
     environment:
-      DATABASE_URL: postgresql://web3sign:web3sign_dev@db:5432/web3sign
-      NEXTAUTH_URL: http://localhost:3100
+      # Compose uses `.env` for interpolation only; runtime vars still need to
+      # be forwarded explicitly to the container.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://web3sign:web3sign_dev@db:5432/web3sign}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3100}"
+      BETTER_AUTH_URL: "${BETTER_AUTH_URL:-}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
       PDF_UPLOAD_MAX_MB: "${PDF_UPLOAD_MAX_MB:-10}"
       PROOFMARK_DEPLOYMENT_MODE: "${PROOFMARK_DEPLOYMENT_MODE:-oss}"
-      RUST_ENGINE_URL: http://rust-engine:9090
+      RUST_ENGINE_URL: "${RUST_ENGINE_URL:-http://rust-engine:9090}"
       SMTP_HOST: "${SMTP_HOST:-}"
       SMTP_PORT: "${SMTP_PORT:-465}"
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASS: "${SMTP_PASS:-}"
       SMTP_FROM: "${SMTP_FROM:-noreply@proofmark.local}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-}"
+      OWNER_ADDRESS: "${OWNER_ADDRESS:-}"
+      OWNER_CHAIN: "${OWNER_CHAIN:-ETH}"
+      AUTOMATION_SECRET: "${AUTOMATION_SECRET:-}"
       ENCRYPTION_MASTER_KEY: "${ENCRYPTION_MASTER_KEY:-}"
+      AUTH_GOOGLE_CLIENT_ID: "${AUTH_GOOGLE_CLIENT_ID:-}"
+      AUTH_GOOGLE_CLIENT_SECRET: "${AUTH_GOOGLE_CLIENT_SECRET:-}"
+      AUTH_GITHUB_CLIENT_ID: "${AUTH_GITHUB_CLIENT_ID:-}"
+      AUTH_GITHUB_CLIENT_SECRET: "${AUTH_GITHUB_CLIENT_SECRET:-}"
+      AUTH_DISCORD_CLIENT_ID: "${AUTH_DISCORD_CLIENT_ID:-}"
+      AUTH_DISCORD_CLIENT_SECRET: "${AUTH_DISCORD_CLIENT_SECRET:-}"
+      AUTH_X_CLIENT_ID: "${AUTH_X_CLIENT_ID:-}"
+      AUTH_X_CLIENT_SECRET: "${AUTH_X_CLIENT_SECRET:-}"
+      AUTH_MICROSOFT_CLIENT_ID: "${AUTH_MICROSOFT_CLIENT_ID:-}"
+      AUTH_MICROSOFT_CLIENT_SECRET: "${AUTH_MICROSOFT_CLIENT_SECRET:-}"
+      AUTH_OKTA_CLIENT_ID: "${AUTH_OKTA_CLIENT_ID:-}"
+      AUTH_OKTA_CLIENT_SECRET: "${AUTH_OKTA_CLIENT_SECRET:-}"
+      AUTH_OKTA_ISSUER: "${AUTH_OKTA_ISSUER:-}"
     depends_on:
       - db
       - rust-engine

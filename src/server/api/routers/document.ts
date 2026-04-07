@@ -1549,7 +1549,6 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking, runs in background)
       try {
-         
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);
@@ -2458,7 +2457,6 @@ export const documentRouter = createTRPCRouter({
 
       // Enqueue async AI forensic review (non-blocking)
       try {
-         
         const { enqueueAiForensicReview } = await import(/* webpackIgnore: true */ "~/premium/ai/forensic-queue");
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call -- premium module
         enqueueAiForensicReview(signer.id, doc.id);

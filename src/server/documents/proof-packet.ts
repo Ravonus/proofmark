@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 /**
  * Proof Packet generator.
  *
@@ -23,8 +22,8 @@ import {
   verifyAuditChainByDocId as verifyAuditChain,
   generateSignedPDF,
 } from "~/server/crypto/rust-engine";
-import { deriveSecurityMode } from "~/lib/document-security";
-import type { EnhancedForensicEvidence, EyeTrackingSessionSummary } from "~/lib/forensic/premium";
+import { deriveSecurityMode } from "~/lib/signing/document-security";
+import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type {
   ForensicSessionLivenessProfile,
   ForensicSessionProfile,
@@ -32,8 +31,24 @@ import type {
   SignerBaselineProfile,
 } from "~/lib/forensic/session";
 
+type EyeTrackingSessionSummary = {
+  active?: boolean;
+  pointCount?: number;
+  fixationCount?: number;
+  avgFixationMs?: number;
+  blinkCount?: number;
+  blinkRate?: number;
+  trackingCoverage?: number;
+  passedCoverageThreshold?: boolean;
+  calibrationAccuracy?: number | null;
+  livenessPassRatio?: number | null;
+  livenessSuspicious?: boolean;
+} & Record<string, unknown>;
+
 /** Loose type for forensic evidence stored as jsonb — avoids strict coupling */
-export type ProofPacketForensicEvidenceData = Partial<EnhancedForensicEvidence> & Record<string, unknown>;
+export type ProofPacketForensicEvidenceData = Partial<EnhancedForensicEvidence> & {
+  eyeTracking?: EyeTrackingSessionSummary | null;
+} & Record<string, unknown>;
 
 export interface ProofPacket {
   version: number;
@@ -176,6 +191,37 @@ export interface ProofPacket {
 
 export type ProofPacketForensicSection = NonNullable<ProofPacket["signatures"][number]["forensic"]>;
 
+function extractBlockchainRefsFromForensics(
+  signerRows: Array<{ forensicEvidence: unknown }>,
+): ProofPacket["blockchain"]["references"] {
+  const refs: ProofPacket["blockchain"]["references"] = [];
+  const seen = new Set<string>();
+
+  for (const signer of signerRows) {
+    const forensic = signer.forensicEvidence as ProofPacketForensicEvidenceData | null;
+    const anchors = forensic?.storage?.anchors;
+    if (!Array.isArray(anchors)) continue;
+
+    for (const anchor of anchors) {
+      if (anchor.status !== "anchored" && anchor.status !== "queued") continue;
+
+      const key = `${anchor.chain}:${anchor.status}:${anchor.txHash ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      refs.push({
+        chain: anchor.chain,
+        type: "forensic_storage",
+        txHash: anchor.txHash ?? null,
+        inscriptionId: null,
+        confirmedAt: null,
+      });
+    }
+  }
+
+  return refs;
+}
+
 export function buildProofPacketForensicSection(
   fe: ProofPacketForensicEvidenceData | null,
   forensicHash: string | null,
@@ -289,31 +335,7 @@ export async function generateProofPacket(documentId: string): Promise<{ manifes
   const lastEvent = events.length > 0 ? events[events.length - 1] : undefined;
   const trailHash = lastEvent?.eventHash ?? "empty";
 
-  // Try to get blockchain anchoring info (if anchor service available)
-  let blockchainRefs: ProofPacket["blockchain"]["references"] = [];
-  try {
-    const { getDocumentAnchors } = await import("~/lib/anchor-client");
-    const anchorResult = (await getDocumentAnchors(documentId)) as {
-      anchors?: Array<{
-        chain: string;
-        anchorType: string;
-        txHash?: string | null;
-        inscriptionId?: string | null;
-        confirmedAt?: string | null;
-      }>;
-    } | null;
-    if (anchorResult?.anchors) {
-      blockchainRefs = anchorResult.anchors.map((a) => ({
-        chain: a.chain,
-        type: a.anchorType,
-        txHash: a.txHash ?? null,
-        inscriptionId: a.inscriptionId ?? null,
-        confirmedAt: a.confirmedAt ?? null,
-      }));
-    }
-  } catch {
-    // Anchor service not available — blockchain section empty
-  }
+  const blockchainRefs = extractBlockchainRefsFromForensics(allSigners);
 
   // Build the manifest
   const manifest: Omit<ProofPacket, "packetHash"> = {

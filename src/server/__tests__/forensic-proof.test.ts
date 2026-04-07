@@ -73,36 +73,7 @@ function buildEvidence(overrides: Partial<ForensicEvidence> = {}): ForensicEvide
       gazeBlinkCount: 0,
       gazeBlinkRate: 0,
       gazeTrackingCoverage: 0,
-      replay: {
-        version: 1,
-        encoding: "pm-replay-v1",
-        timeQuantumMs: 8,
-        viewport: {
-          width: 1440,
-          height: 900,
-          devicePixelRatio: 2,
-          scrollWidth: 1440,
-          scrollHeight: 3200,
-        },
-        targets: [],
-        strings: [],
-        tapeBase64: "ZmFrZQ==",
-        tapeHash: "abc123",
-        capabilities: ["scroll", "click", "field", "signature"],
-        metrics: {
-          eventCount: 18,
-          byteLength: 280,
-          targetCount: 4,
-          stringCount: 3,
-          signatureStrokeCount: 2,
-          signaturePointCount: 18,
-          clipboardEventCount: 0,
-          maxTimestampMs: 24000,
-          gazePointCount: 0,
-          gazeFixationCount: 0,
-          gazeBlinkCount: 0,
-        },
-      },
+      replay: null,
     },
     geo: {
       ip: "8.8.8.8",
@@ -145,7 +116,7 @@ describe("forensic proof enrichment", () => {
     const result = await enrichForensicEvidence({
       evidence: buildEvidence(),
       proofMode: "PRIVATE",
-      reviewContext: { signMethod: "WALLET", hasHandSignature: true },
+      reviewContext: { signMethod: "WALLET", hasHandSignature: false },
     });
 
     expect(result.hash).toHaveLength(64);

@@ -4,6 +4,7 @@
  * Full implementation: premium/server/routers/connector.ts
  */
 
+import { z } from "zod";
 import { isPremiumAvailable } from "~/lib/platform/premium";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -12,7 +13,15 @@ const premiumRouter = isPremiumAvailable()
   : null;
 
 const stubRouter = createTRPCRouter({
-  listSessions: publicProcedure.query(() => []),
+  listSessions: publicProcedure.input(z.any().optional()).query((): any => []),
+  listTokens: publicProcedure.input(z.any().optional()).query((): any => []),
+  createToken: publicProcedure.input(z.any()).mutation((): any => ({
+    token: "",
+    label: "",
+    expiresAt: null,
+  })),
+  revokeToken: publicProcedure.input(z.any()).mutation((): any => ({ success: false })),
+  removeSession: publicProcedure.input(z.any()).mutation((): any => ({ success: false })),
 });
 
-export const connectorRouter: any = premiumRouter ?? stubRouter;
+export const connectorRouter = (premiumRouter ?? stubRouter) as typeof stubRouter;

@@ -52,32 +52,39 @@ docker compose up -d
 ```
 
 See `docker/docker-compose.yml` and `docker/Dockerfile` for configuration.
+Compose reads `.env` for variable substitution, but runtime secrets still need to be
+forwarded into the `app` service. Keep new runtime env vars wired through
+`docker/docker-compose.yml` so production and local stay in sync.
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
-| `SMTP_HOST` | No | `""` | SMTP server for email delivery |
-| `SMTP_PORT` | No | `465` | SMTP port |
-| `SMTP_USER` | No | `""` | SMTP username |
-| `SMTP_PASS` | No | `""` | SMTP password |
-| `SMTP_FROM` | No | `noreply@proofmark.local` | Sender email address |
-| `ADMIN_EMAIL` | No | `""` | Admin notification email |
-| `OWNER_ADDRESS` | No | `""` | Default wallet address for the instance owner |
-| `OWNER_CHAIN` | No | `ETH` | Default chain for the instance owner |
-| `ENCRYPTION_MASTER_KEY` | No | — | 32+ char key for at-rest encryption (enables vault features) |
-| `AUTOMATION_SECRET` | No | `""` | Secret for cron-triggered automation endpoints |
-| `NEXTAUTH_URL` | No | `http://localhost:3100` | Base URL for auth callbacks |
+| Variable                | Required | Default                   | Description                                                  |
+| ----------------------- | -------- | ------------------------- | ------------------------------------------------------------ |
+| `DATABASE_URL`          | Yes      | —                         | PostgreSQL connection string                                 |
+| `SMTP_HOST`             | No       | `""`                      | SMTP server for email delivery                               |
+| `SMTP_PORT`             | No       | `465`                     | SMTP port                                                    |
+| `SMTP_USER`             | No       | `""`                      | SMTP username                                                |
+| `SMTP_PASS`             | No       | `""`                      | SMTP password                                                |
+| `SMTP_FROM`             | No       | `noreply@proofmark.local` | Sender email address                                         |
+| `ADMIN_EMAIL`           | No       | `""`                      | Admin notification email                                     |
+| `OWNER_ADDRESS`         | No       | `""`                      | Default wallet address for the instance owner                |
+| `OWNER_CHAIN`           | No       | `ETH`                     | Default chain for the instance owner                         |
+| `ENCRYPTION_MASTER_KEY` | No       | —                         | 32+ char key for at-rest encryption (enables vault features) |
+| `AUTOMATION_SECRET`     | No       | `""`                      | Secret for cron-triggered automation endpoints               |
+| `NEXTAUTH_URL`          | No       | `http://localhost:3100`   | Base URL for auth callbacks                                  |
+| `BETTER_AUTH_URL`       | No       | `""`                      | Optional Better Auth base URL override                       |
+| `BETTER_AUTH_SECRET`    | No       | `""`                      | Better Auth signing secret                                   |
 
 ### BYO Integration Keys (optional)
 
-| Variable | Description |
-|---|---|
-| `AUTH_GOOGLE_CLIENT_ID` / `AUTH_GOOGLE_CLIENT_SECRET` | Google OAuth SSO |
-| `AUTH_GITHUB_CLIENT_ID` / `AUTH_GITHUB_CLIENT_SECRET` | GitHub OAuth SSO |
-| `AUTH_MICROSOFT_CLIENT_ID` / `AUTH_MICROSOFT_CLIENT_SECRET` | Microsoft OAuth SSO |
-| `AUTH_OKTA_CLIENT_ID` / `AUTH_OKTA_CLIENT_SECRET` / `AUTH_OKTA_ISSUER` | Okta SSO |
+| Variable                                                               | Description         |
+| ---------------------------------------------------------------------- | ------------------- |
+| `AUTH_GOOGLE_CLIENT_ID` / `AUTH_GOOGLE_CLIENT_SECRET`                  | Google OAuth SSO    |
+| `AUTH_GITHUB_CLIENT_ID` / `AUTH_GITHUB_CLIENT_SECRET`                  | GitHub OAuth SSO    |
+| `AUTH_DISCORD_CLIENT_ID` / `AUTH_DISCORD_CLIENT_SECRET`                | Discord OAuth SSO   |
+| `AUTH_X_CLIENT_ID` / `AUTH_X_CLIENT_SECRET`                            | X OAuth SSO         |
+| `AUTH_MICROSOFT_CLIENT_ID` / `AUTH_MICROSOFT_CLIENT_SECRET`            | Microsoft OAuth SSO |
+| `AUTH_OKTA_CLIENT_ID` / `AUTH_OKTA_CLIENT_SECRET` / `AUTH_OKTA_ISSUER` | Okta SSO            |
 
 ## Architecture
 
@@ -93,17 +100,17 @@ src/
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start dev server (OSS mode) |
-| `npm run build` | Production build |
-| `npm run lint` | Run ESLint |
-| `npm run type-check` | Run TypeScript compiler |
-| `npm run format` | Format code with Prettier |
-| `npm run validate` | Run all checks (type-check + lint + format + test) |
-| `npm run test` | Run tests |
-| `npm run db:push` | Push schema to database |
-| `npm run db:studio` | Open Drizzle Studio |
+| Command              | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| `npm run dev`        | Start dev server (OSS mode)                        |
+| `npm run build`      | Production build                                   |
+| `npm run lint`       | Run ESLint                                         |
+| `npm run type-check` | Run TypeScript compiler                            |
+| `npm run format`     | Format code with Prettier                          |
+| `npm run validate`   | Run all checks (type-check + lint + format + test) |
+| `npm run test`       | Run tests                                          |
+| `npm run db:push`    | Push schema to database                            |
+| `npm run db:studio`  | Open Drizzle Studio                                |
 
 ## Premium
 
