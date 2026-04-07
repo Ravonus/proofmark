@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useSession } from "~/lib/auth/auth-client";
@@ -28,6 +28,8 @@ import {
   Wallet,
   PenLine,
   Inbox,
+  Link2,
+  Check,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
@@ -487,6 +489,7 @@ type DocWithSigners = {
     status: string;
     signedAt: Date | null;
     isYou: boolean;
+    signUrl: string | null;
   }>;
 };
 
@@ -504,6 +507,13 @@ function ExpirationBadge({ expiresAt }: { expiresAt: Date }) {
 function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
   const utils = trpc.useUtils();
   const [showDownloadsManager, setShowDownloadsManager] = useState(false);
+  const [copiedSignerId, setCopiedSignerId] = useState<string | null>(null);
+  const copySignUrl = useCallback((signUrl: string, signerId: string) => {
+    void navigator.clipboard.writeText(signUrl).then(() => {
+      setCopiedSignerId(signerId);
+      setTimeout(() => setCopiedSignerId(null), 2000);
+    });
+  }, []);
   const voidMut = trpc.document.voidDocument.useMutation({
     onSuccess: () => utils.document.listByAddress.invalidate(),
   });
@@ -594,17 +604,31 @@ function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
               doc.signers
                 .filter((s) => s.status === "PENDING")
                 .map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      resendMut.mutate({ documentId: doc.id, signerId: s.id });
-                    }}
-                    disabled={resendMut.isPending}
-                    className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
-                  >
-                    <Send className="h-2.5 w-2.5" />
-                    Resend {s.label}
-                  </button>
+                  <span key={s.id} className="inline-flex items-center gap-0.5">
+                    {s.signUrl && (
+                      <button
+                        onClick={() => copySignUrl(s.signUrl!, s.id)}
+                        className="bg-accent/[0.08] hover:bg-accent/[0.15] inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-accent transition-colors"
+                      >
+                        {copiedSignerId === s.id ? (
+                          <Check className="h-2.5 w-2.5" />
+                        ) : (
+                          <Link2 className="h-2.5 w-2.5" />
+                        )}
+                        {copiedSignerId === s.id ? "Copied!" : `Link ${s.label}`}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        resendMut.mutate({ documentId: doc.id, signerId: s.id });
+                      }}
+                      disabled={resendMut.isPending}
+                      className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
+                    >
+                      <Send className="h-2.5 w-2.5" />
+                      Resend
+                    </button>
+                  </span>
                 ))}
 
             {doc.status === "COMPLETED" && (

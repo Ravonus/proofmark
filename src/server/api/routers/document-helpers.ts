@@ -318,56 +318,77 @@ export async function propagateGroupSignature(params: {
     const discloserSigner = siblingSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
     if (!discloserSigner || discloserSigner.status === "SIGNED") continue;
 
-    // Recompute the documentStateHash for this sibling document. When the
-    // discloser signs first (before recipients), all sibling docs have the
-    // same state hash since recipient fields are empty. This lets us propagate
-    // the wallet signature. The finalization signature is always per-document.
-    const siblingSignerIdx = siblingSigners.findIndex((s) => s.id === discloserSigner.id);
-    const siblingStateHash = await computeDocumentStateHash({
-      contentHash: siblingDoc.contentHash,
-      docSigners: siblingSigners,
-      currentSignerFieldValues: signData.fieldValues,
-      currentSignerIndex: siblingSignerIdx >= 0 ? siblingSignerIdx : undefined,
-    });
+    // When all sibling documents share the same content hash, the document
+    // state hash is identical so we can propagate the wallet signature
+    // directly.  When content differs (per-recipient contracts) the
+    // signature is bound to a different state hash and cannot be reused —
+    // we only pre-fill the discloser's address & field values so they
+    // don't need to re-enter data, but they must sign each doc individually.
+    const sameContent = siblingDoc.contentHash === doc.contentHash;
 
-    await db
-      .update(signersTable)
-      .set({
-        address: signData.address,
-        chain: signData.chain,
-        status: "SIGNED",
-        signature: signData.signature,
-        signedAt: signData.signedAt,
-        scheme: signData.scheme,
-        email: signData.email,
-        handSignatureData: signData.handSignatureData,
-        handSignatureHash: signData.handSignatureHash,
-        fieldValues: signData.fieldValues,
-        lastIp: signData.lastIp,
-        ipUpdatedAt: signData.ipUpdatedAt,
-        userAgent: signData.userAgent,
-        identityLevel: signData.identityLevel as "L0_WALLET" | "L1_EMAIL" | "L2_VERIFIED" | "L3_KYC",
-        forensicEvidence: signData.forensicEvidence,
-        forensicHash: signData.forensicHash,
-        documentStateHash: siblingStateHash,
-        consentText: signData.consentText ?? null,
-        consentAt: signData.consentAt ?? null,
-        // NOTE: finalizationSignature is NOT propagated — each doc gets its
-        // own finalization since the state hash differs once recipients sign.
-      })
-      .where(eq(signersTable.id, discloserSigner.id));
+    if (sameContent) {
+      const siblingSignerIdx = siblingSigners.findIndex((s) => s.id === discloserSigner.id);
+      const siblingStateHash = await computeDocumentStateHash({
+        contentHash: siblingDoc.contentHash,
+        docSigners: siblingSigners,
+        currentSignerFieldValues: signData.fieldValues,
+        currentSignerIndex: siblingSignerIdx >= 0 ? siblingSignerIdx : undefined,
+      });
+
+      await db
+        .update(signersTable)
+        .set({
+          address: signData.address,
+          chain: signData.chain,
+          status: "SIGNED",
+          signature: signData.signature,
+          signedAt: signData.signedAt,
+          scheme: signData.scheme,
+          email: signData.email,
+          handSignatureData: signData.handSignatureData,
+          handSignatureHash: signData.handSignatureHash,
+          fieldValues: signData.fieldValues,
+          lastIp: signData.lastIp,
+          ipUpdatedAt: signData.ipUpdatedAt,
+          userAgent: signData.userAgent,
+          identityLevel: signData.identityLevel as "L0_WALLET" | "L1_EMAIL" | "L2_VERIFIED" | "L3_KYC",
+          forensicEvidence: signData.forensicEvidence,
+          forensicHash: signData.forensicHash,
+          documentStateHash: siblingStateHash,
+          consentText: signData.consentText ?? null,
+          consentAt: signData.consentAt ?? null,
+          // NOTE: finalizationSignature is NOT propagated — each doc gets its
+          // own finalization since the state hash differs once recipients sign.
+        })
+        .where(eq(signersTable.id, discloserSigner.id));
+    } else {
+      // Different content: pre-fill address + field values only, keep PENDING
+      await db
+        .update(signersTable)
+        .set({
+          address: signData.address,
+          chain: signData.chain,
+          email: signData.email,
+          fieldValues: signData.fieldValues,
+          lastIp: signData.lastIp,
+          ipUpdatedAt: signData.ipUpdatedAt,
+          userAgent: signData.userAgent,
+        })
+        .where(eq(signersTable.id, discloserSigner.id));
+    }
 
     propagatedCount++;
 
     void safeLogAudit({
       documentId: siblingDoc.id,
-      eventType: "SIGNER_SIGNED",
+      eventType: sameContent ? "SIGNER_SIGNED" : "SIGNER_VIEWED",
       actor: signData.address ?? signData.email ?? "system",
       actorType: signData.address ? "wallet" : "email",
       metadata: {
         propagatedFrom: doc.id,
         groupId: doc.groupId,
         signerLabel: discloserSigner.label,
+        prefillOnly: !sameContent,
       },
     });
   }

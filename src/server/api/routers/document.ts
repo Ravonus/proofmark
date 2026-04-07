@@ -528,8 +528,18 @@ export const documentRouter = createTRPCRouter({
           fields: createDocumentInput.shape.signers.element.shape.fields,
           signMethod: z.enum(["WALLET", "EMAIL_OTP"]).default("WALLET"),
         }),
-        // One document is created per recipient
-        recipients: z.array(createDocumentInput.shape.signers.element).min(1).max(50),
+        // One document is created per recipient.
+        // Each recipient may optionally provide per-recipient content to override
+        // the shared content (e.g., when the contract body references the
+        // recipient by name or has recipient-specific field settings).
+        recipients: z
+          .array(
+            createDocumentInput.shape.signers.element.extend({
+              content: z.string().min(1).optional(),
+            }),
+          )
+          .min(1)
+          .max(50),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -545,9 +555,10 @@ export const documentRouter = createTRPCRouter({
 
       for (const recipient of input.recipients) {
         // Build a standard create input with discloser at index 0, recipient at index 1
+        const { content: recipientContent, ...recipientSigner } = recipient;
         const createInput: z.infer<typeof createDocumentInput> = {
           title: input.title,
-          content: input.content,
+          content: recipientContent ?? input.content,
           createdByEmail: input.createdByEmail,
           proofMode: input.proofMode,
           securityMode: input.securityMode,
@@ -562,7 +573,7 @@ export const documentRouter = createTRPCRouter({
           // template convention where signerIdx 0 = recipient fields and
           // signerIdx 1 = discloser fields.
           signers: [
-            recipient,
+            recipientSigner,
             {
               label: input.discloser.label,
               email: input.discloser.email,
@@ -758,6 +769,8 @@ export const documentRouter = createTRPCRouter({
         signature: isCreator ? s.signature : null,
         handSignatureData: s.handSignatureData ?? null,
         handSignatureHash: isCreator ? s.handSignatureHash : null,
+        claimToken: isCreator ? s.claimToken : null,
+        signUrl: isCreator ? `${getBaseUrl()}/sign/${doc.id}?claim=${s.claimToken}` : null,
         isYou: input.claimToken === s.claimToken,
         isClaimed: !!s.address || !!s.otpVerifiedAt,
         fields: s.fields ?? [],
@@ -1582,6 +1595,7 @@ export const documentRouter = createTRPCRouter({
 
     const allDocIds = new Set([...createdDocs.map((d) => d.id), ...signerRows.map((s) => s.documentId)]);
 
+    const baseUrl = getBaseUrl();
     const results: Array<
       (typeof createdDocs)[number] & {
         viewerIsCreator: boolean;
@@ -1593,6 +1607,7 @@ export const documentRouter = createTRPCRouter({
           status: string;
           signedAt: Date | null;
           isYou: boolean;
+          signUrl: string | null;
         }>;
       }
     > = [];
@@ -1624,6 +1639,7 @@ export const documentRouter = createTRPCRouter({
           status: s.status,
           signedAt: s.signedAt,
           isYou: viewerAccess.matchingSigner?.id === s.id,
+          signUrl: viewerAccess.isCreator ? `${baseUrl}/sign/${docId}?claim=${s.claimToken}` : null,
         })),
       });
     }

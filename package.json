@@ -8,7 +8,7 @@
     "prematerialize:oss": "node scripts/materialize-premium.mjs --force-stubs",
     "dev": "npm run cleanup && npm run prematerialize:oss && npm run db:up && concurrently --kill-others \"PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-10} npm run engine\" \"PROOFMARK_PREMIUM=0 PROOFMARK_DEPLOYMENT_MODE=${PROOFMARK_DEPLOYMENT_MODE:-oss} PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-10} next dev --port 3100\"",
     "paid": "npm run cleanup && npm run prematerialize && npm run db:up && concurrently --kill-others \"PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-100} npm run engine\" \"PROOFMARK_DEPLOYMENT_MODE=${PROOFMARK_DEPLOYMENT_MODE:-premium} PDF_UPLOAD_MAX_MB=${PDF_UPLOAD_MAX_MB:-100} next dev --port 3100\"",
-    "db:up": "docker compose -f docker/docker-compose.yml up db -d --wait 2>/dev/null || docker-compose -f docker/docker-compose.yml up db -d 2>/dev/null || echo 'Docker not available \u2014 ensure Postgres is running on port 5436'",
+    "db:up": "docker compose -f docker/docker-compose.yml up db -d --wait 2>/dev/null || docker-compose -f docker/docker-compose.yml up db -d 2>/dev/null || echo 'Docker not available — ensure Postgres is running on port 5436'",
     "collab:ws": "echo 'Collab WS is handled by the Rust engine on port 9090 at /ws/collab/{session_id}'",
     "connector:local": "tsx --env-file=.env scripts/run-local-connector.ts",
     "engine": "cd rust-service && cargo run --release",
@@ -59,11 +59,9 @@
     "@trpc/next": "^11.0.0",
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
-    "@wagmi/connectors": "^5.7.0",
-    "@wagmi/core": "^3.4.1",
     "better-auth": "^1.5.6",
     "bs58": "^6.0.0",
-    "drizzle-orm": "^0.38.0",
+    "drizzle-orm": "^0.45.0",
     "ethers": "^6.16.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
@@ -81,7 +79,11 @@
     "viem": "^2.21.0",
     "wagmi": "^2.14.0",
     "zod": "^3.24.0",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "lib0": "^0.2.99",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.20"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
@@ -91,9 +93,10 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.5.13",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.2.1",
-    "drizzle-kit": "^0.30.0",
+    "drizzle-kit": "^0.31.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.5.14",
     "eslint-plugin-import": "^2.32.0",
@@ -112,5 +115,10 @@
   },
   "optionalDependencies": {
     "geoip-lite": "^1.4.10"
+  },
+  "overrides": {
+    "@better-auth/core": {
+      "nanostores": "^1.0.1"
+    }
   }
 }

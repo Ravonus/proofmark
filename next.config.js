@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "webgazer"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
   eslint: {
     ignoreDuringBuilds: true,
   },

@@ -491,15 +491,13 @@ async function main() {
 
   await mkdir(OUTPUT_DIR, { recursive: true });
 
-  // Build content using the first recipient as a template (the per-recipient
-  // fields like X handle are embedded via inline fields, not hardcoded text,
-  // so the content is the same structure for all — the actual values are
-  // filled at signing time).
-  const content = buildContent(RECIPIENTS[0]!);
+  // Build per-recipient content — each contract embeds the recipient's name
+  // and X handle in the body text and field settings, so content must differ.
+  const fallbackContent = buildContent(RECIPIENTS[0]!);
 
   const result = await trpc.document.createGroup.mutate({
     title: "Non-Disclosure Agreement",
-    content,
+    content: fallbackContent,
     createdByEmail: "",
     proofMode: "HYBRID",
     signingOrder: "parallel",
@@ -554,12 +552,13 @@ async function main() {
         { type: "signature", label: "Signature", required: true },
       ],
     },
-    // One contract per recipient
+    // One contract per recipient — each with its own content
     recipients: RECIPIENTS.map((r) => ({
       label: `Recipient (${r.xHandle})`,
       email: "",
       signMethod: "WALLET" as const,
       role: "SIGNER" as const,
+      content: buildContent(r),
       fields: [
         { type: "full-name", label: "Full Legal Name", required: true },
         {
