@@ -76,6 +76,15 @@ type CollabSessionsQuery = {
   isFetching: boolean;
 };
 
+type CollabAdminApi = {
+  capabilities: {
+    useQuery: () => CollabCapabilitiesQuery;
+  };
+  list: {
+    useQuery: (input: { status: "active" }, options: { enabled: boolean }) => CollabSessionsQuery;
+  };
+};
+
 type AdminTab =
   | "overview"
   | "users"
@@ -1764,9 +1773,10 @@ function SystemSection({ status }: { status?: OperatorStatus | null }) {
 // ── Premium Section ──
 
 function CollabSessionsAdmin() {
-  const capabilities = trpc.collab.capabilities.useQuery() as CollabCapabilitiesQuery;
+  const collabApi = trpc.collab as CollabAdminApi;
+  const capabilities = collabApi.capabilities.useQuery();
   const available = capabilities.data?.available ?? false;
-  const sessionsQuery = trpc.collab.list.useQuery({ status: "active" }, { enabled: available }) as CollabSessionsQuery;
+  const sessionsQuery = collabApi.list.useQuery({ status: "active" }, { enabled: available });
   const sessions = sessionsQuery.data ?? [];
 
   return (

@@ -27,6 +27,15 @@ type CollabSessionsQuery = {
   data?: unknown[];
 };
 
+type CollabSettingsApi = {
+  capabilities: {
+    useQuery: () => CollabCapabilitiesQuery;
+  };
+  list: {
+    useQuery: (input: { status: "active" }, options: { enabled: boolean }) => CollabSessionsQuery;
+  };
+};
+
 const EMPTY_BRANDING: BrandingForm = {
   name: "Default Branding",
   brandName: "Proofmark",
@@ -558,9 +567,10 @@ export function WorkspaceSettings({ section = "all" }: { section?: WorkspaceSect
 }
 
 function CollabSettingsCard() {
-  const capabilities = trpc.collab.capabilities.useQuery() as CollabCapabilitiesQuery;
+  const collabApi = trpc.collab as CollabSettingsApi;
+  const capabilities = collabApi.capabilities.useQuery();
   const available = capabilities.data?.available ?? false;
-  const sessions = trpc.collab.list.useQuery({ status: "active" }, { enabled: available }) as CollabSessionsQuery;
+  const sessions = collabApi.list.useQuery({ status: "active" }, { enabled: available });
   const sessionCount = sessions.data?.length ?? 0;
 
   return (
