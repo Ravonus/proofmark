@@ -13,13 +13,13 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { resolveUnifiedRequestIdentity } from "~/server/auth-identity";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { db } from "~/server/db";
 import { documents } from "~/server/db/schema";
 import { findSignersByDocumentId } from "~/server/db/compat";
-import { resolveDocumentViewerAccess } from "~/server/document-access";
-import { generateProofPacket } from "~/server/proof-packet";
-import { logAuditEvent } from "~/server/rust-engine";
+import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
+import { generateProofPacket } from "~/server/documents/proof-packet";
+import { logAuditEvent } from "~/server/crypto/rust-engine";
 
 export const dynamic = "force-dynamic";
 

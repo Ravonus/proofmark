@@ -18,10 +18,10 @@
  */
 
 import { useRef, useState, useMemo, useCallback, useEffect } from "react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { useWalletStore } from "~/stores/wallet";
-import { getWalletActions } from "~/components/wallet-provider";
-import { generateQrDataUrl } from "~/lib/qr-svg";
+import { getWalletActions } from "~/components/layout/wallet-provider";
+import { generateQrDataUrl } from "~/lib/utils/qr-svg";
 import { useSigningStore } from "~/stores/signing";
 import { encodeStructuredFieldValue } from "~/lib/document/field-values";
 import type { AttachmentFieldValue } from "~/lib/document/field-values";
@@ -39,7 +39,7 @@ import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/signin
 import { buildAddressSuggestionFieldUpdates, type AddressSuggestion } from "~/lib/address-autocomplete";
 import { collectFingerprintBestEffort, BehavioralTracker, warmForensicReplayCore } from "~/lib/forensic";
 import type { BehavioralSignals } from "~/lib/forensic";
-import { CHAIN_META, normalizeAddress, type WalletChain } from "~/lib/chains";
+import { CHAIN_META, normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
 import {
   buildTokenGateProofMessage,
   getSignerTokenGateChains,

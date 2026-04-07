@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { removePostSignRevealDownload, upsertPostSignRevealDownload } from "~/server/post-sign-downloads";
+import { removePostSignRevealDownload, upsertPostSignRevealDownload } from "~/server/documents/post-sign-downloads";
 
 describe("post-sign shared downloads", () => {
   it("adds a download and enables reveal access", () => {

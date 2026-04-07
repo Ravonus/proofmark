@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDocument, buildSigner, resetBuilderCounters } from "./helpers/builders";
 
 // Mock the Rust engine
-vi.mock("~/server/rust-engine", async () => {
+vi.mock("~/server/crypto/rust-engine", async () => {
   const crypto = await import("crypto");
   return {
     hashDocument: vi.fn(async (content: string) => {
@@ -12,7 +12,7 @@ vi.mock("~/server/rust-engine", async () => {
 });
 
 // Mock delivery (sendSignerInvite)
-vi.mock("~/server/delivery", () => ({
+vi.mock("~/server/messaging/delivery", () => ({
   sendSignerInvite: vi.fn(async () => {
     /* noop */
   }),
@@ -25,19 +25,19 @@ vi.mock("~/server/delivery", () => ({
 }));
 
 // Mock email
-vi.mock("~/server/email", () => ({
+vi.mock("~/server/messaging/email", () => ({
   sendCompletionEmail: vi.fn(async () => {
     /* noop */
   }),
 }));
 
 // Mock audit + search index
-vi.mock("~/server/audit", () => ({
+vi.mock("~/server/audit/audit", () => ({
   logAuditEvent: vi.fn(async () => {
     /* noop */
   }),
 }));
-vi.mock("~/server/search-index", () => ({
+vi.mock("~/server/documents/search-index", () => ({
   indexDocument: vi.fn(async () => {
     /* noop */
   }),
@@ -180,7 +180,7 @@ describe("propagateGroupSignature", () => {
 
 describe("handlePostSignCompletion — sequential notification", () => {
   it("sends invite to next signer in sequential mode", async () => {
-    const { sendSignerInvite } = await import("~/server/delivery");
+    const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
     const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 0 });
@@ -221,7 +221,7 @@ describe("handlePostSignCompletion — sequential notification", () => {
   });
 
   it("does not send invite in parallel mode", async () => {
-    const { sendSignerInvite } = await import("~/server/delivery");
+    const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
     const doc = buildDocument({ signingOrder: "parallel" });
@@ -248,7 +248,7 @@ describe("handlePostSignCompletion — sequential notification", () => {
   });
 
   it("does not send invite when all signers are done", async () => {
-    const { sendSignerInvite } = await import("~/server/delivery");
+    const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
     const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 1 });
@@ -276,7 +276,7 @@ describe("handlePostSignCompletion — sequential notification", () => {
   });
 
   it("handles next signer without email gracefully", async () => {
-    const { sendSignerInvite } = await import("~/server/delivery");
+    const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
     const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 0 });

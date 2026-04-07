@@ -7,7 +7,7 @@
  * whose text content we control.
  */
 import { describe, it, expect, beforeAll } from "vitest";
-import { analyzePdf, type PdfAnalysisResult } from "../pdf-analyze";
+import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 // ─── Build a contract that mirrors the "final_boss_contract.pdf" structure ────

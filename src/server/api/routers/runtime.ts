@@ -4,7 +4,7 @@
  * Full implementation: premium/server/routers/runtime.ts
  */
 
-import { isPremiumAvailable } from "~/lib/premium";
+import { isPremiumAvailable } from "~/lib/platform/premium";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

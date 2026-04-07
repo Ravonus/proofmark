@@ -372,7 +372,7 @@ export async function GET(req: NextRequest) {
 
     // Store verification session for reuse across contracts
     try {
-      const { storeVerificationSession } = await import("~/server/verification-sessions");
+      const { storeVerificationSession } = await import("~/server/auth/verification-sessions");
       await storeVerificationSession({
         identifier: username,
         provider: pending.provider as "x" | "github" | "discord" | "google",

@@ -3,8 +3,8 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { trpc } from "~/lib/trpc";
-import { useWallet } from "~/components/wallet-provider";
+import { trpc } from "~/lib/platform/trpc";
+import { useWallet } from "~/components/layout/wallet-provider";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import { isImageDataUrl } from "~/lib/document/field-values";
 import { tokenizeDocument, type DocToken } from "~/lib/document/document-tokens";
@@ -27,7 +27,7 @@ import {
   Play,
 } from "lucide-react";
 import { ForensicReplayPanel } from "~/components/forensic/forensic-replay-panel";
-import { ThemeToggle } from "~/components/theme-toggle";
+import { ThemeToggle } from "~/components/ui/theme-toggle";
 
 // Premium collab components — loaded dynamically to keep OSS bundle clean
 const CollabToolbar = dynamic(
@@ -43,6 +43,7 @@ const CollabAiPanel = dynamic(
   { ssr: false, loading: () => null },
 );
 const CollabSharePopover = dynamic(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   () => import("../../../../premium/components/collab/collab-share-popover").then((m) => m.CollabSharePopover),
   { ssr: false, loading: () => null },
 );

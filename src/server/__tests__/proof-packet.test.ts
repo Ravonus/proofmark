@@ -23,7 +23,7 @@ type MappedForensicSection = {
 
 describe("proof packet forensic mapping", () => {
   it("surfaces session profile, explicit liveness, signer baseline, and session history", async () => {
-    const { buildProofPacketForensicSection } = (await import("~/server/proof-packet")) as {
+    const { buildProofPacketForensicSection } = (await import("~/server/documents/proof-packet")) as {
       buildProofPacketForensicSection: (
         fe: Record<string, unknown>,
         forensicHash: string | null,

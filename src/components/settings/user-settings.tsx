@@ -3,9 +3,9 @@
 import { useRef, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
-import { CHAIN_META, addressPreview } from "~/lib/chains";
+import { CHAIN_META, addressPreview } from "~/lib/crypto/chains";
 import { Select } from "~/components/ui/select";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
 import { WorkspaceSettings } from "./workspace-settings";

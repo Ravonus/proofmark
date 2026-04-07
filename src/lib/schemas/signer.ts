@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import type { WalletChain } from "~/lib/chains";
+import type { WalletChain } from "~/lib/crypto/chains";
 import type { SignerTokenGate } from "~/lib/token-gates";
 
 // ── Chain ────────────────────────────────────────────────────────────────────

@@ -19,15 +19,15 @@ import {
   platformConfig,
   walletSessions,
 } from "~/server/db/schema";
-import { FEATURE_IDS, getFeatureCatalog } from "~/lib/feature-access";
+import { FEATURE_IDS, getFeatureCatalog } from "~/lib/platform/feature-access";
 import {
   DEFAULT_BRANDING_SETTINGS,
   createReminderConfig,
   getDefaultIntegration,
   getWorkspaceSummary,
-} from "~/server/workspace";
+} from "~/server/workspace/workspace";
 import { isSchemaDriftError } from "~/server/db/compat";
-import { searchAddressSuggestions } from "~/server/address-autocomplete";
+import { searchAddressSuggestions } from "~/server/messaging/address-autocomplete";
 import {
   getFeatureAccessForInput,
   getOperatorStatus,
@@ -37,12 +37,12 @@ import {
   listKnownWallets,
   resolveWalletIdentity,
   saveFeatureOverrides,
-} from "~/server/operator-access";
+} from "~/server/crypto/operator-access";
 import {
   findOwnedOwnerWallet,
   getOwnedWalletContextFromRequest,
   requireOwnedWalletActor,
-} from "~/server/owned-wallet-context";
+} from "~/server/crypto/owned-wallet-context";
 import { saveTemplateSchema, type SaveTemplateInput } from "~/lib/schemas/document";
 
 const brandingSchema = z.object({

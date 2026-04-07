@@ -9,8 +9,8 @@
  */
 
 import { useMemo } from "react";
-import { useSession } from "~/lib/auth-client";
-import { useWallet } from "~/components/wallet-provider";
+import { useSession } from "~/lib/auth/auth-client";
+import { useWallet } from "~/components/layout/wallet-provider";
 
 export function useConnectedIdentity() {
   const wallet = useWallet();

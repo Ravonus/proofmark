@@ -12,7 +12,7 @@ import {
   SplitSquareVertical,
   UserRound,
 } from "lucide-react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import {
   buildReplayLaneSnapshot,
   describeReplayEvent,

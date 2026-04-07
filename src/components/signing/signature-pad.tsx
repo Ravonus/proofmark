@@ -3,10 +3,10 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedButton } from "../ui/motion";
-import { signatureStrokesToDataUrl, type SignatureStroke } from "~/lib/signature-svg";
+import { signatureStrokesToDataUrl, type SignatureStroke } from "~/lib/signature/signature-svg";
 import type { TimedSignatureStroke } from "~/lib/forensic";
 import type { BehavioralTracker } from "~/lib/forensic";
-import { getSavedSignature, saveSignature } from "~/lib/signature-store";
+import { getSavedSignature, saveSignature } from "~/lib/signature/signature-store";
 
 type Props = {
   onCapture: (dataUrl: string) => void;

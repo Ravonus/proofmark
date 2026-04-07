@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { analyzePdf, type PdfAnalysisResult } from "../pdf-analyze";
+import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 const FIXTURES = path.resolve(__dirname, "fixtures");

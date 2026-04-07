@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { collectFingerprintBestEffort } from "~/lib/forensic";
 import { SignaturePad } from "~/components/signing/signature-pad";
 

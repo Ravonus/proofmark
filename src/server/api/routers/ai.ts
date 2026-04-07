@@ -8,7 +8,7 @@
  * The premium router is re-exported to preserve the type surface for tRPC clients.
  */
 
-import { isPremiumAvailable } from "~/lib/premium";
+import { isPremiumAvailable } from "~/lib/platform/premium";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const premiumRouter = isPremiumAvailable()

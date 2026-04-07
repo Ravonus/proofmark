@@ -24,9 +24,9 @@ import {
   Terminal,
   Play,
 } from "lucide-react";
-import { trpc } from "~/lib/trpc";
-import { Nav } from "~/components/nav";
-import { CHAIN_META, type WalletChain } from "~/lib/chains";
+import { trpc } from "~/lib/platform/trpc";
+import { Nav } from "~/components/layout/nav";
+import { CHAIN_META, type WalletChain } from "~/lib/crypto/chains";
 import { SECURITY_MODE_LABELS } from "~/lib/signing/document-security";
 
 async function sha256Hex(data: string | ArrayBuffer): Promise<string> {

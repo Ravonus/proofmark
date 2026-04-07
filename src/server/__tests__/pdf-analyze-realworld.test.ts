@@ -3,7 +3,7 @@
  * Reproduces the exact text layout from pdf-parse extraction.
  */
 import { describe, it, expect, beforeAll } from "vitest";
-import { analyzePdf, type PdfAnalysisResult } from "../pdf-analyze";
+import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 function buildRealContract(): string {

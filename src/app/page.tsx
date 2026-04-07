@@ -1,7 +1,7 @@
 "use client";
 
-import { Nav } from "~/components/nav";
-import { CreateDocument } from "~/components/create-document";
+import { Nav } from "~/components/layout/nav";
+import { CreateDocument } from "~/components/pages/create-document";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export default function Home() {

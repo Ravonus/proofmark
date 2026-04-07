@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getFeatureCatalog } from "~/lib/feature-access";
-import { createReminderConfig, getDefaultReminderChannels } from "~/server/workspace";
+import { getFeatureCatalog } from "~/lib/platform/feature-access";
+import { createReminderConfig, getDefaultReminderChannels } from "~/server/workspace/workspace";
 
 describe("feature catalog", () => {
   const catalog = getFeatureCatalog();

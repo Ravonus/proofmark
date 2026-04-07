@@ -1,7 +1,7 @@
 "use client";
 
-import { Nav } from "~/components/nav";
-import { AdminPanel } from "~/components/admin-panel";
+import { Nav } from "~/components/layout/nav";
+import { AdminPanel } from "~/components/pages/admin-panel";
 import { FadeIn, PageTransition } from "~/components/ui/motion";
 
 export const dynamic = "force-dynamic";

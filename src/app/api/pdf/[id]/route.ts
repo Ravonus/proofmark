@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { resolveUnifiedRequestIdentity } from "~/server/auth-identity";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { db } from "~/server/db";
 import { documents, pdfStyleTemplates } from "~/server/db/schema";
-import { resolveDocumentViewerAccess } from "~/server/document-access";
-import { generateSignedPDF } from "~/server/rust-engine";
+import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
+import { generateSignedPDF } from "~/server/crypto/rust-engine";
 import { resolveDocumentContent } from "~/server/api/routers/document-helpers";
 import { findSignersByDocumentId } from "~/server/db/compat";
 

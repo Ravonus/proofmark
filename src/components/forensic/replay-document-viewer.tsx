@@ -19,7 +19,7 @@ import {
   User,
   HelpCircle,
 } from "lucide-react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import { tokenizeDocument } from "~/lib/document/document-tokens";
 import { decodeReplayEventsSync, type ForensicReplayEncodedEvent } from "~/lib/forensic/replay-codec";
 import { REPLAY_FORMAT_LIMITS } from "~/lib/forensic/replay-format";

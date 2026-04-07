@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isEvmAddress, isSolanaAddress, normalizeAddress, type WalletChain } from "./chains";
+import { isEvmAddress, isSolanaAddress, normalizeAddress, type WalletChain } from "./crypto/chains";
 
 const trimmedOptionalString = z.string().trim().max(120).optional();
 

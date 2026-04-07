@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { UnifiedRequestIdentity } from "~/server/auth-identity";
-import { buildOwnedWalletContext, requireOwnedWalletActor } from "~/server/owned-wallet-context";
+import type { UnifiedRequestIdentity } from "~/server/auth/auth-identity";
+import { buildOwnedWalletContext, requireOwnedWalletActor } from "~/server/crypto/owned-wallet-context";
 
-vi.mock("~/server/auth-identity", () => ({
+vi.mock("~/server/auth/auth-identity", () => ({
   resolveUnifiedRequestIdentity: vi.fn(),
 }));
 

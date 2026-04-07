@@ -14,7 +14,7 @@ import {
   updateTags,
   updateCategory,
   type SearchFilters,
-} from "~/server/search-index";
+} from "~/server/documents/search-index";
 
 export const searchRouter = createTRPCRouter({
   /** Full-text search + filtered browse of your documents. */

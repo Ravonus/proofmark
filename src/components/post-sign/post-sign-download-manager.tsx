@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { FileDown, Loader2, PackageOpen, Save, Trash2, Upload } from "lucide-react";
-import { trpc } from "~/lib/trpc";
+import { trpc } from "~/lib/platform/trpc";
 import type { PostSignReveal } from "~/server/db/schema";
 
 type PostSignDownload = NonNullable<PostSignReveal["downloads"]>[number];
