@@ -10,27 +10,27 @@
  *  - probes.ts     — individual device/browser signal probes
  */
 
-import type { ClientFingerprint, BehavioralSignals, GazeLivenessSummary, TimedSignatureStroke } from "./types";
 import { generateId, sha256 } from "./hash";
 import { getOrCreatePersistentId } from "./persistence";
-import { DeterministicReplayRecorder } from "./replay";
 import {
-  getCanvasHash,
-  getWebGLHash,
   getAudioHash,
-  getFontsHash,
-  getPluginsHash,
   getBatteryInfo,
-  getConnectionInfo,
+  getCanvasHash,
   getColorGamut,
-  getHdr,
-  getReducedMotion,
+  getConnectionInfo,
   getDarkMode,
+  getFontsHash,
   getGpuInfo,
-  parseBrowserMajor,
+  getHdr,
   getMathFingerprint,
+  getPluginsHash,
+  getReducedMotion,
+  getWebGLHash,
   getWebRtcLocalIps,
+  parseBrowserMajor,
 } from "./probes";
+import { DeterministicReplayRecorder } from "./replay";
+import type { BehavioralSignals, ClientFingerprint, GazeLivenessSummary, TimedSignatureStroke } from "./types";
 
 /* ── Typed navigator shorthand ──────────────────────────────── */
 
@@ -237,7 +237,16 @@ export async function collectFingerprintBestEffort(): Promise<ClientFingerprint>
 
 export class BehavioralTracker {
   private startTime = Date.now();
-  private counters = { mouse: 0, clicks: 0, keys: 0, focus: 0, paste: 0, copy: 0, cut: 0, rightClick: 0 };
+  private counters = {
+    mouse: 0,
+    clicks: 0,
+    keys: 0,
+    focus: 0,
+    paste: 0,
+    copy: 0,
+    cut: 0,
+    rightClick: 0,
+  };
   private maxScroll = 0;
   private scrolledBottom = false;
   private pageHidden = false;
@@ -595,7 +604,9 @@ export class BehavioralTracker {
     handler: (e: DocumentEventMap[K]) => void,
     target: EventTarget = document,
   ) {
-    target.addEventListener(event as string, handler as EventListener, { passive: true });
+    target.addEventListener(event as string, handler as EventListener, {
+      passive: true,
+    });
     this.teardown.push(() => target.removeEventListener(event as string, handler as EventListener));
   }
 }
@@ -612,7 +623,11 @@ export async function enrichWithExternalProvider(
   provider: ExternalFingerprintProvider,
 ): Promise<ClientFingerprint> {
   try {
-    return { ...fp, externalVisitorId: await provider.getVisitorId(), externalProvider: provider.name };
+    return {
+      ...fp,
+      externalVisitorId: await provider.getVisitorId(),
+      externalProvider: provider.name,
+    };
   } catch {
     return fp;
   }

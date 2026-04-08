@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, SkipBack, SkipForward } from "lucide-react";
-import type { ForensicReplayTape } from "~/lib/forensic/types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  TSPlaybackController,
-  TSMultiSignerController,
+  type ActiveStroke,
   type PlaybackState,
   type SceneSnapshot,
-  type ActiveStroke,
+  TSMultiSignerController,
+  TSPlaybackController,
 } from "~/lib/forensic/playback-controller";
 import { decodeReplayEventsSync } from "~/lib/forensic/replay-codec";
+import type { ForensicReplayTape } from "~/lib/forensic/types";
 
 type SignerInput = {
   signerId: string;
@@ -104,19 +104,217 @@ function drawPageIndicator(
   ctx.fillText(text, canvasWidth / 2, canvasHeight - 8);
 }
 
-export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate, onStateChange }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+type DrawLaneParams = {
+  ctx: CanvasRenderingContext2D;
+  snap: SceneSnapshot;
+  color: string;
+  signer: SignerInput | undefined;
+  docW: number;
+  docH: number;
+  docPadding: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  rootStyles: CSSStyleDeclaration;
+};
+
+function drawLane({
+  ctx,
+  snap,
+  color,
+  signer,
+  docW,
+  docH,
+  docPadding,
+  canvasWidth,
+  canvasHeight,
+  rootStyles,
+}: DrawLaneParams) {
+  const vp = signer?.replay.viewport;
+  const scaleX = vp ? docW / vp.width : 1;
+  const scaleY = vp ? docH / vp.height : 1;
+
+  for (const stroke of snap.activeStrokes) {
+    drawStroke(ctx, stroke, color, scaleX, scaleY);
+  }
+
+  drawScrollIndicator(ctx, snap, canvasWidth, docH + docPadding, color);
+  drawPageIndicator(ctx, snap, canvasWidth, docH + docPadding);
+
+  if (snap.hidden) {
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(docPadding, docPadding, docW, docH);
+    ctx.font = "14px monospace";
+    ctx.fillStyle = rootStyles.getPropertyValue("--replay-canvas-text-dim").trim() || "rgba(255,255,255,0.4)";
+    ctx.textAlign = "center";
+    ctx.fillText("Tab Hidden", canvasWidth / 2, canvasHeight / 2 - 24);
+  }
+}
+
+function ReplayControls({
+  state,
+  cursorMs,
+  durationMs,
+  speed,
+  signers,
+  activeLane,
+  onSkip,
+  onPlay,
+  onReset,
+  onSeek,
+  onSpeedCycle,
+  onLaneToggle,
+  onLaneClear,
+}: {
+  state: PlaybackState;
+  cursorMs: number;
+  durationMs: number;
+  speed: number;
+  signers: SignerInput[];
+  activeLane: number | null;
+  onSkip: (direction: number) => void;
+  onPlay: () => void;
+  onReset: () => void;
+  onSeek: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSpeedCycle: () => void;
+  onLaneToggle: (lane: number) => void;
+  onLaneClear: () => void;
+}) {
+  return (
+    <>
+      {/* Controls bar */}
+      <div className="flex items-center gap-2 px-2">
+        <button onClick={() => onSkip(-1)} className="p-1 text-secondary hover:text-primary" title="Back 5s">
+          <SkipBack size={16} />
+        </button>
+        <button
+          onClick={onPlay}
+          className="p-1 text-primary hover:text-primary"
+          title={state === "playing" ? "Pause" : "Play"}
+        >
+          {state === "playing" ? <Pause size={18} /> : <Play size={18} />}
+        </button>
+        <button onClick={() => onSkip(1)} className="p-1 text-secondary hover:text-primary" title="Forward 5s">
+          <SkipForward size={16} />
+        </button>
+        <button onClick={onReset} className="p-1 text-secondary hover:text-primary" title="Reset">
+          <RotateCcw size={14} />
+        </button>
+
+        <input
+          type="range"
+          min={0}
+          max={durationMs}
+          value={cursorMs}
+          onChange={onSeek}
+          className="h-1 flex-1 cursor-pointer accent-blue-500"
+        />
+
+        <span className="min-w-[72px] text-right font-mono text-[11px] tabular-nums text-muted">
+          {formatTime(cursorMs)} / {formatTime(durationMs)}
+        </span>
+
+        <button
+          onClick={onSpeedCycle}
+          className="px-1 font-mono text-[11px] text-muted hover:text-primary"
+          title="Change speed"
+        >
+          {speed}x
+        </button>
+      </div>
+
+      {/* Lane selector (multi-signer) */}
+      {signers.length > 1 && (
+        <div className="flex gap-2 px-2">
+          <button
+            onClick={onLaneClear}
+            className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === null ? "bg-surface-elevated text-primary" : "text-muted hover:text-secondary"}`}
+          >
+            All
+          </button>
+          {signers.map((s) => (
+            <button
+              key={s.lane}
+              onClick={() => onLaneToggle(s.lane)}
+              className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === s.lane ? "text-primary" : "text-muted hover:text-secondary"}`}
+              style={activeLane === s.lane ? { backgroundColor: laneColor(s.lane) + "33" } : undefined}
+            >
+              <span style={{ color: laneColor(s.lane) }}>●</span> {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function useAnimationLoop(params: {
+  controllerRef: React.RefObject<TSMultiSignerController | null>;
+  lastTickRef: React.RefObject<number>;
+  rafRef: React.RefObject<number>;
+  draw: () => void;
+  setCursorMs: React.Dispatch<React.SetStateAction<number>>;
+  setState: React.Dispatch<React.SetStateAction<PlaybackState>>;
+  onTimeUpdate?: (ms: number) => void;
+  onStateChange?: (state: PlaybackState) => void;
+}) {
+  const { controllerRef, lastTickRef, rafRef, draw, setCursorMs, setState, onTimeUpdate, onStateChange } = params;
+
+  const loop = useCallback(() => {
+    const now = performance.now();
+    const dt = now - lastTickRef.current;
+    lastTickRef.current = now;
+
+    const ctrl = controllerRef.current;
+    if (ctrl?.state === "playing") {
+      ctrl.tick(Math.round(dt));
+      const nextCursorMs = ctrl.cursorMs;
+      setCursorMs(nextCursorMs);
+      onTimeUpdate?.(nextCursorMs);
+      if (nextCursorMs >= ctrl.durationMs) {
+        setState("ended");
+        onStateChange?.("ended");
+      }
+    }
+
+    draw();
+    rafRef.current = requestAnimationFrame(loop);
+  }, [controllerRef, lastTickRef, rafRef, draw, setCursorMs, setState, onTimeUpdate, onStateChange]);
+
+  useEffect(() => {
+    lastTickRef.current = performance.now();
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [lastTickRef, rafRef, loop]);
+}
+
+function usePlayHandler(params: {
+  controllerRef: React.RefObject<TSMultiSignerController | null>;
+  lastTickRef: React.RefObject<number>;
+  speed: number;
+  setState: React.Dispatch<React.SetStateAction<PlaybackState>>;
+  onStateChange?: (state: PlaybackState) => void;
+}) {
+  const { controllerRef, lastTickRef, speed, setState, onStateChange } = params;
+  return useCallback(() => {
+    const ctrl = controllerRef.current;
+    if (!ctrl) return;
+    if (ctrl.state === "playing") {
+      ctrl.pause();
+      setState("paused");
+      onStateChange?.("paused");
+    } else {
+      ctrl.setSpeed(speed);
+      if (ctrl.state === "ended" || ctrl.state === "idle") ctrl.play();
+      else ctrl.resume();
+      setState("playing");
+      onStateChange?.("playing");
+      lastTickRef.current = performance.now();
+    }
+  }, [controllerRef, lastTickRef, speed, setState, onStateChange]);
+}
+
+function usePlaybackController(signers: SignerInput[]) {
   const controllerRef = useRef<TSMultiSignerController | null>(null);
-  const rafRef = useRef<number>(0);
-  const lastTickRef = useRef(0);
-
-  const [state, setState] = useState<PlaybackState>("idle");
-  const [cursorMs, setCursorMs] = useState(0);
-  const [speedIndex, setSpeedIndex] = useState(1);
-  const [activeLane, setActiveLane] = useState<number | null>(null);
-
-  const speed = SPEEDS[speedIndex]!;
-
   const controller = useMemo(() => {
     const controllers = signers.map((s) => {
       const events = s.replay.tapeBase64 ? decodeReplayEventsSync(s.replay.tapeBase64) : [];
@@ -126,7 +324,21 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
     controllerRef.current = multi;
     return multi;
   }, [signers]);
+  return { controller, controllerRef };
+}
 
+export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate, onStateChange }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number>(0);
+  const lastTickRef = useRef(0);
+
+  const [state, setState] = useState<PlaybackState>("idle");
+  const [cursorMs, setCursorMs] = useState(0);
+  const [speedIndex, setSpeedIndex] = useState(1);
+  const [activeLane, setActiveLane] = useState<number | null>(null);
+
+  const speed = SPEEDS[speedIndex]!;
+  const { controller, controllerRef } = usePlaybackController(signers);
   const durationMs = controller.durationMs;
 
   const draw = useCallback(() => {
@@ -144,106 +356,60 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
     ctx.fillStyle = rootStyles.getPropertyValue("--replay-surface-bg").trim() || "#0f172a";
     ctx.fillRect(0, 0, width, height);
 
-    // Document area
     const docPadding = 16;
     const docW = width - docPadding * 2;
-    const docH = height - docPadding * 2 - 48; // leave room for controls
+    const docH = height - docPadding * 2 - 48;
     ctx.fillStyle = rootStyles.getPropertyValue("--replay-surface-doc").trim() || "#1e293b";
     ctx.fillRect(docPadding, docPadding, docW, docH);
 
     const ctrl = controllerRef.current;
     if (!ctrl) return;
 
-    const snapshots = ctrl.snapshots();
+    const visibleSnapshots = [...ctrl.snapshots()].filter(([lane]) => activeLane === null || activeLane === lane);
 
-    for (const [lane, snap] of snapshots) {
-      if (activeLane !== null && activeLane !== lane) continue;
-      const color = laneColor(lane);
-
-      // Scale factors — assume first signer viewport as reference
-      const signer = signers.find((s) => s.lane === lane);
-      const vp = signer?.replay.viewport;
-      const scaleX = vp ? docW / vp.width : 1;
-      const scaleY = vp ? docH / vp.height : 1;
-
-      // Draw active signature strokes
-      for (const stroke of snap.activeStrokes) {
-        drawStroke(ctx, stroke, color, scaleX, scaleY);
-      }
-
-      // Draw scroll indicator
-      drawScrollIndicator(ctx, snap, width, docH + docPadding, color);
-
-      // Draw page indicator
-      drawPageIndicator(ctx, snap, width, docH + docPadding);
-
-      // Hidden indicator
-      if (snap.hidden) {
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(docPadding, docPadding, docW, docH);
-        ctx.font = "14px monospace";
-        ctx.fillStyle = rootStyles.getPropertyValue("--replay-canvas-text-dim").trim() || "rgba(255,255,255,0.4)";
-        ctx.textAlign = "center";
-        ctx.fillText("Tab Hidden", width / 2, height / 2 - 24);
-      }
+    for (const [lane, snap] of visibleSnapshots) {
+      drawLane({
+        ctx,
+        snap,
+        color: laneColor(lane),
+        signer: signers.find((s) => s.lane === lane),
+        docW,
+        docH,
+        docPadding,
+        canvasWidth: width,
+        canvasHeight: height,
+        rootStyles,
+      });
     }
 
-    // Lane labels
     const labelY = docH + docPadding + 20;
-    for (const signer of signers) {
-      if (activeLane !== null && activeLane !== signer.lane) continue;
-      const color = laneColor(signer.lane);
-      ctx.fillStyle = color;
+    const visibleSigners = signers.filter((s) => activeLane === null || activeLane === s.lane);
+    for (const signer of visibleSigners) {
+      ctx.fillStyle = laneColor(signer.lane);
       ctx.font = "11px monospace";
       ctx.textAlign = "left";
       ctx.fillText(`● ${signer.label}`, docPadding + signer.lane * 120, labelY);
     }
   }, [width, height, signers, activeLane]);
 
-  const loop = useCallback(() => {
-    const now = performance.now();
-    const dt = now - lastTickRef.current;
-    lastTickRef.current = now;
+  useAnimationLoop({
+    controllerRef,
+    lastTickRef,
+    rafRef,
+    draw,
+    setCursorMs,
+    setState,
+    onTimeUpdate,
+    onStateChange,
+  });
 
-    const ctrl = controllerRef.current;
-    if (ctrl?.state === "playing") {
-      ctrl.tick(Math.round(dt));
-      const nextCursorMs = ctrl.cursorMs;
-      setCursorMs(nextCursorMs);
-      onTimeUpdate?.(nextCursorMs);
-
-      if (nextCursorMs >= ctrl.durationMs) {
-        setState("ended");
-        onStateChange?.("ended");
-      }
-    }
-
-    draw();
-    rafRef.current = requestAnimationFrame(loop);
-  }, [draw, onTimeUpdate, onStateChange]);
-
-  useEffect(() => {
-    lastTickRef.current = performance.now();
-    rafRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [loop]);
-
-  const handlePlay = () => {
-    const ctrl = controllerRef.current;
-    if (!ctrl) return;
-    if (ctrl.state === "playing") {
-      ctrl.pause();
-      setState("paused");
-      onStateChange?.("paused");
-    } else {
-      ctrl.setSpeed(speed);
-      if (ctrl.state === "ended" || ctrl.state === "idle") ctrl.play();
-      else ctrl.resume();
-      setState("playing");
-      onStateChange?.("playing");
-      lastTickRef.current = performance.now();
-    }
-  };
+  const handlePlay = usePlayHandler({
+    controllerRef,
+    lastTickRef,
+    speed,
+    setState,
+    onStateChange,
+  });
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const ms = parseInt(e.target.value, 10);
@@ -282,68 +448,21 @@ export function ReplaySurface({ signers, width = 640, height = 480, onTimeUpdate
     <div className="flex flex-col gap-2" style={{ width }}>
       <canvas ref={canvasRef} style={{ width, height, borderRadius: 8 }} className="border border-border" />
 
-      {/* Controls bar */}
-      <div className="flex items-center gap-2 px-2">
-        <button onClick={() => handleSkip(-1)} className="p-1 text-secondary hover:text-primary" title="Back 5s">
-          <SkipBack size={16} />
-        </button>
-        <button
-          onClick={handlePlay}
-          className="p-1 text-primary hover:text-primary"
-          title={state === "playing" ? "Pause" : "Play"}
-        >
-          {state === "playing" ? <Pause size={18} /> : <Play size={18} />}
-        </button>
-        <button onClick={() => handleSkip(1)} className="p-1 text-secondary hover:text-primary" title="Forward 5s">
-          <SkipForward size={16} />
-        </button>
-        <button onClick={handleReset} className="p-1 text-secondary hover:text-primary" title="Reset">
-          <RotateCcw size={14} />
-        </button>
-
-        <input
-          type="range"
-          min={0}
-          max={durationMs}
-          value={cursorMs}
-          onChange={handleSeek}
-          className="h-1 flex-1 cursor-pointer accent-blue-500"
-        />
-
-        <span className="min-w-[72px] text-right font-mono text-[11px] tabular-nums text-muted">
-          {formatTime(cursorMs)} / {formatTime(durationMs)}
-        </span>
-
-        <button
-          onClick={handleSpeedCycle}
-          className="px-1 font-mono text-[11px] text-muted hover:text-primary"
-          title="Change speed"
-        >
-          {speed}x
-        </button>
-      </div>
-
-      {/* Lane selector (multi-signer) */}
-      {signers.length > 1 && (
-        <div className="flex gap-2 px-2">
-          <button
-            onClick={() => setActiveLane(null)}
-            className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === null ? "bg-surface-elevated text-primary" : "text-muted hover:text-secondary"}`}
-          >
-            All
-          </button>
-          {signers.map((s) => (
-            <button
-              key={s.lane}
-              onClick={() => handleLaneToggle(s.lane)}
-              className={`rounded px-2 py-0.5 font-mono text-[10px] ${activeLane === s.lane ? "text-primary" : "text-muted hover:text-secondary"}`}
-              style={activeLane === s.lane ? { backgroundColor: laneColor(s.lane) + "33" } : undefined}
-            >
-              <span style={{ color: laneColor(s.lane) }}>●</span> {s.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <ReplayControls
+        state={state}
+        cursorMs={cursorMs}
+        durationMs={durationMs}
+        speed={speed}
+        signers={signers}
+        activeLane={activeLane}
+        onSkip={handleSkip}
+        onPlay={handlePlay}
+        onReset={handleReset}
+        onSeek={handleSeek}
+        onSpeedCycle={handleSpeedCycle}
+        onLaneToggle={handleLaneToggle}
+        onLaneClear={() => setActiveLane(null)}
+      />
     </div>
   );
 }

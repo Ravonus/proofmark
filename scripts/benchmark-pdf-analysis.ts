@@ -1,7 +1,7 @@
 import { performance } from "node:perf_hooks";
+import { createFakePdf } from "~/server/__tests__/helpers/fake-pdf";
 import { analyzePdf as analyzePdfTs } from "~/server/pdf-analyze";
 import { analyzePdf as analyzePdfRust, getEngineStatus } from "~/server/rust-engine";
-import { createFakePdf } from "~/server/__tests__/helpers/fake-pdf";
 
 type BenchmarkCase = {
   name: string;

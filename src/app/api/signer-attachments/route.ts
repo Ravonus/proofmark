@@ -1,10 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { tokenizeDocument } from "~/lib/document/document-tokens";
+import { decryptDocument as decryptContent } from "~/server/crypto/rust-engine";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
-import { tokenizeDocument } from "~/lib/document/document-tokens";
 import { saveSignerAttachment } from "~/server/documents/attachments";
-import { decryptDocument as decryptContent } from "~/server/crypto/rust-engine";
 
 export const dynamic = "force-dynamic";
 

@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { authenticateConnector } from "../_auth";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { connectorSessions } from "~/server/db/schema";
+import { authenticateConnector } from "../_auth";
 
 export const dynamic = "force-dynamic";
 

@@ -98,6 +98,8 @@ src/
 
 **Stack:** Next.js 15 + React 19 + tRPC 11 + Drizzle ORM + PostgreSQL + Tailwind CSS
 
+For the enforced OSS directory contract, Biome maintainability thresholds, and architecture boundaries, see [`docs/oss-structure.md`](docs/oss-structure.md).
+
 ## Scripts
 
 | Command              | Description                                        |
@@ -118,7 +120,7 @@ The `premium/` directory contains optional premium features (blockchain anchorin
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for development setup, code style, and PR guidelines.
 
 ## License
 

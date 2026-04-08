@@ -1,7 +1,9 @@
-import { z } from "zod";
 import { randomBytes } from "crypto";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { getConfiguredProviders } from "~/server/auth/auth";
 import {
   createOrUpdateMergeRequest,
   dismissMergeRequest,
@@ -11,10 +13,8 @@ import {
   mergeCurrentIdentityAccounts,
   syncCurrentIdentityFromRequest,
 } from "~/server/auth/auth-identity";
-import { authChallenges, walletSessions } from "~/server/db/schema";
 import { verifySignature } from "~/server/crypto/rust-engine";
-import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
-import { getConfiguredProviders } from "~/server/auth/auth";
+import { authChallenges, walletSessions } from "~/server/db/schema";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 min
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -140,7 +140,10 @@ export const authRouter = createTRPCRouter({
       const expiresAt = new Date(now.getTime() + SESSION_TTL_MS);
 
       const authSession = ctx.req ? await getBetterAuthSessionFromHeaders(ctx.req) : null;
-      const walletOwner = await findUserByWallet({ address, chain: input.chain });
+      const walletOwner = await findUserByWallet({
+        address,
+        chain: input.chain,
+      });
 
       let userId = walletOwner?.user.id ?? null;
       let mergeRequestId: string | null = null;
@@ -200,7 +203,11 @@ export const authRouter = createTRPCRouter({
       .limit(1);
 
     if (!session) return null;
-    return { address: session.address, chain: session.chain, userId: session.userId };
+    return {
+      address: session.address,
+      chain: session.chain,
+      userId: session.userId,
+    };
   }),
 
   logout: publicProcedure.input(z.object({ token: z.string() })).mutation(async ({ ctx, input }) => {

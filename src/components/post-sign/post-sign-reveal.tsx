@@ -1,12 +1,115 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { addressPreview } from "~/lib/crypto/chains";
 import { trpc } from "~/lib/platform/trpc";
 import { useWallet } from "../layout/wallet-provider";
+import { AnimatedButton, AnimatedLink, FadeIn, GlassCard, StaggerContainer, StaggerItem } from "../ui/motion";
 import { PostSignRevealUploader } from "./post-sign-reveal-uploader";
-import { addressPreview } from "~/lib/crypto/chains";
-import { FadeIn, GlassCard, AnimatedButton, AnimatedLink, StaggerContainer, StaggerItem } from "../ui/motion";
+
+function TestbedAccessCard({
+  testbedAccess,
+  signer,
+  refreshing,
+  refreshResult,
+  refreshError,
+  onRefresh,
+}: {
+  testbedAccess:
+    | {
+        enabled?: boolean;
+        description?: string | null;
+      }
+    | null
+    | undefined;
+  signer: { lastIp?: string | null; ipUpdatedAt?: Date | string | null } | null;
+  refreshing: boolean;
+  refreshResult: string | null;
+  refreshError: string | null;
+  onRefresh: () => void;
+}) {
+  if (!testbedAccess?.enabled) return null;
+  return (
+    <FadeIn delay={0.25}>
+      <GlassCard className="space-y-4 p-5 sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">&#127760;</span>
+          <h3 className="text-lg font-semibold">Testbed Access</h3>
+        </div>
+        {testbedAccess.description && <p className="text-sm text-secondary">{testbedAccess.description}</p>}
+
+        <div className="bg-surface/50 space-y-4 rounded-xl p-4">
+          {signer?.lastIp ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-success/20 flex h-8 w-8 items-center justify-center rounded-full text-sm text-success">
+                  &#10003;
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Access Granted</p>
+                  <p className="font-mono text-xs text-muted">{signer.lastIp}</p>
+                  {signer.ipUpdatedAt && (
+                    <p className="text-[10px] text-muted">{new Date(signer.ipUpdatedAt).toLocaleString()}</p>
+                  )}
+                </div>
+              </div>
+              <AnimatedButton
+                variant="secondary"
+                className="px-3 py-2 text-xs"
+                onClick={onRefresh}
+                disabled={refreshing}
+              >
+                {refreshing ? "Verifying..." : "Refresh IP"}
+              </AnimatedButton>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-warning/20 flex h-8 w-8 items-center justify-center rounded-full text-sm text-warning">
+                  !
+                </div>
+                <div>
+                  <p className="text-sm font-medium">IP Not Registered</p>
+                  <p className="text-xs text-muted">Sign a quick wallet verification to register your IP</p>
+                </div>
+              </div>
+              <AnimatedButton variant="primary" className="px-4 py-2 text-xs" onClick={onRefresh} disabled={refreshing}>
+                {refreshing ? "Verifying..." : "Register Access"}
+              </AnimatedButton>
+            </div>
+          )}
+
+          <AnimatePresence>
+            {refreshResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="bg-success/10 rounded-lg p-3 text-sm text-success"
+              >
+                Access updated — IP {refreshResult} registered
+              </motion.div>
+            )}
+            {refreshError && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-red-400">
+                {refreshError}
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          <div className="bg-accent/5 border-accent/10 rounded-lg border p-3">
+            <p className="text-xs leading-relaxed text-muted">
+              Click &quot;
+              {signer?.lastIp ? "Refresh IP" : "Register Access"}&quot; to verify your wallet and whitelist your current
+              IP. This is a lightweight signature — it does not modify the contract.
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+    </FadeIn>
+  );
+}
 
 function formatUploadMeta(download: { uploadedByLabel?: string; uploadedAt?: string }) {
   const label = download.uploadedByLabel?.trim();
@@ -228,91 +331,14 @@ export function PostSignReveal({ documentId }: { documentId: string }) {
       </FadeIn>
 
       {/* Testbed Access */}
-      {reveal.testbedAccess?.enabled && (
-        <FadeIn delay={0.25}>
-          <GlassCard className="space-y-4 p-5 sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">&#127760;</span>
-              <h3 className="text-lg font-semibold">Testbed Access</h3>
-            </div>
-            {reveal.testbedAccess.description && (
-              <p className="text-sm text-secondary">{reveal.testbedAccess.description}</p>
-            )}
-
-            <div className="bg-surface/50 space-y-4 rounded-xl p-4">
-              {signer?.lastIp ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-success/20 flex h-8 w-8 items-center justify-center rounded-full text-sm text-success">
-                      &#10003;
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Access Granted</p>
-                      <p className="font-mono text-xs text-muted">{signer.lastIp}</p>
-                      {signer.ipUpdatedAt && (
-                        <p className="text-[10px] text-muted">{new Date(signer.ipUpdatedAt).toLocaleString()}</p>
-                      )}
-                    </div>
-                  </div>
-                  <AnimatedButton
-                    variant="secondary"
-                    className="px-3 py-2 text-xs"
-                    onClick={handleRefreshAccess}
-                    disabled={refreshing}
-                  >
-                    {refreshing ? "Verifying..." : "Refresh IP"}
-                  </AnimatedButton>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-warning/20 flex h-8 w-8 items-center justify-center rounded-full text-sm text-warning">
-                      !
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">IP Not Registered</p>
-                      <p className="text-xs text-muted">Sign a quick wallet verification to register your IP</p>
-                    </div>
-                  </div>
-                  <AnimatedButton
-                    variant="primary"
-                    className="px-4 py-2 text-xs"
-                    onClick={handleRefreshAccess}
-                    disabled={refreshing}
-                  >
-                    {refreshing ? "Verifying..." : "Register Access"}
-                  </AnimatedButton>
-                </div>
-              )}
-
-              <AnimatePresence>
-                {refreshResult && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-success/10 rounded-lg p-3 text-sm text-success"
-                  >
-                    Access updated — IP {refreshResult} registered
-                  </motion.div>
-                )}
-                {refreshMutation.error && (
-                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-red-400">
-                    {refreshMutation.error.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-
-              <div className="bg-accent/5 border-accent/10 rounded-lg border p-3">
-                <p className="text-xs leading-relaxed text-muted">
-                  Click &quot;{signer?.lastIp ? "Refresh IP" : "Register Access"}&quot; to verify your wallet and
-                  whitelist your current IP. This is a lightweight signature — it does not modify the contract.
-                </p>
-              </div>
-            </div>
-          </GlassCard>
-        </FadeIn>
-      )}
+      <TestbedAccessCard
+        testbedAccess={reveal.testbedAccess}
+        signer={signer}
+        refreshing={refreshing}
+        refreshResult={refreshResult}
+        refreshError={refreshMutation.error?.message ?? null}
+        onRefresh={handleRefreshAccess}
+      />
     </div>
   );
 }

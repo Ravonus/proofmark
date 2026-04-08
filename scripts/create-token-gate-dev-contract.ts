@@ -1,14 +1,14 @@
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { createHash, randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, resolve } from "path";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
-import { db } from "~/server/db";
-import { sessions } from "~/server/db/schema";
-import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
+import { type DocToken, tokensToContent } from "~/lib/document/document-tokens";
 import { normalizeSignerTokenGate, type SignerTokenGate } from "~/lib/token-gates";
 import type { AppRouter } from "~/server/api/root";
+import { db } from "~/server/db";
 import { insertDocumentCompat, insertSignersCompat } from "~/server/db/compat";
+import { sessions } from "~/server/db/schema";
 import { getDefaultReminderChannels } from "~/server/workspace";
 
 const DEFAULT_OWNER_ADDRESS = process.env.PM_OWNER_ADDRESS ?? "0x3000000000000000000000000000000000000C33";
@@ -86,13 +86,25 @@ function buildContent(): string {
     { kind: "heading", text: "1. Required Assets", sectionNum: 2 },
     { kind: "text", text: `1. Ordinal inscription ${BTC_INSCRIPTION_ID}.` },
     { kind: "break" },
-    { kind: "text", text: `2. Solana SPL token ${SOL_TOKEN_MINT} with a minimum balance of 1,000,000.` },
+    {
+      kind: "text",
+      text: `2. Solana SPL token ${SOL_TOKEN_MINT} with a minimum balance of 1,000,000.`,
+    },
     { kind: "break" },
-    { kind: "text", text: `3. Ethereum NFT ${ETH_NFT_CONTRACT} token #${ETH_NFT_TOKEN_ID}.` },
+    {
+      kind: "text",
+      text: `3. Ethereum NFT ${ETH_NFT_CONTRACT} token #${ETH_NFT_TOKEN_ID}.`,
+    },
     { kind: "break" },
-    { kind: "text", text: `4. MOG ERC-20 on Ethereum at ${MOG_ERC20_CONTRACT}.` },
+    {
+      kind: "text",
+      text: `4. MOG ERC-20 on Ethereum at ${MOG_ERC20_CONTRACT}.`,
+    },
     { kind: "break" },
-    { kind: "text", text: `5. Mad Lads #5454 on Solana (mint ${MAD_LADS_MINT}).` },
+    {
+      kind: "text",
+      text: `5. Mad Lads #5454 on Solana (mint ${MAD_LADS_MINT}).`,
+    },
     { kind: "break" },
     {
       kind: "text",

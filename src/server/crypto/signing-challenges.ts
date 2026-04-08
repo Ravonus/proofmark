@@ -10,8 +10,8 @@
  * 3. Canvas proof-of-work — server issues a render seed, client must return hash
  */
 
+import { createHash, createHmac, randomBytes } from "crypto";
 import { z } from "zod";
-import { createHmac, createHash, randomBytes } from "crypto";
 
 // Use the encryption master key as HMAC secret (or fall back to random)
 const HMAC_SECRET = process.env.ENCRYPTION_MASTER_KEY ?? randomBytes(32).toString("hex");
@@ -114,7 +114,11 @@ export function issueLivenessChallenge(documentId: string, claimToken: string): 
     issuedAt,
     expiresAt,
     stepNonces: steps.map((s) => s.nonce),
-    stepPositions: steps.map((s) => ({ x: s.targetX, y: s.targetY, kind: s.kind })),
+    stepPositions: steps.map((s) => ({
+      x: s.targetX,
+      y: s.targetY,
+      kind: s.kind,
+    })),
   });
   const token = `${id}.${hmacSign(payload)}`;
 
@@ -145,7 +149,11 @@ export function verifyLivenessChallenge(
       passRatio: 0,
       avgReactionMs: 0,
       flags: [
-        { code: "LIVENESS_TOKEN_INVALID", severity: "critical", message: "Liveness challenge token is malformed" },
+        {
+          code: "LIVENESS_TOKEN_INVALID",
+          severity: "critical",
+          message: "Liveness challenge token is malformed",
+        },
       ],
     };
   }
@@ -162,7 +170,13 @@ export function verifyLivenessChallenge(
       valid: false,
       passRatio: 0,
       avgReactionMs: 0,
-      flags: [{ code: "LIVENESS_NO_STEPS", severity: "critical", message: "No liveness steps returned" }],
+      flags: [
+        {
+          code: "LIVENESS_NO_STEPS",
+          severity: "critical",
+          message: "No liveness steps returned",
+        },
+      ],
     };
   }
 
@@ -246,7 +260,13 @@ export function verifyTimingToken(
     return {
       valid: false,
       elapsedMs: 0,
-      flags: [{ code: "TIMING_TOKEN_INVALID", severity: "critical", message: "Timing token is malformed" }],
+      flags: [
+        {
+          code: "TIMING_TOKEN_INVALID",
+          severity: "critical",
+          message: "Timing token is malformed",
+        },
+      ],
     };
   }
 
@@ -259,7 +279,13 @@ export function verifyTimingToken(
     return {
       valid: false,
       elapsedMs: 0,
-      flags: [{ code: "TIMING_TOKEN_TAMPERED", severity: "critical", message: "Timing token signature is invalid" }],
+      flags: [
+        {
+          code: "TIMING_TOKEN_TAMPERED",
+          severity: "critical",
+          message: "Timing token signature is invalid",
+        },
+      ],
     };
   }
 
@@ -435,7 +461,13 @@ export function verifyCanvasChallenge(
   if (dotIndex === -1) {
     return {
       valid: false,
-      flags: [{ code: "CANVAS_TOKEN_INVALID", severity: "critical", message: "Canvas challenge token is malformed" }],
+      flags: [
+        {
+          code: "CANVAS_TOKEN_INVALID",
+          severity: "critical",
+          message: "Canvas challenge token is malformed",
+        },
+      ],
     };
   }
 
@@ -447,7 +479,11 @@ export function verifyCanvasChallenge(
     return {
       valid: false,
       flags: [
-        { code: "CANVAS_TOKEN_TAMPERED", severity: "critical", message: "Canvas challenge token signature is invalid" },
+        {
+          code: "CANVAS_TOKEN_TAMPERED",
+          severity: "critical",
+          message: "Canvas challenge token signature is invalid",
+        },
       ],
     };
   }

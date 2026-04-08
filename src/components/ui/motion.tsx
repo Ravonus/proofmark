@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence, type Variants } from "framer-motion";
-import { type ReactNode, type ComponentProps, useRef, useCallback } from "react";
-import { CheckCircle, FileSignature, Send, Lock, Plus } from "lucide-react";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { CheckCircle, FileSignature, Lock, Plus, Send } from "lucide-react";
+import { type ComponentProps, type ReactNode, useCallback, useRef } from "react";
 
 // ── Fade + slide in from bottom ─────────────────────────────────────────────
 
@@ -387,7 +387,11 @@ export function OnboardingChecklist({
                     }`}
                     initial={{ scale: 0.85, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: i * 0.1, duration: 0.25, ease: "easeOut" }}
+                    transition={{
+                      delay: i * 0.1,
+                      duration: 0.25,
+                      ease: "easeOut",
+                    }}
                   >
                     {step.icon}
                   </motion.div>

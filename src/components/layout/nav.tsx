@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
-import { useWallet, WalletButton } from "./wallet-provider";
-import { useSession } from "~/lib/auth/auth-client";
-import { ThemeToggle } from "../ui/theme-toggle";
+import { AnimatePresence, motion } from "framer-motion";
+import { LayoutDashboard, LogIn, Menu, Plus, Settings, Shield, ShieldCheck, User, X } from "lucide-react";
 import Link from "next/link";
-import { W3SLink, W3SIconButton } from "../ui/motion";
-import { Plus, LayoutDashboard, ShieldCheck, Settings, Shield, LogIn, User, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useSession } from "~/lib/auth/auth-client";
+import { W3SIconButton, W3SLink } from "../ui/motion";
+import { ThemeToggle } from "../ui/theme-toggle";
+import { useWallet, WalletButton } from "./wallet-provider";
 
 const navLinks = [
   { href: "/", label: "New", icon: Plus },
@@ -70,7 +70,11 @@ export function Nav({ badge }: { badge?: { label: string; color?: string } }) {
                     <motion.span
                       layoutId="nav-indicator"
                       className="absolute inset-x-3 -bottom-[7px] h-px bg-[var(--accent)]"
-                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 35,
+                      }}
                     />
                   )}
                 </Link>

@@ -9,13 +9,14 @@
  * state parameter with "sv:" so we can tell the two apart.
  */
 
+import { toNextJsHandler } from "better-auth/next-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth/auth";
-import { toNextJsHandler } from "better-auth/next-js";
 
 export const dynamic = "force-dynamic";
 
 const { GET: betterAuthGET, POST } = toNextJsHandler(auth);
+
 export { POST };
 
 export async function GET(req: NextRequest) {

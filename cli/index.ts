@@ -1,4 +1,5 @@
 #!/usr/bin/env node --no-deprecation
+/* eslint-disable no-console, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-floating-promises */
 /**
  * Proofmark CLI
  *
@@ -12,14 +13,14 @@
 // Suppress punycode deprecation warning
 process.removeAllListeners("warning");
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync, createHash } from "crypto";
-import { createInterface } from "readline";
-import { homedir } from "os";
-import { join } from "path";
-import { Wallet } from "ethers";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "crypto";
+import { Wallet } from "ethers";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
+import { createInterface } from "readline";
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -43,23 +44,29 @@ function ask(prompt: string, hide = false): Promise<string> {
       const wasRaw = stdin.isRaw;
       if (stdin.setRawMode) stdin.setRawMode(true);
       let input = "";
+      const finishInput = () => {
+        if (stdin.setRawMode) stdin.setRawMode(wasRaw ?? false);
+        process.stdout.write("\n");
+        r.close();
+        resolve(input);
+      };
       const onData = (ch: Buffer) => {
         const c = ch.toString();
         if (c === "\n" || c === "\r") {
-          if (stdin.setRawMode) stdin.setRawMode(wasRaw ?? false);
           stdin.removeListener("data", onData);
-          process.stdout.write("\n");
-          r.close();
-          resolve(input);
-        } else if (c === "\x7f" || c === "\b") {
+          finishInput();
+          return;
+        }
+        if (c === "\x7f" || c === "\b") {
           input = input.slice(0, -1);
           process.stdout.write("\b \b");
-        } else if (c === "\x03") {
-          process.exit(0);
-        } else {
-          input += c;
-          process.stdout.write("*");
+          return;
         }
+        if (c === "\x03") {
+          process.exit(0);
+        }
+        input += c;
+        process.stdout.write("*");
       };
       stdin.on("data", onData);
     } else {
@@ -127,7 +134,11 @@ function saveEncryptedKey(data: { encrypted: string; salt: string; iv: string })
   writeFileSync(KEY_FILE, JSON.stringify(data), { mode: 0o600 });
 }
 
-function loadEncryptedKey(): { encrypted: string; salt: string; iv: string } | null {
+function loadEncryptedKey(): {
+  encrypted: string;
+  salt: string;
+  iv: string;
+} | null {
   if (!existsSync(KEY_FILE)) return null;
   return JSON.parse(readFileSync(KEY_FILE, "utf8"));
 }
@@ -160,27 +171,25 @@ async function apiCall(procedure: string, input: unknown): Promise<unknown> {
 
 // ─── Key Detection ──────────────────────────────────────────────────────────
 
-function detectKeyChain(
-  pk: string,
-): { chain: string; address: string; storedPk: string } | null {
-  const trimmed = pk.trim();
+type DetectedKey = { chain: string; address: string; storedPk: string };
 
-  // ── Try ETH first: 0x-prefixed or 64 hex chars ──
+function tryDetectETH(trimmed: string): DetectedKey | null {
   const ethCandidate = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-  if (/^0x[0-9a-fA-F]{64}$/.test(ethCandidate)) {
-    try {
-      const wallet = new Wallet(ethCandidate);
-      return {
-        chain: "ETH",
-        address: wallet.address.toLowerCase(),
-        storedPk: wallet.privateKey,
-      };
-    } catch {
-      // not ETH, continue
-    }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(ethCandidate)) return null;
+  try {
+    const wallet = new Wallet(ethCandidate);
+    return {
+      chain: "ETH",
+      address: wallet.address.toLowerCase(),
+      storedPk: wallet.privateKey,
+    };
+  } catch {
+    return null;
   }
+}
 
-  // ── Try SOL: base58 secret key (typically 87-88 chars) ──
+function tryDetectSOL(trimmed: string): DetectedKey | null {
+  // base58 secret key (typically 87-88 chars)
   try {
     const decoded = bs58.decode(trimmed);
     if (decoded.length === 64) {
@@ -192,10 +201,10 @@ function detectKeyChain(
       };
     }
   } catch {
-    // not base58 SOL
+    /* not base58 SOL */
   }
 
-  // ── Try SOL: JSON byte array ──
+  // JSON byte array
   if (trimmed.startsWith("[")) {
     try {
       const bytes = JSON.parse(trimmed);
@@ -208,11 +217,11 @@ function detectKeyChain(
         };
       }
     } catch {
-      // not JSON SOL
+      /* not JSON SOL */
     }
   }
 
-  // ── Try SOL: 128 hex chars (64 bytes as hex) ──
+  // 128 hex chars (64 bytes as hex)
   if (/^[0-9a-fA-F]{128}$/.test(trimmed)) {
     try {
       const keypair = Keypair.fromSecretKey(Buffer.from(trimmed, "hex"));
@@ -222,31 +231,33 @@ function detectKeyChain(
         storedPk: bs58.encode(keypair.secretKey),
       };
     } catch {
-      // not hex SOL
-    }
-  }
-
-  // ── Try BTC: WIF format (starts with 5, K, or L) ──
-  if (/^[5KL][1-9A-HJ-NP-Za-km-z]{50,51}$/.test(trimmed)) {
-    try {
-      // Validate WIF by base58check decoding
-      const decoded = bs58.decode(trimmed);
-      if (decoded.length >= 33 && decoded.length <= 38) {
-        // Valid WIF — derive a display address from the key hash
-        const keyHash = createHash("sha256").update(decoded.slice(1, 33)).digest();
-        const ripemd = createHash("ripemd160").update(keyHash).digest("hex");
-        return {
-          chain: "BTC",
-          address: `1${ripemd.slice(0, 32)}`, // simplified display
-          storedPk: trimmed,
-        };
-      }
-    } catch {
-      // not WIF
+      /* not hex SOL */
     }
   }
 
   return null;
+}
+
+function tryDetectBTC(trimmed: string): DetectedKey | null {
+  if (!/^[5KL][1-9A-HJ-NP-Za-km-z]{50,51}$/.test(trimmed)) return null;
+  try {
+    const decoded = bs58.decode(trimmed);
+    if (decoded.length < 33 || decoded.length > 38) return null;
+    const keyHash = createHash("sha256").update(decoded.slice(1, 33)).digest();
+    const ripemd = createHash("ripemd160").update(keyHash).digest("hex");
+    return {
+      chain: "BTC",
+      address: `1${ripemd.slice(0, 32)}`,
+      storedPk: trimmed,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function detectKeyChain(pk: string): DetectedKey | null {
+  const trimmed = pk.trim();
+  return tryDetectETH(trimmed) ?? tryDetectSOL(trimmed) ?? tryDetectBTC(trimmed);
 }
 
 // ─── Commands ───────────────────────────────────────────────────────────────
@@ -334,6 +345,69 @@ async function unlockKey(): Promise<UnlockedKey> {
   }
 }
 
+const TEMPLATE_GENERATORS: Record<string, (parties: string[], date: string, term: string) => string> = {
+  "1": generateMutualNDA,
+  "": generateMutualNDA,
+  "2": generateOneWayNDA,
+  "3": generateCryptoNDA,
+  "4": generateServiceAgreement,
+  "5": generateConsultingAgreement,
+};
+
+async function generateContent(
+  templateChoice: string,
+  signersList: Array<{ label: string; email: string }>,
+): Promise<string> {
+  const term = "3 years";
+  const partyNames = signersList.map((s) => s.label);
+  const effectiveDate = new Date().toISOString().split("T")[0]!;
+  const generator = TEMPLATE_GENERATORS[templateChoice];
+  if (generator) return generator(partyNames, effectiveDate, term);
+  return askMultiline("\n  Paste document content:");
+}
+
+async function promptPostSignReveal(): Promise<Record<string, unknown> | undefined> {
+  const addReveal = await ask("\n  Add post-sign reveal content? (y/N): ");
+  if (addReveal.toLowerCase() !== "y") return undefined;
+
+  const summary = await ask("  Reveal summary: ");
+  const downloads = await promptDownloads();
+  const testbedAccess = await promptTestbedAccess();
+
+  return {
+    enabled: true,
+    summary,
+    downloads: downloads.length > 0 ? downloads : undefined,
+    testbedAccess,
+  };
+}
+
+async function promptDownloads(): Promise<Array<Record<string, string>>> {
+  const addDownloads = await ask("  Add PDF downloads? (y/N): ");
+  if (addDownloads.toLowerCase() !== "y") return [];
+
+  const downloads: Array<Record<string, string>> = [];
+  let addMoreDl = true;
+  while (addMoreDl) {
+    const dlLabel = await ask("    Download label: ");
+    if (!dlLabel) break;
+    const dlFile = await ask("    Filename (in /public/downloads/): ");
+    const dlDesc = await ask("    Description: ");
+    downloads.push({ label: dlLabel, filename: dlFile, description: dlDesc });
+    const moreDl = await ask("    Add another download? (y/N): ");
+    addMoreDl = moreDl.toLowerCase() === "y";
+  }
+  return downloads;
+}
+
+async function promptTestbedAccess(): Promise<Record<string, unknown> | undefined> {
+  const addTestbed = await ask("  Add testbed/docs access gating? (y/N): ");
+  if (addTestbed.toLowerCase() !== "y") return undefined;
+  const desc = await ask("    Access description: ");
+  const domain = await ask("    Proxy domain (e.g., agorix-docs.technomancy.it): ");
+  return { enabled: true, description: desc, proxyEndpoint: domain };
+}
+
 async function create() {
   console.log("\n  ┌─────────────────────────────┐");
   console.log("  │   Create New Document       │");
@@ -387,66 +461,10 @@ async function create() {
   }
 
   // Generate content
-  let content: string;
-  const term = "3 years";
-  const partyNames = signersList.map((s) => s.label);
-  const effectiveDate = new Date().toISOString().split("T")[0];
-
-  if (templateChoice === "1" || templateChoice === "") {
-    content = generateMutualNDA(partyNames, effectiveDate!, term);
-  } else if (templateChoice === "2") {
-    content = generateOneWayNDA(partyNames, effectiveDate!, term);
-  } else if (templateChoice === "3") {
-    content = generateCryptoNDA(partyNames, effectiveDate!, term);
-  } else if (templateChoice === "4") {
-    content = generateServiceAgreement(partyNames, effectiveDate!, term);
-  } else if (templateChoice === "5") {
-    content = generateConsultingAgreement(partyNames, effectiveDate!, term);
-  } else {
-    content = await askMultiline("\n  Paste document content:");
-  }
+  const content = await generateContent(templateChoice, signersList);
 
   // Post-sign reveal?
-  const addReveal = await ask("\n  Add post-sign reveal content? (y/N): ");
-  let postSignReveal: Record<string, unknown> | undefined;
-
-  if (addReveal.toLowerCase() === "y") {
-    const summary = await ask("  Reveal summary: ");
-    const addDownloads = await ask("  Add PDF downloads? (y/N): ");
-
-    const downloads: Array<Record<string, string>> = [];
-    if (addDownloads.toLowerCase() === "y") {
-      let addMoreDl = true;
-      while (addMoreDl) {
-        const dlLabel = await ask("    Download label: ");
-        if (!dlLabel) break;
-        const dlFile = await ask("    Filename (in /public/downloads/): ");
-        const dlDesc = await ask("    Description: ");
-        downloads.push({ label: dlLabel, filename: dlFile, description: dlDesc });
-        const moreDl = await ask("    Add another download? (y/N): ");
-        addMoreDl = moreDl.toLowerCase() === "y";
-      }
-    }
-
-    const addTestbed = await ask("  Add testbed/docs access gating? (y/N): ");
-    let testbedAccess: Record<string, unknown> | undefined;
-    if (addTestbed.toLowerCase() === "y") {
-      const desc = await ask("    Access description: ");
-      const domain = await ask("    Proxy domain (e.g., agorix-docs.technomancy.it): ");
-      testbedAccess = {
-        enabled: true,
-        description: desc,
-        proxyEndpoint: domain,
-      };
-    }
-
-    postSignReveal = {
-      enabled: true,
-      summary,
-      downloads: downloads.length > 0 ? downloads : undefined,
-      testbedAccess,
-    };
-  }
+  const postSignReveal = await promptPostSignReveal();
 
   // Create via API
   console.log("\n  Creating document...");
@@ -461,7 +479,10 @@ async function create() {
       email: s.email || undefined,
     })),
     postSignReveal,
-  })) as { id: string; signerLinks: Array<{ label: string; claimToken: string; signUrl: string }> };
+  })) as {
+    id: string;
+    signerLinks: Array<{ label: string; claimToken: string; signUrl: string }>;
+  };
 
   const publicBase = process.env.PROOFMARK_PUBLIC_URL ?? "https://docu.technomancy.it";
 

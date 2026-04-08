@@ -8,14 +8,14 @@
  * (gitignored) and this router loads them at runtime.
  */
 
-import { z } from "zod";
-import { createTRPCRouter, publicProcedure, authedProcedure } from "~/server/api/trpc";
-import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
-import { loadPremiumChains, getPremiumFeatures } from "~/lib/platform/premium";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
-import { documents } from "~/server/db/schema";
+import { z } from "zod";
+import { getPremiumFeatures, loadPremiumChains } from "~/lib/platform/premium";
+import { authedProcedure, createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { requireFeatureForWallet, resolveWalletIdentity } from "~/server/crypto/operator-access";
+import { documents } from "~/server/db/schema";
 
 export const anchorRouter = createTRPCRouter({
   /** Check premium feature availability. */
@@ -31,14 +31,24 @@ export const anchorRouter = createTRPCRouter({
     }
 
     const [doc] = await ctx.db
-      .select({ contentHash: documents.contentHash, createdBy: documents.createdBy })
+      .select({
+        contentHash: documents.contentHash,
+        createdBy: documents.createdBy,
+      })
       .from(documents)
       .where(eq(documents.id, input.documentId))
       .limit(1);
 
-    if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
+    if (!doc)
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Document not found",
+      });
     if (!identity.walletAddressSet.has(doc.createdBy.toLowerCase())) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Only the document creator can anchor" });
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only the document creator can anchor",
+      });
     }
 
     await requireFeatureForWallet(
@@ -50,7 +60,10 @@ export const anchorRouter = createTRPCRouter({
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- premium module type unresolvable in OSS build
     const chains = await loadPremiumChains();
     if (!chains) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Premium feature — upgrade to enable blockchain anchoring" });
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Premium feature — upgrade to enable blockchain anchoring",
+      });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- premium module
@@ -72,7 +85,11 @@ export const anchorRouter = createTRPCRouter({
       .where(eq(documents.id, input.documentId))
       .limit(1);
 
-    if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
+    if (!doc)
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Document not found",
+      });
     if (!identity.walletAddressSet.has(doc.createdBy.toLowerCase())) {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
@@ -97,7 +114,10 @@ export const anchorRouter = createTRPCRouter({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- premium module
       return { auditHash, ...result };
     } catch (e) {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (e as Error).message });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: (e as Error).message,
+      });
     }
   }),
 

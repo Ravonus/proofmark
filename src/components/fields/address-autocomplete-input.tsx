@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, MapPin } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AddressSuggestion } from "~/lib/address-autocomplete";
 
 type Props = {

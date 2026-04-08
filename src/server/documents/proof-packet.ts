@@ -15,14 +15,6 @@
 
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
-import { db } from "~/server/db";
-import { documents, signers } from "~/server/db/schema";
-import {
-  getAuditTrail,
-  verifyAuditChainByDocId as verifyAuditChain,
-  generateSignedPDF,
-} from "~/server/crypto/rust-engine";
-import { deriveSecurityMode } from "~/lib/signing/document-security";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type {
   ForensicSessionLivenessProfile,
@@ -30,6 +22,14 @@ import type {
   PersistedForensicSessionCapture,
   SignerBaselineProfile,
 } from "~/lib/forensic/session";
+import { deriveSecurityMode } from "~/lib/signing/document-security";
+import {
+  generateSignedPDF,
+  getAuditTrail,
+  verifyAuditChainByDocId as verifyAuditChain,
+} from "~/server/crypto/rust-engine";
+import { db } from "~/server/db";
+import { documents, signers } from "~/server/db/schema";
 
 type EyeTrackingSessionSummary = {
   active?: boolean;
@@ -222,6 +222,67 @@ function extractBlockchainRefsFromForensics(
   return refs;
 }
 
+function buildGeoSection(fe: ProofPacketForensicEvidenceData) {
+  if (!fe.geo) return null;
+  return {
+    city: fe.geo.city,
+    region: fe.geo.region,
+    country: fe.geo.country,
+    latitude: fe.geo.latitude,
+    longitude: fe.geo.longitude,
+    isp: fe.geo.isp,
+    isVpn: fe.geo.isVpn,
+    isProxy: fe.geo.isProxy,
+    isTor: fe.geo.isTor,
+    isDatacenter: fe.geo.isDatacenter,
+  };
+}
+
+function buildBehavioralSection(fe: ProofPacketForensicEvidenceData) {
+  if (!fe.behavioral) return null;
+  return {
+    timeOnPage: fe.behavioral.timeOnPage,
+    scrolledToBottom: fe.behavioral.scrolledToBottom,
+    maxScrollDepth: fe.behavioral.maxScrollDepth,
+    pasteEvents: fe.behavioral.pasteEvents,
+    copyEvents: fe.behavioral.copyEvents,
+    cutEvents: fe.behavioral.cutEvents,
+  };
+}
+
+function buildReplaySection(fe: ProofPacketForensicEvidenceData) {
+  if (!fe.behavioral?.replay) return null;
+  const r = fe.behavioral.replay;
+  return {
+    encoding: r.encoding,
+    tapeHash: r.tapeHash,
+    eventCount: r.metrics.eventCount,
+    byteLength: r.metrics.byteLength,
+    targetCount: r.metrics.targetCount,
+    stringCount: r.metrics.stringCount,
+    signatureStrokeCount: r.metrics.signatureStrokeCount,
+    signaturePointCount: r.metrics.signaturePointCount,
+    clipboardEventCount: r.metrics.clipboardEventCount,
+    capabilities: r.capabilities,
+  };
+}
+
+function buildStorageSection(fe: ProofPacketForensicEvidenceData) {
+  if (!fe.storage) return null;
+  return {
+    mode: fe.storage.mode,
+    objectCid: fe.storage.objectCid ?? null,
+    objectHash: fe.storage.objectHash ?? null,
+    byteLength: fe.storage.byteLength,
+    anchored: fe.storage.anchored,
+    anchors: fe.storage.anchors.map((anchor) => ({
+      chain: anchor.chain,
+      status: anchor.status,
+      txHash: anchor.txHash ?? null,
+    })),
+  };
+}
+
 export function buildProofPacketForensicSection(
   fe: ProofPacketForensicEvidenceData | null,
   forensicHash: string | null,
@@ -232,59 +293,11 @@ export function buildProofPacketForensicSection(
     evidenceHash: forensicHash ?? fe.evidenceHash ?? null,
     visitorId: fe.fingerprint?.visitorId ?? null,
     persistentId: fe.fingerprint?.persistentId ?? null,
-    geo: fe.geo
-      ? {
-          city: fe.geo.city,
-          region: fe.geo.region,
-          country: fe.geo.country,
-          latitude: fe.geo.latitude,
-          longitude: fe.geo.longitude,
-          isp: fe.geo.isp,
-          isVpn: fe.geo.isVpn,
-          isProxy: fe.geo.isProxy,
-          isTor: fe.geo.isTor,
-          isDatacenter: fe.geo.isDatacenter,
-        }
-      : null,
+    geo: buildGeoSection(fe),
     flags: fe.flags ?? [],
-    behavioral: fe.behavioral
-      ? {
-          timeOnPage: fe.behavioral.timeOnPage,
-          scrolledToBottom: fe.behavioral.scrolledToBottom,
-          maxScrollDepth: fe.behavioral.maxScrollDepth,
-          pasteEvents: fe.behavioral.pasteEvents,
-          copyEvents: fe.behavioral.copyEvents,
-          cutEvents: fe.behavioral.cutEvents,
-        }
-      : null,
-    replay: fe.behavioral?.replay
-      ? {
-          encoding: fe.behavioral.replay.encoding,
-          tapeHash: fe.behavioral.replay.tapeHash,
-          eventCount: fe.behavioral.replay.metrics.eventCount,
-          byteLength: fe.behavioral.replay.metrics.byteLength,
-          targetCount: fe.behavioral.replay.metrics.targetCount,
-          stringCount: fe.behavioral.replay.metrics.stringCount,
-          signatureStrokeCount: fe.behavioral.replay.metrics.signatureStrokeCount,
-          signaturePointCount: fe.behavioral.replay.metrics.signaturePointCount,
-          clipboardEventCount: fe.behavioral.replay.metrics.clipboardEventCount,
-          capabilities: fe.behavioral.replay.capabilities,
-        }
-      : null,
-    storage: fe.storage
-      ? {
-          mode: fe.storage.mode,
-          objectCid: fe.storage.objectCid ?? null,
-          objectHash: fe.storage.objectHash ?? null,
-          byteLength: fe.storage.byteLength,
-          anchored: fe.storage.anchored,
-          anchors: fe.storage.anchors.map((anchor) => ({
-            chain: anchor.chain,
-            status: anchor.status,
-            txHash: anchor.txHash ?? null,
-          })),
-        }
-      : null,
+    behavioral: buildBehavioralSection(fe),
+    replay: buildReplaySection(fe),
+    storage: buildStorageSection(fe),
     automationReview: fe.automationReview
       ? {
           verdict: fe.automationReview.verdict,
@@ -421,7 +434,11 @@ export async function generateProofPacket(documentId: string): Promise<{ manifes
 
   // Generate PDF
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://docu.technomancy.it";
-  const pdf = await generateSignedPDF({ doc, signers: allSigners, verifyUrl: `${baseUrl}/verify/${doc.contentHash}` });
+  const pdf = await generateSignedPDF({
+    doc,
+    signers: allSigners,
+    verifyUrl: `${baseUrl}/verify/${doc.contentHash}`,
+  });
 
   return { manifest: fullManifest, pdf: Buffer.from(pdf) };
 }

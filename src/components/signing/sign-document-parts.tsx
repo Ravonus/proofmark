@@ -1,11 +1,11 @@
 "use client";
 
+import { AlertCircle, Check } from "lucide-react";
 import { memo } from "react";
+import { addressPreview, CHAIN_META, type WalletChain } from "~/lib/crypto/chains";
 import { trpc } from "~/lib/platform/trpc";
-import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/crypto/chains";
 import { getRecipientCompletedLabel, isViewOnlyRecipientRole } from "~/lib/signing/recipient-roles";
 import { describeSignerTokenGate } from "~/lib/token-gates";
-import { AlertCircle, Check } from "lucide-react";
 import type { SignerInfo } from "./sign-document-helpers";
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -49,6 +49,76 @@ export const DocumentHeader = memo(function DocumentHeader({
   );
 });
 
+function getSignerStatusLabel(signer: SignerInfo, role: string): string {
+  if (signer.status === "SIGNED") return getRecipientCompletedLabel(role);
+  if (signer.status === "DECLINED") return "Declined";
+  if (isViewOnlyRecipientRole(role)) return "View-only";
+  if (signer.canSign === false) return "Waiting turn";
+  return "Pending";
+}
+
+function getSignerStatusClassName(signer: SignerInfo, role: string): string {
+  if (signer.status === "SIGNED") return "text-green-400";
+  if (signer.status === "DECLINED") return "text-red-400";
+  if (signer.canSign === false && !isViewOnlyRecipientRole(role)) return "text-sky-400";
+  if (isViewOnlyRecipientRole(role)) return "text-muted";
+  return "text-amber-400";
+}
+
+function resolveSignerStatus(signer: SignerInfo) {
+  const role = signer.role ?? "SIGNER";
+  return {
+    role,
+    statusLabel: getSignerStatusLabel(signer, role),
+    statusClassName: getSignerStatusClassName(signer, role),
+  };
+}
+
+function SignerRow({ signer, currentAddress }: { signer: SignerInfo; currentAddress: string | null }) {
+  const meta = signer.chain ? CHAIN_META[signer.chain as WalletChain] : null;
+  const isMe = signer.isYou || (currentAddress && signer.address?.toLowerCase() === currentAddress.toLowerCase());
+  const roleLabel = (signer.role ?? "SIGNER").toLowerCase().replace(/_/g, " ");
+  const contactLabel = signer.address ? addressPreview(signer.address) : signer.email || "Not yet claimed";
+  const tokenGateLabel = signer.tokenGates ? describeSignerTokenGate(signer.tokenGates) : null;
+  const { statusLabel, statusClassName } = resolveSignerStatus(signer);
+
+  return (
+    <div
+      className={`flex items-center justify-between rounded-xl px-4 py-3 ${isMe ? "bg-accent/10 ring-accent/20 ring-1" : "bg-surface-card"}`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${signer.status === "SIGNED" ? "bg-green-500/15" : "bg-surface-hover"}`}
+        >
+          {signer.status === "SIGNED" ? (
+            <Check className="h-4 w-4 text-green-400" />
+          ) : meta ? (
+            <span style={{ color: meta.color }}>{meta.icon}</span>
+          ) : (
+            <span className="text-xs text-muted">?</span>
+          )}
+        </div>
+        <div>
+          <p className="text-sm font-medium">
+            {signer.label}
+            {isMe && <span className="ml-2 text-[10px] font-normal text-accent">(you)</span>}
+          </p>
+          <p className="font-mono text-xs text-muted">{contactLabel}</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{roleLabel}</p>
+          {tokenGateLabel && <p className="mt-1 text-[10px] text-amber-300/80">Token-gated: {tokenGateLabel}</p>}
+        </div>
+      </div>
+      <div className="text-right">
+        <p className={`flex items-center justify-end gap-1 text-xs font-medium ${statusClassName}`}>
+          {signer.status === "SIGNED" && <Check className="h-3 w-3" />}
+          {statusLabel}
+        </p>
+        {signer.signedAt && <p className="text-[10px] text-muted">{new Date(signer.signedAt).toLocaleDateString()}</p>}
+      </div>
+    </div>
+  );
+}
+
 export const SignerList = memo(function SignerList({
   signers,
   currentAddress,
@@ -60,75 +130,9 @@ export const SignerList = memo(function SignerList({
     <div className="glass-card space-y-3 rounded-2xl p-5">
       <h3 className="text-sm font-medium text-secondary">Recipients</h3>
       <div className="space-y-2">
-        {signers.map((signer, idx) => {
-          const meta = signer.chain ? CHAIN_META[signer.chain as WalletChain] : null;
-          const isMe =
-            signer.isYou || (currentAddress && signer.address?.toLowerCase() === currentAddress.toLowerCase());
-          const role = signer.role ?? "SIGNER";
-          const roleLabel = role.toLowerCase().replace(/_/g, " ");
-          const contactLabel = signer.address ? addressPreview(signer.address) : signer.email || "Not yet claimed";
-          const tokenGateLabel = signer.tokenGates ? describeSignerTokenGate(signer.tokenGates) : null;
-          const statusLabel =
-            signer.status === "SIGNED"
-              ? getRecipientCompletedLabel(role)
-              : signer.status === "DECLINED"
-                ? "Declined"
-                : isViewOnlyRecipientRole(role)
-                  ? "View-only"
-                  : signer.canSign === false
-                    ? "Waiting turn"
-                    : "Pending";
-          const statusClassName =
-            signer.status === "SIGNED"
-              ? "text-green-400"
-              : signer.status === "DECLINED"
-                ? "text-red-400"
-                : signer.canSign === false && !isViewOnlyRecipientRole(role)
-                  ? "text-sky-400"
-                  : isViewOnlyRecipientRole(role)
-                    ? "text-muted"
-                    : "text-amber-400";
-          return (
-            <div
-              key={idx}
-              className={`flex items-center justify-between rounded-xl px-4 py-3 ${isMe ? "bg-accent/10 ring-accent/20 ring-1" : "bg-surface-card"}`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${signer.status === "SIGNED" ? "bg-green-500/15" : "bg-surface-hover"}`}
-                >
-                  {signer.status === "SIGNED" ? (
-                    <Check className="h-4 w-4 text-green-400" />
-                  ) : meta ? (
-                    <span style={{ color: meta.color }}>{meta.icon}</span>
-                  ) : (
-                    <span className="text-xs text-muted">?</span>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium">
-                    {signer.label}
-                    {isMe && <span className="ml-2 text-[10px] font-normal text-accent">(you)</span>}
-                  </p>
-                  <p className="font-mono text-xs text-muted">{contactLabel}</p>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted">{roleLabel}</p>
-                  {tokenGateLabel && (
-                    <p className="mt-1 text-[10px] text-amber-300/80">Token-gated: {tokenGateLabel}</p>
-                  )}
-                </div>
-              </div>
-              <div className="text-right">
-                <p className={`flex items-center justify-end gap-1 text-xs font-medium ${statusClassName}`}>
-                  {signer.status === "SIGNED" && <Check className="h-3 w-3" />}
-                  {statusLabel}
-                </p>
-                {signer.signedAt && (
-                  <p className="text-[10px] text-muted">{new Date(signer.signedAt).toLocaleDateString()}</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {signers.map((signer, idx) => (
+          <SignerRow key={idx} signer={signer} currentAddress={currentAddress} />
+        ))}
       </div>
     </div>
   );

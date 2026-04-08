@@ -6,8 +6,9 @@
  * Usage:
  *   NEXTAUTH_URL=https://docu.technomancy.it npx tsx scripts/sign-as-human-bot.ts
  */
-import puppeteer from "puppeteer";
+
 import { Wallet } from "ethers";
+import puppeteer from "puppeteer";
 
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3100";
 
@@ -79,7 +80,10 @@ async function drawHumanSignature(page: puppeteer.Page, canvas: puppeteer.Elemen
   let isDown = false;
   for (const p of points) {
     if (p.x === -1) {
-      if (isDown) { await page.mouse.up(); isDown = false; }
+      if (isDown) {
+        await page.mouse.up();
+        isDown = false;
+      }
       await sleep(randomBetween(80, 200));
       continue;
     }
@@ -95,61 +99,30 @@ async function drawHumanSignature(page: puppeteer.Page, canvas: puppeteer.Elemen
   if (isDown) await page.mouse.up();
 }
 
-// ── Main ────────────────────────────────────────────────────
+// ── Page navigation ─────────────────────────────────────────
 
-async function main() {
-  console.log("Launching browser...");
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--window-size=1440,900"],
-    defaultViewport: { width: 1440, height: 900 },
-  });
-
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-  );
-
-  // Step 1: Use the signing URL from args or the latest contract
+async function navigateToSigningPage(page: puppeteer.Page): Promise<void> {
   const signUrl = process.argv[2];
-  if (!signUrl) {
-    // Try to read from the latest contract output
-    const fs = await import("fs/promises");
-    try {
-      const contractData = JSON.parse(await fs.readFile("tmp/eye-tracking-test-contract.json", "utf8"));
-      const url = contractData.partyB?.signUrl;
-      if (url) {
-        console.log(`Using URL from latest contract: ${url}`);
-        await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-      } else {
-        throw new Error("No sign URL found. Pass one as argument: npx tsx scripts/sign-as-human-bot.ts <URL>");
-      }
-    } catch (e) {
-      throw new Error("No sign URL. Run create-eye-tracking-test-contract.ts first, or pass URL as argument.");
-    }
-  } else {
+  if (signUrl) {
     console.log(`Opening: ${signUrl}`);
     await page.goto(signUrl, { waitUntil: "networkidle2", timeout: 30000 });
+    return;
   }
-  const currentUrl = page.url();
-  const docId = currentUrl.match(/\/sign\/([^?]+)/)?.[1] ?? "unknown";
+  const fs = await import("fs/promises");
+  try {
+    const contractData = JSON.parse(await fs.readFile("tmp/eye-tracking-test-contract.json", "utf8"));
+    const url = contractData.partyB?.signUrl;
+    if (!url) {
+      throw new Error("No sign URL found.");
+    }
+    console.log(`Using URL from latest contract: ${url}`);
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+  } catch {
+    throw new Error("No sign URL. Run create-eye-tracking-test-contract.ts first, or pass URL as argument.");
+  }
+}
 
-  await sleep(2000);
-  console.log("Page loaded. Starting human-like interaction...");
-
-  // Step 2: Read the document (scroll through it slowly)
-  console.log("  Scrolling through document like a reader...");
-  await humanMouseWander(page, 3);
-  await humanScroll(page, 800, 6);
-  await sleep(randomBetween(1000, 2000));
-  await humanMouseWander(page, 2);
-  await humanScroll(page, 800, 6);
-  await sleep(randomBetween(1500, 3000));
-  await humanScroll(page, 600, 4);
-
-  // Step 3: Fill in fields
-  console.log("  Filling in fields with human-like typing...");
-  // Look for input fields
+async function fillFields(page: puppeteer.Page): Promise<void> {
   const inputs = await page.$$("input[type='text'], input[type='email'], input:not([type])");
   const fieldValues = [
     "Marcus Rivera",
@@ -177,85 +150,50 @@ async function main() {
     await page.keyboard.press("Tab");
     await sleep(randomBetween(400, 1000));
   }
+}
 
-  // Step 4: Scroll to signature area
-  console.log("  Scrolling to signature...");
-  await humanScroll(page, 600, 5);
-  await sleep(randomBetween(1000, 2000));
-
-  // Step 5: Draw signature on canvas
-  console.log("  Drawing signature...");
-  const canvas = await page.$("canvas");
-  if (canvas) {
-    await canvas.scrollIntoView();
-    await sleep(500);
-    await drawHumanSignature(page, canvas);
-    await sleep(randomBetween(500, 1000));
-  } else {
-    console.log("  (No canvas found — skipping signature drawing)");
-  }
-
-  // Step 5.5: Inject synthetic gaze data to trick the eye tracking system
-  // A sophisticated bot might try to fake gaze events to look human
-  console.log("  Injecting synthetic gaze data (trying to trick eye tracking)...");
+async function injectSyntheticGaze(page: puppeteer.Page): Promise<void> {
   await page.evaluate(() => {
-    // Try to access the behavioral tracker and inject gaze events
-    // This simulates an attacker who knows our forensic API
     const tracker = (window as any).__pm_behavioral_tracker;
-    if (tracker) {
-      console.log("[bot] Found behavioral tracker, injecting synthetic gaze...");
-
-      // Activate gaze tracking
-      tracker.activateGazeTracking?.();
-
-      // Simulate a "reading" pattern — left-to-right saccades with fixations
-      const startTime = Date.now();
-      let y = 0.15; // Start near top of document
-      for (let line = 0; line < 20; line++) {
-        // Read left to right
-        for (let x = 0.1; x <= 0.85; x += 0.05) {
-          tracker.recordGazePoint?.(x + (Math.random() - 0.5) * 0.02, y + (Math.random() - 0.5) * 0.01, 0.7 + Math.random() * 0.15);
-        }
-        // Fixation at end of line
-        tracker.recordGazeFixation?.(0.8, y, 250 + Math.random() * 200, null);
-        // Saccade to next line (return sweep)
-        tracker.recordGazeSaccade?.(0.8, y, 0.12, y + 0.04, 180 + Math.random() * 60);
-        y += 0.04;
-        // Occasional "blink"
-        if (Math.random() < 0.15) {
-          tracker.recordGazeBlink?.(150 + Math.random() * 200);
-        }
-      }
-
-      // Report calibration
-      tracker.recordGazeCalibration?.(0.88, 5);
-
-      console.log("[bot] Injected ~300 gaze points, 20 fixations, ~3 blinks, 20 saccades");
-    } else {
+    if (!tracker) {
       console.log("[bot] No behavioral tracker found — gaze injection failed");
+      return;
     }
+    console.log("[bot] Found behavioral tracker, injecting synthetic gaze...");
+    tracker.activateGazeTracking?.();
+    let y = 0.15;
+    for (let line = 0; line < 20; line++) {
+      for (let x = 0.1; x <= 0.85; x += 0.05) {
+        tracker.recordGazePoint?.(
+          x + (Math.random() - 0.5) * 0.02,
+          y + (Math.random() - 0.5) * 0.01,
+          0.7 + Math.random() * 0.15,
+        );
+      }
+      tracker.recordGazeFixation?.(0.8, y, 250 + Math.random() * 200, null);
+      tracker.recordGazeSaccade?.(0.8, y, 0.12, y + 0.04, 180 + Math.random() * 60);
+      y += 0.04;
+      if (Math.random() < 0.15) {
+        tracker.recordGazeBlink?.(150 + Math.random() * 200);
+      }
+    }
+    tracker.recordGazeCalibration?.(0.88, 5);
+    console.log("[bot] Injected ~300 gaze points, 20 fixations, ~3 blinks, 20 saccades");
   });
-  await sleep(500);
+}
 
-  // Step 6: Connect wallet / finalize
-  console.log("  Looking for submit/sign button...");
-  await humanMouseWander(page, 2);
-
-  // Try to find a wallet connect or sign button
+async function findSignButton(page: puppeteer.Page): Promise<void> {
   const buttons = await page.$$("button");
   for (const btn of buttons) {
     const text = await btn.evaluate((el) => el.textContent?.toLowerCase() ?? "");
     if (text.includes("sign") || text.includes("connect") || text.includes("finalize")) {
       console.log(`  Found button: "${text.trim()}"`);
-      // Don't actually click — we'd need a real wallet
       break;
     }
   }
+}
 
-  // Take a screenshot for evidence
-  await page.screenshot({ path: "tmp/human-bot-attempt.png", fullPage: true });
-  console.log("\nScreenshot saved to tmp/human-bot-attempt.png");
-
+function printSummary(currentUrl: string, docId: string): void {
   console.log("\n" + "=".repeat(70));
   console.log("HUMAN-BOT DECEPTION TEST");
   console.log("=".repeat(70));
@@ -269,7 +207,76 @@ async function main() {
   console.log(`  ${currentUrl}`);
   console.log(`\nReplay: ${BASE_URL}/replay/${docId}`);
   console.log("=".repeat(70));
+}
 
+// ── Main ────────────────────────────────────────────────────
+
+async function main() {
+  console.log("Launching browser...");
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--window-size=1440,900"],
+    defaultViewport: { width: 1440, height: 900 },
+  });
+
+  const page = await browser.newPage();
+  await page.setUserAgent(
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+  );
+
+  await navigateToSigningPage(page);
+  const currentUrl = page.url();
+  const docId = currentUrl.match(/\/sign\/([^?]+)/)?.[1] ?? "unknown";
+
+  await sleep(2000);
+  console.log("Page loaded. Starting human-like interaction...");
+
+  // Read the document (scroll through it slowly)
+  console.log("  Scrolling through document like a reader...");
+  await humanMouseWander(page, 3);
+  await humanScroll(page, 800, 6);
+  await sleep(randomBetween(1000, 2000));
+  await humanMouseWander(page, 2);
+  await humanScroll(page, 800, 6);
+  await sleep(randomBetween(1500, 3000));
+  await humanScroll(page, 600, 4);
+
+  // Fill in fields
+  console.log("  Filling in fields with human-like typing...");
+  await fillFields(page);
+
+  // Scroll to signature area
+  console.log("  Scrolling to signature...");
+  await humanScroll(page, 600, 5);
+  await sleep(randomBetween(1000, 2000));
+
+  // Draw signature on canvas
+  console.log("  Drawing signature...");
+  const canvas = await page.$("canvas");
+  if (canvas) {
+    await canvas.scrollIntoView();
+    await sleep(500);
+    await drawHumanSignature(page, canvas);
+    await sleep(randomBetween(500, 1000));
+  } else {
+    console.log("  (No canvas found — skipping signature drawing)");
+  }
+
+  // Inject synthetic gaze data
+  console.log("  Injecting synthetic gaze data (trying to trick eye tracking)...");
+  await injectSyntheticGaze(page);
+  await sleep(500);
+
+  // Connect wallet / finalize
+  console.log("  Looking for submit/sign button...");
+  await humanMouseWander(page, 2);
+  await findSignButton(page);
+
+  // Take a screenshot for evidence
+  await page.screenshot({ path: "tmp/human-bot-attempt.png", fullPage: true });
+  console.log("\nScreenshot saved to tmp/human-bot-attempt.png");
+
+  printSummary(currentUrl, docId);
   await browser.close();
 }
 

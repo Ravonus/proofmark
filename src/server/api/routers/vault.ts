@@ -10,11 +10,11 @@
  * The server only stores encrypted blobs.
  */
 
-import { z } from "zod";
-import { eq, and } from "drizzle-orm";
-import { createTRPCRouter, authedProcedure } from "~/server/api/trpc";
-import { users, userVaults, managedWallets, documentKeyShares } from "~/server/db/schema";
 import { TRPCError } from "@trpc/server";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { documentKeyShares, managedWallets, users, userVaults } from "~/server/db/schema";
 
 const kdfParamsSchema = z.object({
   algorithm: z.string(),
@@ -40,7 +40,10 @@ export const vaultRouter = createTRPCRouter({
       const [user] = await ctx.db.select().from(users).where(eq(users.walletAddress, ctx.session.address)).limit(1);
 
       if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User not found — create an account first" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found — create an account first",
+        });
       }
 
       const [existing] = await ctx.db

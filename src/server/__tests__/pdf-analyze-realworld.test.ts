@@ -2,7 +2,7 @@
  * Test against the ACTUAL structure of final_boss_contract.pdf.
  * Reproduces the exact text layout from pdf-parse extraction.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 

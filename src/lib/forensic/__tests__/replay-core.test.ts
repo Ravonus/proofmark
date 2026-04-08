@@ -29,7 +29,10 @@ describe("forensic replay core", () => {
   });
 
   it("uses the configured loader when wasm initializes successfully", async () => {
-    const wasmLikeCore = { ...createTypeScriptReplayCore(), kind: "wasm" as const };
+    const wasmLikeCore = {
+      ...createTypeScriptReplayCore(),
+      kind: "wasm" as const,
+    };
     configureForensicReplayWasmLoader(async () => wasmLikeCore);
 
     const core = await resolveForensicReplayCore();

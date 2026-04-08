@@ -1,11 +1,11 @@
 "use client";
 
+import { AlertTriangle, Check, Loader2, Shield } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { trpc } from "~/lib/platform/trpc";
 import { useWallet, WalletButton } from "~/components/layout/wallet-provider";
-import { GlassCard, AnimatedButton } from "~/components/ui/motion";
+import { AnimatedButton, GlassCard } from "~/components/ui/motion";
 import { CHAIN_META } from "~/lib/crypto/chains";
-import { Shield, Check, Loader2, AlertTriangle } from "lucide-react";
+import { trpc } from "~/lib/platform/trpc";
 
 /**
  * Setup Gate — blocks the entire site until platform ownership is claimed.

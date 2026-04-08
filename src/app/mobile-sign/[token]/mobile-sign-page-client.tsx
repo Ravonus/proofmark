@@ -1,9 +1,68 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { trpc } from "~/lib/platform/trpc";
-import { collectFingerprintBestEffort } from "~/lib/forensic";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SignaturePad } from "~/components/signing/signature-pad";
+import { collectFingerprintBestEffort } from "~/lib/forensic";
+import { trpc } from "~/lib/platform/trpc";
+
+type MobileStatus = "loading" | "ready" | "signing" | "done" | "error";
+
+function deriveMobileStatus(
+  submitMut: { isPending: boolean; isSuccess: boolean; isError: boolean },
+  sessionQuery: { error: unknown; data?: { status?: string } | null },
+): MobileStatus {
+  if (submitMut.isPending) return "signing";
+  if (submitMut.isSuccess) return "done";
+  if (submitMut.isError) return "error";
+  if (sessionQuery.error) return "error";
+  if (sessionQuery.data?.status === "expired") return "error";
+  if (sessionQuery.data?.status === "signed") return "done";
+  if (sessionQuery.data) return "ready";
+  return "loading";
+}
+
+function MobileStatusScreen({
+  status,
+  errorMessage,
+  mode,
+}: {
+  status: "error" | "done" | "loading";
+  errorMessage: string | null;
+  mode: "signature" | "initials";
+}) {
+  if (status === "error")
+    return (
+      <MobileShell>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="space-y-3 text-center">
+            <div className="text-4xl">&#x26A0;&#xFE0F;</div>
+            <p className="font-medium text-red-400">{errorMessage ?? "Something went wrong."}</p>
+          </div>
+        </div>
+      </MobileShell>
+    );
+  if (status === "done")
+    return (
+      <MobileShell>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="space-y-3 text-center">
+            <div className="text-5xl text-emerald-400">&#x2713;</div>
+            <p className="text-lg font-semibold text-emerald-400">
+              {mode === "initials" ? "Initials Sent!" : "Signature Sent!"}
+            </p>
+            <p className="text-sm text-white/50">Return to your computer to continue.</p>
+          </div>
+        </div>
+      </MobileShell>
+    );
+  return (
+    <MobileShell>
+      <div className="flex flex-1 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+      </div>
+    </MobileShell>
+  );
+}
 
 export function MobileSignClient({ token, mode = "signature" }: { token: string; mode?: "signature" | "initials" }) {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -27,21 +86,7 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
       ? "This signing link has expired."
       : null;
   const errorMessage = submitMut.error?.message ?? queryErrorMessage;
-  const status: "loading" | "ready" | "signing" | "done" | "error" = submitMut.isPending
-    ? "signing"
-    : submitMut.isSuccess
-      ? "done"
-      : submitMut.isError
-        ? "error"
-        : sessionQuery.error
-          ? "error"
-          : sessionQuery.data?.status === "expired"
-            ? "error"
-            : sessionQuery.data?.status === "signed"
-              ? "done"
-              : sessionQuery.data
-                ? "ready"
-                : "loading";
+  const status = deriveMobileStatus(submitMut, sessionQuery);
 
   // Track orientation
   useEffect(() => {
@@ -77,7 +122,9 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
     }
     return () => {
       try {
-        const orientation = screen.orientation as ScreenOrientation & { unlock?: () => void };
+        const orientation = screen.orientation as ScreenOrientation & {
+          unlock?: () => void;
+        };
         orientation.unlock?.();
       } catch {
         /* best-effort unlock */
@@ -156,43 +203,8 @@ export function MobileSignClient({ token, mode = "signature" }: { token: string;
     );
   }
 
-  if (status === "error") {
-    return (
-      <MobileShell>
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="space-y-3 text-center">
-            <div className="text-4xl">⚠️</div>
-            <p className="font-medium text-red-400">{errorMessage ?? "Something went wrong."}</p>
-          </div>
-        </div>
-      </MobileShell>
-    );
-  }
-
-  if (status === "done") {
-    return (
-      <MobileShell>
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="space-y-3 text-center">
-            <div className="text-5xl text-emerald-400">✓</div>
-            <p className="text-lg font-semibold text-emerald-400">
-              {mode === "initials" ? "Initials Sent!" : "Signature Sent!"}
-            </p>
-            <p className="text-sm text-white/50">Return to your computer to continue.</p>
-          </div>
-        </div>
-      </MobileShell>
-    );
-  }
-
-  if (status === "loading") {
-    return (
-      <MobileShell>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-        </div>
-      </MobileShell>
-    );
+  if (status === "error" || status === "done" || status === "loading") {
+    return <MobileStatusScreen status={status} errorMessage={errorMessage} mode={mode} />;
   }
 
   return (

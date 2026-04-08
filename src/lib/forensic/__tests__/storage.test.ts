@@ -1,30 +1,51 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { CapturedGeometry, CaptureResult, CaptureString, CaptureTarget } from "../capture-adapter";
+import { encodeReplayEventsSync, type ForensicReplayEncodedEvent } from "../replay-codec";
 import {
   buildEmbeddedPayload,
   buildExternalPointer,
+  EXTERNALIZE_THRESHOLD_BYTES,
   estimateEmbeddedSize,
   shouldExternalize,
-  EXTERNALIZE_THRESHOLD_BYTES,
 } from "../storage";
-import { encodeReplayEventsSync, type ForensicReplayEncodedEvent } from "../replay-codec";
-import type { CaptureResult, CaptureTarget, CaptureString, CapturedGeometry } from "../capture-adapter";
 
 function makeCaptureResult(eventCount: number): CaptureResult {
   const events: ForensicReplayEncodedEvent[] = [];
   for (let i = 0; i < eventCount; i++) {
-    events.push({ type: "click", delta: 1, targetId: 1, x: i * 10, y: i * 5, button: 0 });
+    events.push({
+      type: "click",
+      delta: 1,
+      targetId: 1,
+      x: i * 10,
+      y: i * 5,
+      button: 0,
+    });
   }
   const { tapeBase64, byteLength } = encodeReplayEventsSync(events);
   const targets: CaptureTarget[] = [{ id: 1, hash: "abc123", descriptor: "tag:button|id:submit" }];
   const strings: CaptureString[] = [];
   const geometry: CapturedGeometry = {
-    viewport: { width: 1024, height: 768, devicePixelRatio: 2, scrollWidth: 1024, scrollHeight: 3000 },
+    viewport: {
+      width: 1024,
+      height: 768,
+      devicePixelRatio: 2,
+      scrollWidth: 1024,
+      scrollHeight: 3000,
+    },
     pages: [],
     fields: [],
     signaturePads: [],
   };
 
-  return { events, targets, strings, geometry, tapeBase64, byteLength, durationMs: eventCount * 8 };
+  return {
+    events,
+    targets,
+    strings,
+    geometry,
+    tapeBase64,
+    byteLength,
+    durationMs: eventCount * 8,
+  };
 }
 
 describe("storage", () => {

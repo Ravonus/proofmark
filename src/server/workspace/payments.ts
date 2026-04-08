@@ -1,6 +1,6 @@
 import type { InlineField } from "~/lib/document/document-tokens";
-import type { IntegrationConfig } from "~/server/db/schema";
 import type { PaymentFieldValue } from "~/lib/document/field-values";
+import type { IntegrationConfig } from "~/server/db/schema";
 
 export type PaymentFieldSettings = {
   amount?: number;
@@ -87,7 +87,10 @@ async function verifyStripeCheckout(config: IntegrationConfig, sessionId: string
     throw new Error(`Stripe payment verification failed with ${response.status}`);
   }
 
-  const data = (await response.json()) as { payment_status?: string; id?: string };
+  const data = (await response.json()) as {
+    payment_status?: string;
+    id?: string;
+  };
   if (data.payment_status !== "paid" || !data.id) {
     throw new Error("Stripe checkout is not marked as paid");
   }

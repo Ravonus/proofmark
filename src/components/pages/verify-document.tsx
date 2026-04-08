@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ShieldCheck, ShieldX, Clock, CheckCircle } from "lucide-react";
+import { CheckCircle, Clock, ShieldCheck, ShieldX } from "lucide-react";
+import { addressPreview, CHAIN_META, type WalletChain } from "~/lib/crypto/chains";
 import { trpc } from "~/lib/platform/trpc";
-import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/crypto/chains";
-import { FadeIn, ScaleIn, GlassCard, StaggerContainer, StaggerItem } from "../ui/motion";
+import { FadeIn, GlassCard, ScaleIn, StaggerContainer, StaggerItem } from "../ui/motion";
 
 export function VerifyDocument({ hash }: { hash: string }) {
   const verifyQuery = trpc.document.verify.useQuery({ query: hash });
@@ -57,7 +57,12 @@ export function VerifyDocument({ hash }: { hash: string }) {
             className={`mb-3 flex justify-center ${allSigned ? "text-success" : "text-warning"}`}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+            transition={{
+              type: "spring",
+              stiffness: 200,
+              damping: 15,
+              delay: 0.1,
+            }}
           >
             {allSigned ? <ShieldCheck className="h-10 w-10" /> : <Clock className="h-10 w-10" />}
           </motion.div>

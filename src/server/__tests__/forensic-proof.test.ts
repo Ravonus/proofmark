@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { enrichForensicEvidence } from "~/server/forensic/forensic-proof";
-import { loadPremiumChains } from "~/lib/platform/premium";
 import type { ForensicEvidence } from "~/lib/forensic/types";
+import { loadPremiumChains } from "~/lib/platform/premium";
+import { enrichForensicEvidence } from "~/server/forensic/forensic-proof";
 
 vi.mock("~/lib/platform/premium", () => ({
   loadPremiumChains: vi.fn(async () => null),
@@ -162,7 +162,13 @@ describe("forensic proof enrichment", () => {
           pasteEvents: 2,
           replay: null,
         },
-        flags: [{ code: "WEBDRIVER_DETECTED", severity: "critical", message: "webdriver" }],
+        flags: [
+          {
+            code: "WEBDRIVER_DETECTED",
+            severity: "critical",
+            message: "webdriver",
+          },
+        ],
       }),
       proofMode: "HYBRID",
       automationPolicy: {

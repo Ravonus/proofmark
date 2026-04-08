@@ -1,5 +1,5 @@
+import { type DecodedForensicReplayEvent, decodeForensicReplay } from "./replay";
 import type { ForensicReplayTape, TimedSignaturePoint, TimedSignatureStroke } from "./types";
-import { decodeForensicReplay, type DecodedForensicReplayEvent } from "./replay";
 
 export interface SignatureMotionBoundingBox {
   minX: number;
@@ -59,22 +59,22 @@ function normalizeAngle(delta: number) {
   return value;
 }
 
-function analyzeStroke(stroke: TimedSignatureStroke) {
-  const points = [...stroke].sort((left, right) => left.t - right.t);
-  const velocities: number[] = [];
+function collectPressures(points: TimedSignaturePoint[]): number[] {
   const pressures: number[] = [];
-
-  let pathLength = 0;
-  let pauseCount = 0;
-  let maxPauseMs = 0;
-  let directionChangeCount = 0;
-  let zeroDeltaSegmentCount = 0;
-
   for (const point of points) {
     if (typeof point.force === "number") {
       pressures.push(point.force);
     }
   }
+  return pressures;
+}
+
+function analyzeSegments(points: TimedSignaturePoint[]) {
+  const velocities: number[] = [];
+  let pathLength = 0;
+  let pauseCount = 0;
+  let maxPauseMs = 0;
+  let zeroDeltaSegmentCount = 0;
 
   for (let index = 1; index < points.length; index += 1) {
     const left = points[index - 1]!;
@@ -83,69 +83,84 @@ function analyzeStroke(stroke: TimedSignatureStroke) {
     const segmentLength = distance(left, right);
     pathLength += segmentLength;
     if (deltaT > 0) {
-      const velocity = segmentLength / deltaT;
-      velocities.push(velocity);
+      velocities.push(segmentLength / deltaT);
       if (deltaT >= 48) {
         pauseCount += 1;
         maxPauseMs = Math.max(maxPauseMs, deltaT);
       }
     } else {
       zeroDeltaSegmentCount += 1;
-      if (segmentLength > 0) {
-        velocities.push(segmentLength);
-      }
+      if (segmentLength > 0) velocities.push(segmentLength);
     }
   }
 
+  return {
+    velocities,
+    pathLength,
+    pauseCount,
+    maxPauseMs,
+    zeroDeltaSegmentCount,
+  };
+}
+
+function countDirectionChanges(points: TimedSignaturePoint[]): number {
+  let count = 0;
   for (let index = 2; index < points.length; index += 1) {
     const first = points[index - 2]!;
     const middle = points[index - 1]!;
     const last = points[index]!;
-    const previousDx = middle.x - first.x;
-    const previousDy = middle.y - first.y;
-    const nextDx = last.x - middle.x;
-    const nextDy = last.y - middle.y;
-    const previousLength = Math.hypot(previousDx, previousDy);
-    const nextLength = Math.hypot(nextDx, nextDy);
+    const previousLength = Math.hypot(middle.x - first.x, middle.y - first.y);
+    const nextLength = Math.hypot(last.x - middle.x, last.y - middle.y);
     if (previousLength === 0 || nextLength === 0) continue;
-    const turn = Math.abs(normalizeAngle(Math.atan2(nextDy, nextDx) - Math.atan2(previousDy, previousDx)));
-    if (turn >= Math.PI / 4) {
-      directionChangeCount += 1;
-    }
+    const turn = Math.abs(
+      normalizeAngle(
+        Math.atan2(last.y - middle.y, last.x - middle.x) - Math.atan2(middle.y - first.y, middle.x - first.x),
+      ),
+    );
+    if (turn >= Math.PI / 4) count += 1;
   }
+  return count;
+}
+
+function summarizePressures(pressures: number[]) {
+  if (pressures.length === 0) {
+    return {
+      pressureAverage: null,
+      pressureVariance: null,
+      pressureRange: null,
+    };
+  }
+  return {
+    pressureAverage: average(pressures),
+    pressureVariance: variance(pressures),
+    pressureRange: Math.max(...pressures) - Math.min(...pressures),
+  };
+}
+
+function analyzeStroke(stroke: TimedSignatureStroke) {
+  const points = [...stroke].sort((left, right) => left.t - right.t);
+  const pressures = collectPressures(points);
+  const segments = analyzeSegments(points);
+  const directionChangeCount = countDirectionChanges(points);
 
   const durationMs = Math.max(0, (points.at(-1)?.t ?? 0) - (points[0]?.t ?? 0));
-  const pointCount = points.length;
-  const averageVelocityPxPerMs = durationMs > 0 ? pathLength / durationMs : average(velocities);
-  const velocityVariance = variance(velocities);
+  const averageVelocityPxPerMs = durationMs > 0 ? segments.pathLength / durationMs : average(segments.velocities);
+  const velocityVariance = variance(segments.velocities);
   const velocityStdDev = Math.sqrt(velocityVariance);
   const velocityCoefficientOfVariation = averageVelocityPxPerMs > 0 ? velocityStdDev / averageVelocityPxPerMs : 0;
 
-  const pressuresSummary =
-    pressures.length > 0
-      ? {
-          pressureAverage: average(pressures),
-          pressureVariance: variance(pressures),
-          pressureRange: Math.max(...pressures) - Math.min(...pressures),
-        }
-      : {
-          pressureAverage: null,
-          pressureVariance: null,
-          pressureRange: null,
-        };
-
   return {
-    pointCount,
+    pointCount: points.length,
     durationMs,
-    pathLengthPx: pathLength,
-    pauseCount,
-    maxPauseMs,
+    pathLengthPx: segments.pathLength,
+    pauseCount: segments.pauseCount,
+    maxPauseMs: segments.maxPauseMs,
     directionChangeCount,
-    zeroDeltaSegmentCount,
+    zeroDeltaSegmentCount: segments.zeroDeltaSegmentCount,
     averageVelocityPxPerMs,
     velocityVariance,
     velocityCoefficientOfVariation,
-    ...pressuresSummary,
+    ...summarizePressures(pressures),
   };
 }
 

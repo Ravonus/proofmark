@@ -9,11 +9,18 @@ import { isPremiumAvailable } from "~/lib/platform/premium";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const premiumRouter = isPremiumAvailable()
-  ? (require("../../../../premium/server/routers/collab") as { collabRouter: unknown }).collabRouter
+  ? (
+      require("../../../../premium/server/routers/collab") as {
+        collabRouter: unknown;
+      }
+    ).collabRouter
   : null;
 
 const stubRouter = createTRPCRouter({
-  capabilities: publicProcedure.query(() => ({ available: false, collaboration: false })),
+  capabilities: publicProcedure.query(() => ({
+    available: false,
+    collaboration: false,
+  })),
   create: publicProcedure.input(z.any()).mutation((): any => ({
     sessionId: "",
     joinToken: "",

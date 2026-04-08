@@ -183,7 +183,10 @@ describe("handlePostSignCompletion — sequential notification", () => {
     const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
-    const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 0 });
+    const doc = buildDocument({
+      signingOrder: "sequential",
+      currentSignerIndex: 0,
+    });
     const signer0 = buildSigner({
       documentId: doc.id,
       signerOrder: 0,
@@ -225,7 +228,12 @@ describe("handlePostSignCompletion — sequential notification", () => {
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
     const doc = buildDocument({ signingOrder: "parallel" });
-    const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
+    const signer0 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 0,
+      status: "SIGNED",
+      role: "SIGNER",
+    });
     const signer1 = buildSigner({
       documentId: doc.id,
       signerOrder: 1,
@@ -251,8 +259,16 @@ describe("handlePostSignCompletion — sequential notification", () => {
     const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
-    const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 1 });
-    const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
+    const doc = buildDocument({
+      signingOrder: "sequential",
+      currentSignerIndex: 1,
+    });
+    const signer0 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 0,
+      status: "SIGNED",
+      role: "SIGNER",
+    });
     const signer1 = buildSigner({
       documentId: doc.id,
       signerOrder: 1,
@@ -279,8 +295,16 @@ describe("handlePostSignCompletion — sequential notification", () => {
     const { sendSignerInvite } = await import("~/server/messaging/delivery");
     const { handlePostSignCompletion } = await import("~/server/api/routers/document-helpers");
 
-    const doc = buildDocument({ signingOrder: "sequential", currentSignerIndex: 0 });
-    const signer0 = buildSigner({ documentId: doc.id, signerOrder: 0, status: "SIGNED", role: "SIGNER" });
+    const doc = buildDocument({
+      signingOrder: "sequential",
+      currentSignerIndex: 0,
+    });
+    const signer0 = buildSigner({
+      documentId: doc.id,
+      signerOrder: 0,
+      status: "SIGNED",
+      role: "SIGNER",
+    });
     const signer1 = buildSigner({
       documentId: doc.id,
       signerOrder: 1,
@@ -332,9 +356,16 @@ function createMockDb() {
   const whereFn = vi.fn().mockResolvedValue(undefined);
   return {
     update: vi.fn(() => ({ set: setFn.mockReturnValue({ where: whereFn }) })),
-    select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) })) })),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })),
+      })),
+    })),
     query: {
-      documents: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
+      documents: {
+        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
       signers: { findFirst: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
     },
   };

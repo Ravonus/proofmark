@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, Moon } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useThemeStore } from "~/stores";
 
 /** Theme toggle — zero useEffect, zero useState. Reads/writes from Zustand. */

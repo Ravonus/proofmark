@@ -8,7 +8,11 @@ import { isPremiumAvailable } from "~/lib/platform/premium";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const premiumRouter = isPremiumAvailable()
-  ? (require("../../../../premium/server/routers/runtime") as { runtimeRouter: unknown }).runtimeRouter
+  ? (
+      require("../../../../premium/server/routers/runtime") as {
+        runtimeRouter: unknown;
+      }
+    ).runtimeRouter
   : null;
 
 const stubRouter = createTRPCRouter({

@@ -32,7 +32,15 @@ function percentile(sorted: number[], ratio: number) {
 
 function summarize(values: number[]): MetricSummary {
   if (values.length === 0) {
-    return { count: 0, min: null, p10: null, median: null, p90: null, max: null, mean: null };
+    return {
+      count: 0,
+      min: null,
+      p10: null,
+      median: null,
+      p90: null,
+      max: null,
+      mean: null,
+    };
   }
   const sorted = [...values].sort((left, right) => left - right);
   return {
@@ -63,6 +71,60 @@ function behavioralFromSample(sample: InputSample) {
   return sample.behavioral ?? sample.session?.behavioral ?? null;
 }
 
+type LabeledProfile = {
+  id: string;
+  label: Label;
+  profile: ReturnType<typeof buildForensicSessionProfile>;
+};
+
+type ProfileGetter = (entry: LabeledProfile) => number | null | undefined;
+
+function metricFor(entries: LabeledProfile[], getter: ProfileGetter) {
+  return summarize(entries.map(getter).filter((v): v is number => typeof v === "number" && Number.isFinite(v)));
+}
+
+function computeSuggestions(humans: LabeledProfile[], agents: LabeledProfile[]) {
+  const typingCvGetter: ProfileGetter = (e) => e.profile.typing.coefficientOfVariation;
+  const gazeGetter: ProfileGetter = (e) => e.profile.gaze.features?.readingPatternScore ?? null;
+  const livenessGetter: ProfileGetter = (e) => (e.profile.liveness.available ? e.profile.liveness.passRatio : null);
+  const sigGetter: ProfileGetter = (e) => e.profile.signature?.motionComplexityScore ?? null;
+
+  return {
+    typingCvBoundary: midpoint(metricFor(agents, typingCvGetter).p90, metricFor(humans, typingCvGetter).p10),
+    gazeReadingScoreBoundary: midpoint(metricFor(agents, gazeGetter).p90, metricFor(humans, gazeGetter).p10),
+    livenessPassRatioBoundary: midpoint(metricFor(agents, livenessGetter).p90, metricFor(humans, livenessGetter).p10),
+    signatureComplexityBoundary: midpoint(metricFor(agents, sigGetter).p90, metricFor(humans, sigGetter).p10),
+  };
+}
+
+function computeAgreement(humans: LabeledProfile[], agents: LabeledProfile[]) {
+  return {
+    typing: {
+      humanCorrect: humans.filter((e) => e.profile.typing.verdict !== "bot").length,
+      agentCorrect: agents.filter((e) => e.profile.typing.verdict !== "human").length,
+    },
+    gaze: {
+      humanCorrect: humans.filter((e) => e.profile.gaze.verdict !== "synthetic").length,
+      agentCorrect: agents.filter((e) => e.profile.gaze.verdict !== "natural").length,
+    },
+    liveness: {
+      humanCorrect: humans.filter((e) => !e.profile.liveness.available || e.profile.liveness.verdict !== "failed")
+        .length,
+      agentCorrect: agents.filter((e) => !e.profile.liveness.available || e.profile.liveness.verdict !== "passed")
+        .length,
+    },
+  };
+}
+
+function buildMetricsForGroup(entries: LabeledProfile[]) {
+  return {
+    typingCv: metricFor(entries, (e) => e.profile.typing.coefficientOfVariation),
+    gazeReadingScore: metricFor(entries, (e) => e.profile.gaze.features?.readingPatternScore ?? null),
+    livenessPassRatio: metricFor(entries, (e) => (e.profile.liveness.available ? e.profile.liveness.passRatio : null)),
+    signatureComplexity: metricFor(entries, (e) => e.profile.signature?.motionComplexityScore ?? null),
+  };
+}
+
 async function main() {
   const inputPath = process.argv[2];
   if (!inputPath) {
@@ -74,7 +136,7 @@ async function main() {
   const content = await readFile(absolutePath, "utf8");
   const samples = normalizeSamples(JSON.parse(content));
 
-  const labeledProfiles = samples
+  const labeledProfiles: LabeledProfile[] = samples
     .map((sample, index) => {
       const behavioral = behavioralFromSample(sample);
       if (!behavioral) return null;
@@ -86,82 +148,19 @@ async function main() {
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry != null);
 
-  const humans = labeledProfiles.filter((entry) => entry.label === "human");
-  const agents = labeledProfiles.filter((entry) => entry.label === "agent");
-
-  const metric = (
-    entries: typeof labeledProfiles,
-    getter: (entry: (typeof labeledProfiles)[number]) => number | null | undefined,
-  ) =>
-    summarize(
-      entries.map(getter).filter((value): value is number => typeof value === "number" && Number.isFinite(value)),
-    );
-
-  const suggestions = {
-    typingCvBoundary: midpoint(
-      metric(agents, (entry) => entry.profile.typing.coefficientOfVariation).p90,
-      metric(humans, (entry) => entry.profile.typing.coefficientOfVariation).p10,
-    ),
-    gazeReadingScoreBoundary: midpoint(
-      metric(agents, (entry) => entry.profile.gaze.features?.readingPatternScore ?? null).p90,
-      metric(humans, (entry) => entry.profile.gaze.features?.readingPatternScore ?? null).p10,
-    ),
-    livenessPassRatioBoundary: midpoint(
-      metric(agents, (entry) => (entry.profile.liveness.available ? entry.profile.liveness.passRatio : null)).p90,
-      metric(humans, (entry) => (entry.profile.liveness.available ? entry.profile.liveness.passRatio : null)).p10,
-    ),
-    signatureComplexityBoundary: midpoint(
-      metric(agents, (entry) => entry.profile.signature?.motionComplexityScore ?? null).p90,
-      metric(humans, (entry) => entry.profile.signature?.motionComplexityScore ?? null).p10,
-    ),
-  };
-
-  const agreement = {
-    typing: {
-      humanCorrect: humans.filter((entry) => entry.profile.typing.verdict !== "bot").length,
-      agentCorrect: agents.filter((entry) => entry.profile.typing.verdict !== "human").length,
-    },
-    gaze: {
-      humanCorrect: humans.filter((entry) => entry.profile.gaze.verdict !== "synthetic").length,
-      agentCorrect: agents.filter((entry) => entry.profile.gaze.verdict !== "natural").length,
-    },
-    liveness: {
-      humanCorrect: humans.filter(
-        (entry) => !entry.profile.liveness.available || entry.profile.liveness.verdict !== "failed",
-      ).length,
-      agentCorrect: agents.filter(
-        (entry) => !entry.profile.liveness.available || entry.profile.liveness.verdict !== "passed",
-      ).length,
-    },
-  };
+  const humans = labeledProfiles.filter((e) => e.label === "human");
+  const agents = labeledProfiles.filter((e) => e.label === "agent");
 
   const output = {
     inputPath: absolutePath,
     sampleCount: labeledProfiles.length,
-    labels: {
-      human: humans.length,
-      agent: agents.length,
-    },
+    labels: { human: humans.length, agent: agents.length },
     metrics: {
-      human: {
-        typingCv: metric(humans, (entry) => entry.profile.typing.coefficientOfVariation),
-        gazeReadingScore: metric(humans, (entry) => entry.profile.gaze.features?.readingPatternScore ?? null),
-        livenessPassRatio: metric(humans, (entry) =>
-          entry.profile.liveness.available ? entry.profile.liveness.passRatio : null,
-        ),
-        signatureComplexity: metric(humans, (entry) => entry.profile.signature?.motionComplexityScore ?? null),
-      },
-      agent: {
-        typingCv: metric(agents, (entry) => entry.profile.typing.coefficientOfVariation),
-        gazeReadingScore: metric(agents, (entry) => entry.profile.gaze.features?.readingPatternScore ?? null),
-        livenessPassRatio: metric(agents, (entry) =>
-          entry.profile.liveness.available ? entry.profile.liveness.passRatio : null,
-        ),
-        signatureComplexity: metric(agents, (entry) => entry.profile.signature?.motionComplexityScore ?? null),
-      },
+      human: buildMetricsForGroup(humans),
+      agent: buildMetricsForGroup(agents),
     },
-    agreement,
-    suggestedThresholds: suggestions,
+    agreement: computeAgreement(humans, agents),
+    suggestedThresholds: computeSuggestions(humans, agents),
   };
 
   console.log(JSON.stringify(output, null, 2));

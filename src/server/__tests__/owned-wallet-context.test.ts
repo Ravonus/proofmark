@@ -35,8 +35,16 @@ describe("owned wallet context", () => {
         updatedAt: new Date(),
       } as NonNullable<UnifiedRequestIdentity["walletSession"]>,
       wallets: [
-        { address: "0x1111111111111111111111111111111111111111", chain: "ETH", isPrimary: true },
-        { address: "0x2222222222222222222222222222222222222222", chain: "ETH", isPrimary: false },
+        {
+          address: "0x1111111111111111111111111111111111111111",
+          chain: "ETH",
+          isPrimary: true,
+        },
+        {
+          address: "0x2222222222222222222222222222222222222222",
+          chain: "ETH",
+          isPrimary: false,
+        },
       ],
     });
 

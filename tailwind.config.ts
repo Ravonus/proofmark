@@ -52,7 +52,9 @@ export default {
       keyframes: {
         "glow-pulse": {
           "0%, 100%": { boxShadow: "0 0 6px var(--accent), 0 0 0 transparent" },
-          "50%": { boxShadow: "0 0 16px var(--accent), 0 0 32px var(--accent-subtle)" },
+          "50%": {
+            boxShadow: "0 0 16px var(--accent), 0 0 32px var(--accent-subtle)",
+          },
         },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },

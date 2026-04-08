@@ -4,26 +4,36 @@
 
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
-import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { AppRouter } from "~/server/api/root";
 
 const baseUrl = "http://127.0.0.1:3100";
 
 const trpc = createTRPCProxyClient<AppRouter>({
-  links: [httpBatchLink({
-    url: `${baseUrl}/api/trpc`,
-    transformer: superjson,
-    headers: {
-      "x-api-key": process.env.AUTOMATION_SECRET ?? "",
-      "x-wallet-address": "0x0000000000000000000000000000000000000001",
-      "x-wallet-chain": "ETH",
-    },
-  })],
+  links: [
+    httpBatchLink({
+      url: `${baseUrl}/api/trpc`,
+      transformer: superjson,
+      headers: {
+        "x-api-key": process.env.AUTOMATION_SECRET ?? "",
+        "x-wallet-address": "0x0000000000000000000000000000000000000001",
+        "x-wallet-chain": "ETH",
+      },
+    }),
+  ],
 });
 
 const CONTRACTORS = [
-  { docId: "KWk6kh5rBsPu3T6u", claim: "97hUd6P87dWQYzJKb8Bcaa-AtsOtUZt7", name: "Alice Johnson" },
-  { docId: "yL1j2fl63gPJ3afF", claim: "-1EQWR3AlU4T_7TwlOIOo5wEjLtPbY4U", name: "Bob Smith" },
+  {
+    docId: "KWk6kh5rBsPu3T6u",
+    claim: "97hUd6P87dWQYzJKb8Bcaa-AtsOtUZt7",
+    name: "Alice Johnson",
+  },
+  {
+    docId: "yL1j2fl63gPJ3afF",
+    claim: "-1EQWR3AlU4T_7TwlOIOo5wEjLtPbY4U",
+    name: "Bob Smith",
+  },
 ];
 
 async function main() {
@@ -65,8 +75,19 @@ async function main() {
         signature,
         fieldValues: { "name-contractor": c.name },
         forensic: {
-          fingerprint: { visitorId: `test-${c.name}`, canvasHash: "test", webglHash: "test" } as Record<string, unknown>,
-          behavioral: { timeOnPage: 30000, scrolledToBottom: true, maxScrollDepth: 100, mouseMoveCount: 50, clickCount: 10, keyPressCount: 20 } as Record<string, unknown>,
+          fingerprint: {
+            visitorId: `test-${c.name}`,
+            canvasHash: "test",
+            webglHash: "test",
+          } as Record<string, unknown>,
+          behavioral: {
+            timeOnPage: 30000,
+            scrolledToBottom: true,
+            maxScrollDepth: 100,
+            mouseMoveCount: 50,
+            clickCount: 10,
+            keyPressCount: 20,
+          } as Record<string, unknown>,
         },
         challengeResponses: {},
       });

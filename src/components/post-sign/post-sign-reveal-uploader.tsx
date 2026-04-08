@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, UploadCloud } from "lucide-react";
-import { GlassCard } from "../ui/motion";
+import { useState } from "react";
 import type { PostSignReveal } from "~/server/db/schema";
+import { GlassCard } from "../ui/motion";
 import { deriveLabel } from "./post-sign-download-manager";
 
 async function readApiResponse(response: Response): Promise<{ reveal: PostSignReveal }> {
-  const body = (await response.json().catch(() => null)) as { error?: string; reveal?: PostSignReveal } | null;
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+    reveal?: PostSignReveal;
+  } | null;
   if (!response.ok) {
     throw new Error(body?.error ?? "Upload failed");
   }

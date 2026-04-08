@@ -1,28 +1,30 @@
 import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
-import { documents, signers as signersTable, type signers, type PostSignReveal } from "~/server/db/schema";
-import { isActionableRecipientRole } from "~/lib/signing/recipient-roles";
 import {
   decodeStructuredFieldValue,
   encodeStructuredFieldValue,
   type PaymentFieldValue,
 } from "~/lib/document/field-values";
+import { isActionableRecipientRole } from "~/lib/signing/recipient-roles";
+import { documents, type PostSignReveal, type signers, signers as signersTable } from "~/server/db/schema";
+
 export {
-  documentFieldSchema as fieldInput,
-  documentSignerSchema as signerInput,
-  documentReminderSchema as reminderInput,
   createDocumentSchema as createDocumentInput,
+  documentFieldSchema as fieldInput,
+  documentReminderSchema as reminderInput,
+  documentSignerSchema as signerInput,
 } from "~/lib/schemas/document";
-import { decryptDocument as decryptContent, hashDocument } from "~/server/crypto/rust-engine";
-import { evaluateIdentityVerification } from "~/server/auth/id-verification";
+
 import type { InlineField } from "~/lib/document/document-tokens";
-import { findSignersByDocumentId, findDocumentsByGroupId } from "~/server/db/compat";
-import { sendCompletionEmail, sendFinalizationEmail } from "~/server/messaging/email";
-import { resolveDocumentBranding, sendSignerInvite } from "~/server/messaging/delivery";
 import { GROUP_ROLE, getBaseUrl, type SignData } from "~/lib/signing/signing-constants";
-import type { db as _dbInstance } from "~/server/db";
 import type { AuditLogParams } from "~/server/audit/audit";
+import { evaluateIdentityVerification } from "~/server/auth/id-verification";
+import { decryptDocument as decryptContent, hashDocument } from "~/server/crypto/rust-engine";
+import type { db as _dbInstance } from "~/server/db";
+import { findDocumentsByGroupId, findSignersByDocumentId } from "~/server/db/compat";
 import type { BrandingSettings } from "~/server/db/schema";
+import { resolveDocumentBranding, sendSignerInvite } from "~/server/messaging/delivery";
+import { sendCompletionEmail, sendFinalizationEmail } from "~/server/messaging/email";
 
 /** Type alias for the Drizzle database client used throughout document helpers. */
 type Db = typeof _dbInstance;
@@ -171,6 +173,74 @@ export async function assertDocAccess(db: Db, docId: string, callerAddress: stri
   return doc;
 }
 
+async function advanceSequentialOrder(
+  db: Db,
+  doc: typeof documents.$inferSelect,
+  docSigners: Array<typeof signers.$inferSelect>,
+  justSignedOrder: number,
+) {
+  const nextIdx = getNextPendingSignerOrder(docSigners, justSignedOrder);
+  await db.update(documents).set({ currentSignerIndex: nextIdx }).where(eq(documents.id, doc.id));
+
+  const nextSigner = docSigners.find(
+    (s) => s.signerOrder === nextIdx && isActionableRecipientRole(s.role) && s.status === "PENDING",
+  );
+  if (nextSigner && (nextSigner.email || nextSigner.phone)) {
+    const baseUrl = getBaseUrl();
+    void sendSignerInvite({
+      ownerAddress: doc.createdBy,
+      brandingProfileId: (doc as { brandingProfileId?: string | null }).brandingProfileId ?? undefined,
+      document: { title: doc.title },
+      signer: {
+        label: nextSigner.label,
+        email: nextSigner.email,
+        phone: nextSigner.phone,
+        deliveryMethods:
+          (nextSigner as { deliveryMethods?: Array<"EMAIL" | "SMS"> | null }).deliveryMethods ?? undefined,
+      },
+      signUrl: `${baseUrl}/sign/${doc.id}?claim=${nextSigner.claimToken}`,
+    });
+  }
+}
+
+async function notifyDisclosersIfReady(
+  _db: Db,
+  doc: typeof documents.$inferSelect,
+  docSigners: Array<typeof signers.$inferSelect>,
+  justSignedId: string,
+) {
+  const actionable = getActionableSigners(docSigners);
+  const nonDisclosers = actionable.filter(
+    (s) => (s as { groupRole?: string | null }).groupRole !== GROUP_ROLE.DISCLOSER,
+  );
+  const allNonDisclosersDone = nonDisclosers.every((s) => s.id === justSignedId || s.status === "SIGNED");
+  const disclosersNeedingFinalization = actionable.filter((s) => {
+    const role = (s as { groupRole?: string | null }).groupRole;
+    const finSig = (s as { finalizationSignature?: string | null }).finalizationSignature;
+    return role === GROUP_ROLE.DISCLOSER && s.status === "SIGNED" && !finSig;
+  });
+
+  if (!allNonDisclosersDone || disclosersNeedingFinalization.length === 0) return;
+
+  const baseUrl = getBaseUrl();
+  const branding = await resolveDocumentBranding(
+    doc.createdBy,
+    (doc as { brandingProfileId?: string | null }).brandingProfileId,
+  );
+  for (const discloser of disclosersNeedingFinalization) {
+    if (discloser.email) {
+      void sendFinalizationEmail({
+        to: discloser.email,
+        documentTitle: doc.title,
+        signerLabel: discloser.label,
+        signUrl: `${baseUrl}/sign/${doc.id}?claim=${discloser.claimToken}`,
+        branding,
+        replyTo: branding.emailReplyTo,
+      });
+    }
+  }
+}
+
 /**
  * Shared post-signing completion logic: advance sequential order, mark COMPLETED
  * if all actionable signers are done, send completion email.
@@ -196,63 +266,11 @@ export async function handlePostSignCompletion(params: {
   });
 
   if (doc.signingOrder === "sequential" && !allSigned) {
-    const nextIdx = getNextPendingSignerOrder(docSigners, justSignedOrder);
-    await db.update(documents).set({ currentSignerIndex: nextIdx }).where(eq(documents.id, doc.id));
-
-    // Notify the next signer that it's their turn
-    const nextSigner = docSigners.find(
-      (s) => s.signerOrder === nextIdx && isActionableRecipientRole(s.role) && s.status === "PENDING",
-    );
-    if (nextSigner && (nextSigner.email || nextSigner.phone)) {
-      const baseUrl = getBaseUrl();
-      void sendSignerInvite({
-        ownerAddress: doc.createdBy,
-        brandingProfileId: (doc as { brandingProfileId?: string | null }).brandingProfileId ?? undefined,
-        document: { title: doc.title },
-        signer: {
-          label: nextSigner.label,
-          email: nextSigner.email,
-          phone: nextSigner.phone,
-          deliveryMethods:
-            (nextSigner as { deliveryMethods?: Array<"EMAIL" | "SMS"> | null }).deliveryMethods ?? undefined,
-        },
-        signUrl: `${baseUrl}/sign/${doc.id}?claim=${nextSigner.claimToken}`,
-      });
-    }
+    await advanceSequentialOrder(db, doc, docSigners, justSignedOrder);
   }
 
-  // When all non-discloser signers are done, notify disclosers needing finalization
   if (!allSigned) {
-    const actionable = getActionableSigners(docSigners);
-    const nonDisclosers = actionable.filter(
-      (s) => (s as { groupRole?: string | null }).groupRole !== GROUP_ROLE.DISCLOSER,
-    );
-    const allNonDisclosersDone = nonDisclosers.every((s) => s.id === justSignedId || s.status === "SIGNED");
-    const disclosersNeedingFinalization = actionable.filter((s) => {
-      const role = (s as { groupRole?: string | null }).groupRole;
-      const finSig = (s as { finalizationSignature?: string | null }).finalizationSignature;
-      return role === GROUP_ROLE.DISCLOSER && s.status === "SIGNED" && !finSig;
-    });
-
-    if (allNonDisclosersDone && disclosersNeedingFinalization.length > 0) {
-      const baseUrl = getBaseUrl();
-      const branding = await resolveDocumentBranding(
-        doc.createdBy,
-        (doc as { brandingProfileId?: string | null }).brandingProfileId,
-      );
-      for (const discloser of disclosersNeedingFinalization) {
-        if (discloser.email) {
-          void sendFinalizationEmail({
-            to: discloser.email,
-            documentTitle: doc.title,
-            signerLabel: discloser.label,
-            signUrl: `${baseUrl}/sign/${doc.id}?claim=${discloser.claimToken}`,
-            branding,
-            replyTo: branding.emailReplyTo,
-          });
-        }
-      }
-    }
+    await notifyDisclosersIfReady(db, doc, docSigners, justSignedId);
   }
 
   if (allSigned) {
@@ -281,6 +299,81 @@ export async function handlePostSignCompletion(params: {
   }
 
   return { allSigned };
+}
+
+async function propagateToSibling(
+  db: Db,
+  doc: { id: string; groupId: string | null; contentHash: string },
+  siblingDoc: { id: string; contentHash: string },
+  signData: SignData,
+): Promise<boolean> {
+  const siblingSigners = await findSignersByDocumentId(db, siblingDoc.id);
+  const discloserSigner = siblingSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
+  if (!discloserSigner || discloserSigner.status === "SIGNED") return false;
+
+  const sameContent = siblingDoc.contentHash === doc.contentHash;
+
+  if (sameContent) {
+    const siblingSignerIdx = siblingSigners.findIndex((s) => s.id === discloserSigner.id);
+    const siblingStateHash = await computeDocumentStateHash({
+      contentHash: siblingDoc.contentHash,
+      docSigners: siblingSigners,
+      currentSignerFieldValues: signData.fieldValues,
+      currentSignerIndex: siblingSignerIdx >= 0 ? siblingSignerIdx : undefined,
+    });
+    await db
+      .update(signersTable)
+      .set({
+        address: signData.address,
+        chain: signData.chain,
+        status: "SIGNED",
+        signature: signData.signature,
+        signedAt: signData.signedAt,
+        scheme: signData.scheme,
+        email: signData.email,
+        handSignatureData: signData.handSignatureData,
+        handSignatureHash: signData.handSignatureHash,
+        fieldValues: signData.fieldValues,
+        lastIp: signData.lastIp,
+        ipUpdatedAt: signData.ipUpdatedAt,
+        userAgent: signData.userAgent,
+        identityLevel: signData.identityLevel as "L0_WALLET" | "L1_EMAIL" | "L2_VERIFIED" | "L3_KYC",
+        forensicEvidence: signData.forensicEvidence,
+        forensicHash: signData.forensicHash,
+        documentStateHash: siblingStateHash,
+        consentText: signData.consentText ?? null,
+        consentAt: signData.consentAt ?? null,
+      })
+      .where(eq(signersTable.id, discloserSigner.id));
+  } else {
+    await db
+      .update(signersTable)
+      .set({
+        address: signData.address,
+        chain: signData.chain,
+        email: signData.email,
+        fieldValues: signData.fieldValues,
+        lastIp: signData.lastIp,
+        ipUpdatedAt: signData.ipUpdatedAt,
+        userAgent: signData.userAgent,
+      })
+      .where(eq(signersTable.id, discloserSigner.id));
+  }
+
+  void safeLogAudit({
+    documentId: siblingDoc.id,
+    eventType: sameContent ? "SIGNER_SIGNED" : "SIGNER_VIEWED",
+    actor: signData.address ?? signData.email ?? "system",
+    actorType: signData.address ? "wallet" : "email",
+    metadata: {
+      propagatedFrom: doc.id,
+      groupId: doc.groupId,
+      signerLabel: discloserSigner.label,
+      prefillOnly: !sameContent,
+    },
+  });
+
+  return true;
 }
 
 /**
@@ -314,83 +407,8 @@ export async function propagateGroupSignature(params: {
     if (siblingDoc.id === doc.id) continue;
     if (siblingDoc.status !== "PENDING") continue;
 
-    const siblingSigners = await findSignersByDocumentId(db, siblingDoc.id);
-    const discloserSigner = siblingSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
-    if (!discloserSigner || discloserSigner.status === "SIGNED") continue;
-
-    // When all sibling documents share the same content hash, the document
-    // state hash is identical so we can propagate the wallet signature
-    // directly.  When content differs (per-recipient contracts) the
-    // signature is bound to a different state hash and cannot be reused —
-    // we only pre-fill the discloser's address & field values so they
-    // don't need to re-enter data, but they must sign each doc individually.
-    const sameContent = siblingDoc.contentHash === doc.contentHash;
-
-    if (sameContent) {
-      const siblingSignerIdx = siblingSigners.findIndex((s) => s.id === discloserSigner.id);
-      const siblingStateHash = await computeDocumentStateHash({
-        contentHash: siblingDoc.contentHash,
-        docSigners: siblingSigners,
-        currentSignerFieldValues: signData.fieldValues,
-        currentSignerIndex: siblingSignerIdx >= 0 ? siblingSignerIdx : undefined,
-      });
-
-      await db
-        .update(signersTable)
-        .set({
-          address: signData.address,
-          chain: signData.chain,
-          status: "SIGNED",
-          signature: signData.signature,
-          signedAt: signData.signedAt,
-          scheme: signData.scheme,
-          email: signData.email,
-          handSignatureData: signData.handSignatureData,
-          handSignatureHash: signData.handSignatureHash,
-          fieldValues: signData.fieldValues,
-          lastIp: signData.lastIp,
-          ipUpdatedAt: signData.ipUpdatedAt,
-          userAgent: signData.userAgent,
-          identityLevel: signData.identityLevel as "L0_WALLET" | "L1_EMAIL" | "L2_VERIFIED" | "L3_KYC",
-          forensicEvidence: signData.forensicEvidence,
-          forensicHash: signData.forensicHash,
-          documentStateHash: siblingStateHash,
-          consentText: signData.consentText ?? null,
-          consentAt: signData.consentAt ?? null,
-          // NOTE: finalizationSignature is NOT propagated — each doc gets its
-          // own finalization since the state hash differs once recipients sign.
-        })
-        .where(eq(signersTable.id, discloserSigner.id));
-    } else {
-      // Different content: pre-fill address + field values only, keep PENDING
-      await db
-        .update(signersTable)
-        .set({
-          address: signData.address,
-          chain: signData.chain,
-          email: signData.email,
-          fieldValues: signData.fieldValues,
-          lastIp: signData.lastIp,
-          ipUpdatedAt: signData.ipUpdatedAt,
-          userAgent: signData.userAgent,
-        })
-        .where(eq(signersTable.id, discloserSigner.id));
-    }
-
-    propagatedCount++;
-
-    void safeLogAudit({
-      documentId: siblingDoc.id,
-      eventType: sameContent ? "SIGNER_SIGNED" : "SIGNER_VIEWED",
-      actor: signData.address ?? signData.email ?? "system",
-      actorType: signData.address ? "wallet" : "email",
-      metadata: {
-        propagatedFrom: doc.id,
-        groupId: doc.groupId,
-        signerLabel: discloserSigner.label,
-        prefillOnly: !sameContent,
-      },
-    });
+    const didPropagate = await propagateToSibling(db, doc, siblingDoc, signData);
+    if (didPropagate) propagatedCount++;
   }
 
   if (propagatedCount > 0) {
@@ -420,7 +438,10 @@ export function processIdentityVerification(params: {
   signerAddress?: string | null;
   signerEmail?: string | null;
   baseIdentityLevel: IdentityLevel;
-}): { sanitizedFieldValues: Record<string, string> | null; identityLevel: IdentityLevel } {
+}): {
+  sanitizedFieldValues: Record<string, string> | null;
+  identityLevel: IdentityLevel;
+} {
   const { editableFields, signerAddress, signerEmail, baseIdentityLevel } = params;
   let { sanitizedFieldValues } = params;
 

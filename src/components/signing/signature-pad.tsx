@@ -1,12 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AnimatedButton } from "../ui/motion";
-import { signatureStrokesToDataUrl, type SignatureStroke } from "~/lib/signature/signature-svg";
-import type { TimedSignatureStroke } from "~/lib/forensic";
-import type { BehavioralTracker } from "~/lib/forensic";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import type { BehavioralTracker, TimedSignatureStroke } from "~/lib/forensic";
 import { getSavedSignature, saveSignature } from "~/lib/signature/signature-store";
+import { type SignatureStroke, signatureStrokesToDataUrl } from "~/lib/signature/signature-svg";
+import { AnimatedButton } from "../ui/motion";
 
 type Props = {
   onCapture: (dataUrl: string) => void;
@@ -22,16 +21,7 @@ type Props = {
   documentId?: string;
 };
 
-export function SignaturePad({
-  onCapture,
-  onClear,
-  captured,
-  forensicTracker,
-  forensicSurfaceId = "signature-pad",
-  mode = "signature",
-  signerIdentity,
-  documentId,
-}: Props) {
+function useSignatureCanvas(forensicTracker: BehavioralTracker | null | undefined, forensicSurfaceId: string) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const strokesRef = useRef<TimedSignatureStroke[]>([]);
   const activeStrokeRef = useRef<TimedSignatureStroke | null>(null);
@@ -50,7 +40,7 @@ export function SignaturePad({
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
-      if (w === 0 || h === 0) return; // not laid out yet
+      if (w === 0 || h === 0) return;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.scale(dpr, dpr);
@@ -61,14 +51,10 @@ export function SignaturePad({
       ctx.lineJoin = "round";
     };
 
-    // Use ResizeObserver to init once canvas has real dimensions
     const ro = new ResizeObserver(() => {
-      if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-        setupCanvas();
-      }
+      if (canvas.clientWidth > 0 && canvas.clientHeight > 0) setupCanvas();
     });
     ro.observe(canvas);
-    // Also try immediately in case already laid out
     setupCanvas();
 
     return () => ro.disconnect();
@@ -136,6 +122,47 @@ export function SignaturePad({
     activeStrokeRef.current = null;
   };
 
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    strokesRef.current = [];
+    activeStrokeRef.current = null;
+    activeReplayStrokeRef.current = null;
+    drawOriginRef.current = null;
+    setHasStrokes(false);
+    forensicTracker?.clearSignature(forensicSurfaceId);
+  };
+
+  return {
+    canvasRef,
+    strokesRef,
+    hasStrokes,
+    startDraw,
+    draw,
+    endDraw,
+    clearCanvas,
+  };
+}
+
+export function SignaturePad({
+  onCapture,
+  onClear,
+  captured,
+  forensicTracker,
+  forensicSurfaceId = "signature-pad",
+  mode = "signature",
+  signerIdentity,
+  documentId,
+}: Props) {
+  const { canvasRef, strokesRef, hasStrokes, startDraw, draw, endDraw, clearCanvas } = useSignatureCanvas(
+    forensicTracker,
+    forensicSurfaceId,
+  );
+
   const handleCapture = () => {
     const canvas = canvasRef.current;
     if (!canvas || !hasStrokes) return;
@@ -168,18 +195,7 @@ export function SignaturePad({
   const placeholder = isInitials ? "Initial here" : "Sign here";
 
   const handleClear = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-    strokesRef.current = [];
-    activeStrokeRef.current = null;
-    activeReplayStrokeRef.current = null;
-    drawOriginRef.current = null;
-    setHasStrokes(false);
-    forensicTracker?.clearSignature(forensicSurfaceId);
+    clearCanvas();
     onClear();
   };
 

@@ -19,14 +19,14 @@
 import { createHash } from "crypto";
 import { promises as dns } from "dns";
 import type {
-  ClientFingerprint,
   BehavioralSignals,
+  ClientFingerprint,
   ForensicEvidence,
   ForensicFlag,
+  ForensicGeoProvider,
+  ForensicProviderConfig,
   GeoIntel,
   TlsFingerprint,
-  ForensicProviderConfig,
-  ForensicGeoProvider,
 } from "~/lib/forensic/types";
 import { logger } from "~/lib/utils/logger";
 

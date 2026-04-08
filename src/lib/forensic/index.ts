@@ -1,18 +1,38 @@
 // Client-side collection
+
+export type {
+  CapturedField,
+  CapturedGeometry,
+  CapturedPage,
+  CapturedSignaturePad,
+  CapturedViewport,
+  CaptureResult,
+  CaptureString,
+  CaptureTarget,
+} from "./capture-adapter";
+// Capture adapter (thin browser shell)
+export { ForensicCaptureAdapter, snapshotGeometry } from "./capture-adapter";
+export type { ExternalFingerprintProvider } from "./fingerprint";
 export {
+  BehavioralTracker,
   collectFingerprint,
   collectFingerprintBestEffort,
-  BehavioralTracker,
   enrichWithExternalProvider,
 } from "./fingerprint";
-export type { ExternalFingerprintProvider } from "./fingerprint";
+// Sub-modules (for advanced usage / testing)
+export { generateId, sha256 } from "./hash";
+export { getOrCreatePersistentId } from "./persistence";
+export type { ActiveStroke, PlaybackState, SceneSnapshot, StrokePoint } from "./playback-controller";
+// Playback controller (TS fallback)
+export { TSMultiSignerController, TSPlaybackController } from "./playback-controller";
 export {
   DeterministicReplayRecorder,
   decodeForensicReplay,
-  replayForensicTape,
-  encodeTimedSignature,
   decodeTimedSignature,
+  encodeTimedSignature,
+  replayForensicTape,
 } from "./replay";
+export type { ForensicReplayCore, ForensicReplayCoreKind } from "./replay-core";
 export {
   configureForensicReplayWasmLoader,
   createTypeScriptReplayCore,
@@ -21,92 +41,68 @@ export {
   resolveForensicReplayCore,
   warmForensicReplayCore,
 } from "./replay-core";
-export type { ForensicReplayCore, ForensicReplayCoreKind } from "./replay-core";
 export {
-  REPLAY_ENCODING,
-  SIGNATURE_ENCODING,
-  REPLAY_CONTAINER_MAGIC,
   REPLAY_CHUNK_IDS,
-  REPLAY_STREAM_IDS,
-  REPLAY_OPS,
-  REPLAY_NAV_DIRECTION_CODES,
   REPLAY_CLIPBOARD_ACTION_CODES,
-  REPLAY_STRING_KINDS,
+  REPLAY_CONTAINER_MAGIC,
+  REPLAY_ENCODING,
   REPLAY_FORMAT_LIMITS,
+  REPLAY_NAV_DIRECTION_CODES,
+  REPLAY_OPS,
+  REPLAY_STREAM_IDS,
+  REPLAY_STRING_KINDS,
+  SIGNATURE_ENCODING,
 } from "./replay-format";
-
-// Capture adapter (thin browser shell)
-export { ForensicCaptureAdapter, snapshotGeometry } from "./capture-adapter";
-export type {
-  CapturedGeometry,
-  CapturedViewport,
-  CapturedPage,
-  CapturedField,
-  CapturedSignaturePad,
-  CaptureTarget,
-  CaptureString,
-  CaptureResult,
-} from "./capture-adapter";
-
-// Playback controller (TS fallback)
-export { TSPlaybackController, TSMultiSignerController } from "./playback-controller";
-export type { PlaybackState, SceneSnapshot, ActiveStroke, StrokePoint } from "./playback-controller";
-
-// Storage tiers
-export {
-  buildEmbeddedPayload,
-  buildExternalPointer,
-  estimateEmbeddedSize,
-  shouldExternalize,
-  EXTERNALIZE_THRESHOLD_BYTES,
-} from "./storage";
-export type { ReplayStoragePointer, EmbeddedReplayPayload, ExternalReplayPayload } from "./storage";
-
-// Sessions (multi-visit tracking + per-interaction classification)
-export {
-  generateSessionId,
-  buildForensicSessionProfile,
-  buildSignerBaselineProfile,
-  classifyInteractions,
-  classifySession,
-  buildForensicSession,
-  mergeSignerSessions,
-} from "./session";
 export type {
   ForensicSession,
-  ForensicSessionProfile,
   ForensicSessionLivenessProfile,
+  ForensicSessionProfile,
   ForensicSessionSignal,
+  InteractionAction,
+  InteractionClassification,
   PersistedForensicSessionCapture,
   SessionClassification,
-  InteractionClassification,
-  InteractionAction,
   SignerBaselineComparison,
   SignerBaselineProfile,
   SignerForensicSessions,
 } from "./session";
-
-// Sub-modules (for advanced usage / testing)
-export { sha256, generateId } from "./hash";
-export { getOrCreatePersistentId } from "./persistence";
+// Sessions (multi-visit tracking + per-interaction classification)
+export {
+  buildForensicSession,
+  buildForensicSessionProfile,
+  buildSignerBaselineProfile,
+  classifyInteractions,
+  classifySession,
+  generateSessionId,
+  mergeSignerSessions,
+} from "./session";
 export { analyzeTimedSignature, extractReplaySignatureAnalysis } from "./signature-analysis";
+export type { EmbeddedReplayPayload, ExternalReplayPayload, ReplayStoragePointer } from "./storage";
+// Storage tiers
+export {
+  buildEmbeddedPayload,
+  buildExternalPointer,
+  EXTERNALIZE_THRESHOLD_BYTES,
+  estimateEmbeddedSize,
+  shouldExternalize,
+} from "./storage";
 
 // Types
 export type {
-  ClientFingerprint,
   BehavioralSignals,
-  GeoIntel,
-  TlsFingerprint,
+  ClientFingerprint,
   ForensicEvidence,
+  ForensicFingerprintProvider,
   ForensicFlag,
   ForensicGeoProvider,
-  ForensicFingerprintProvider,
   ForensicProviderConfig,
   ForensicReplayEventKind,
-  ForensicReplayViewport,
-  ForensicReplayTarget,
   ForensicReplayStringEntry,
   ForensicReplayTape,
+  ForensicReplayTarget,
+  ForensicReplayViewport,
+  GeoIntel,
   TimedSignaturePoint,
   TimedSignatureStroke,
+  TlsFingerprint,
 } from "./types";

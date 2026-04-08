@@ -1,6 +1,6 @@
-import type { Document, Signer } from "~/server/db/schema";
 import type { UnifiedRequestIdentity } from "~/server/auth/auth-identity";
 import { normalizeStoredWalletAddress } from "~/server/auth/wallet-identity";
+import type { Document, Signer } from "~/server/db/schema";
 
 type SignerIdentityFields = Pick<Signer, "email" | "address" | "chain" | "userId">;
 

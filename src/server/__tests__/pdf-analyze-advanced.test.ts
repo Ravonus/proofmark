@@ -2,9 +2,10 @@
  * Tests for advanced features: AcroForm extraction, header/footer stripping,
  * structural markers, entity type extraction, recital skipping, and deduplication.
  */
-import { describe, it, expect } from "vitest";
+
 import fs from "node:fs";
 import path from "node:path";
+import { describe, expect, it } from "vitest";
 import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 

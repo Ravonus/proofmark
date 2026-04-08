@@ -4,11 +4,11 @@ import { Plus, Shield, Trash2 } from "lucide-react";
 import {
   describeSignerTokenGate,
   type SignerTokenGate,
-  type TokenGateRule,
   TOKEN_GATE_TYPE_OPTIONS,
+  type TokenGateRule,
 } from "~/lib/token-gates";
-import { Select } from "../ui/select";
 import { W3SButton } from "../ui/motion";
+import { Select } from "../ui/select";
 
 type Props = {
   value: SignerTokenGate | null | undefined;
@@ -22,11 +22,30 @@ function createRuleId() {
 function createRule(type: TokenGateRule["type"]): TokenGateRule {
   switch (type) {
     case "ERC20":
-      return { id: createRuleId(), chain: "ETH", type: "ERC20", contractAddress: "", minAmount: "1" };
+      return {
+        id: createRuleId(),
+        chain: "ETH",
+        type: "ERC20",
+        contractAddress: "",
+        minAmount: "1",
+      };
     case "ERC721":
-      return { id: createRuleId(), chain: "ETH", type: "ERC721", contractAddress: "", tokenId: "", minAmount: "1" };
+      return {
+        id: createRuleId(),
+        chain: "ETH",
+        type: "ERC721",
+        contractAddress: "",
+        tokenId: "",
+        minAmount: "1",
+      };
     case "SPL":
-      return { id: createRuleId(), chain: "SOL", type: "SPL", mintAddress: "", minAmount: "1" };
+      return {
+        id: createRuleId(),
+        chain: "SOL",
+        type: "SPL",
+        mintAddress: "",
+        minAmount: "1",
+      };
     case "ORDINAL":
       return {
         id: createRuleId(),
@@ -36,7 +55,13 @@ function createRule(type: TokenGateRule["type"]): TokenGateRule {
         identifier: "",
       };
     case "RUNE":
-      return { id: createRuleId(), chain: "BTC", type: "RUNE", identifier: "", minAmount: "1" };
+      return {
+        id: createRuleId(),
+        chain: "BTC",
+        type: "RUNE",
+        identifier: "",
+        minAmount: "1",
+      };
   }
 }
 
@@ -96,8 +121,16 @@ export function TokenGateEditor({ value, onChange }: Props) {
               variant="glass"
               label="Match"
               options={[
-                { value: "ALL", label: "Match all", description: "Wallet must satisfy every rule" },
-                { value: "ANY", label: "Match any", description: "Wallet can satisfy just one rule" },
+                {
+                  value: "ALL",
+                  label: "Match all",
+                  description: "Wallet must satisfy every rule",
+                },
+                {
+                  value: "ANY",
+                  label: "Match any",
+                  description: "Wallet can satisfy just one rule",
+                },
               ]}
             />
             <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3 py-2 text-[10px] text-muted">
@@ -106,193 +139,225 @@ export function TokenGateEditor({ value, onChange }: Props) {
           </div>
 
           {gate.rules.map((rule, index) => (
-            <div
+            <TokenGateRuleRow
               key={rule.id ?? `${rule.type}-${index}`}
-              className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3"
-            >
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">Rule {index + 1}</p>
-                </div>
-                <Select
-                  value={rule.type}
-                  onChange={(nextType) => handleTypeChange(rule.id, nextType as TokenGateRule["type"])}
-                  size="sm"
-                  variant="glass"
-                  options={TOKEN_GATE_TYPE_OPTIONS.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                    description: option.chain,
-                  }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setRules(gate.rules.filter((candidate) => candidate.id !== rule.id))}
-                  className="rounded-md p-1.5 text-red-400/70 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                  title="Remove rule"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Label</span>
-                  <input
-                    value={rule.label ?? ""}
-                    onChange={(event) => replaceRule(rule.id, { ...rule, label: event.target.value })}
-                    placeholder="Optional display label"
-                    className={inputClassName}
-                  />
-                </label>
-
-                {rule.type === "ORDINAL" ? (
-                  <Select
-                    label="Match by"
-                    value={rule.identifierType}
-                    onChange={(nextValue) =>
-                      replaceRule(rule.id, { ...rule, identifierType: nextValue as "INSCRIPTION_ID" | "COLLECTION_ID" })
-                    }
-                    size="sm"
-                    variant="glass"
-                    options={[
-                      {
-                        value: "INSCRIPTION_ID",
-                        label: "Inscription ID",
-                        description: "Verified via ord / ordinals.com",
-                      },
-                      { value: "COLLECTION_ID", label: "Collection ID", description: "Not supported yet" },
-                    ]}
-                  />
-                ) : (
-                  <div />
-                )}
-              </div>
-
-              {rule.type === "ERC20" && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Contract</span>
-                    <input
-                      value={rule.contractAddress}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, contractAddress: event.target.value })}
-                      placeholder="0x..."
-                      className={inputClassName}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
-                      Minimum Amount
-                    </span>
-                    <input
-                      value={rule.minAmount}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, minAmount: event.target.value })}
-                      placeholder="1000"
-                      className={inputClassName}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {rule.type === "ERC721" && (
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <label className="space-y-1 sm:col-span-2">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Contract</span>
-                    <input
-                      value={rule.contractAddress}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, contractAddress: event.target.value })}
-                      placeholder="0x..."
-                      className={inputClassName}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Token ID</span>
-                    <input
-                      value={rule.tokenId ?? ""}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, tokenId: event.target.value })}
-                      placeholder="Optional"
-                      className={inputClassName}
-                    />
-                  </label>
-                  <label className="space-y-1 sm:col-span-3">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Minimum NFTs</span>
-                    <input
-                      value={rule.minAmount}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, minAmount: event.target.value })}
-                      placeholder="1"
-                      className={inputClassName}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {rule.type === "SPL" && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Mint</span>
-                    <input
-                      value={rule.mintAddress}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, mintAddress: event.target.value })}
-                      placeholder="So111111..."
-                      className={inputClassName}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
-                      Minimum Amount
-                    </span>
-                    <input
-                      value={rule.minAmount}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, minAmount: event.target.value })}
-                      placeholder="500000"
-                      className={inputClassName}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {rule.type === "ORDINAL" && (
-                <label className="space-y-1">
-                  <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
-                    {rule.identifierType === "COLLECTION_ID" ? "Collection ID" : "Inscription ID"}
-                  </span>
-                  <input
-                    value={rule.identifier}
-                    onChange={(event) => replaceRule(rule.id, { ...rule, identifier: event.target.value })}
-                    placeholder={rule.identifierType === "COLLECTION_ID" ? "collection-id" : "txidi0"}
-                    className={inputClassName}
-                  />
-                </label>
-              )}
-
-              {rule.type === "RUNE" && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Rune</span>
-                    <input
-                      value={rule.identifier}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, identifier: event.target.value })}
-                      placeholder="DOG•GO•TO•THE•MOON or 840000:3"
-                      className={inputClassName}
-                    />
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
-                      Minimum Amount
-                    </span>
-                    <input
-                      value={rule.minAmount}
-                      onChange={(event) => replaceRule(rule.id, { ...rule, minAmount: event.target.value })}
-                      placeholder="1"
-                      className={inputClassName}
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
+              rule={rule}
+              index={index}
+              onReplace={replaceRule}
+              onTypeChange={handleTypeChange}
+              onRemove={(ruleId) => setRules(gate.rules.filter((c) => c.id !== ruleId))}
+            />
           ))}
         </div>
       )}
     </div>
   );
+}
+
+function TokenGateRuleRow({
+  rule,
+  index,
+  onReplace,
+  onTypeChange,
+  onRemove,
+}: {
+  rule: TokenGateRule;
+  index: number;
+  onReplace: (ruleId: string | undefined, nextRule: TokenGateRule) => void;
+  onTypeChange: (ruleId: string | undefined, type: TokenGateRule["type"]) => void;
+  onRemove: (ruleId: string | undefined) => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-3">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted">Rule {index + 1}</p>
+        </div>
+        <Select
+          value={rule.type}
+          onChange={(nextType) => onTypeChange(rule.id, nextType as TokenGateRule["type"])}
+          size="sm"
+          variant="glass"
+          options={TOKEN_GATE_TYPE_OPTIONS.map((o) => ({
+            value: o.value,
+            label: o.label,
+            description: o.chain,
+          }))}
+        />
+        <button
+          type="button"
+          onClick={() => onRemove(rule.id)}
+          className="rounded-md p-1.5 text-red-400/70 transition-colors hover:bg-red-500/10 hover:text-red-400"
+          title="Remove rule"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Label</span>
+          <input
+            value={rule.label ?? ""}
+            onChange={(e) => onReplace(rule.id, { ...rule, label: e.target.value })}
+            placeholder="Optional display label"
+            className={inputClassName}
+          />
+        </label>
+        {rule.type === "ORDINAL" ? (
+          <Select
+            label="Match by"
+            value={rule.identifierType}
+            onChange={(v) =>
+              onReplace(rule.id, {
+                ...rule,
+                identifierType: v as "INSCRIPTION_ID" | "COLLECTION_ID",
+              })
+            }
+            size="sm"
+            variant="glass"
+            options={[
+              {
+                value: "INSCRIPTION_ID",
+                label: "Inscription ID",
+                description: "Verified via ord / ordinals.com",
+              },
+              {
+                value: "COLLECTION_ID",
+                label: "Collection ID",
+                description: "Not supported yet",
+              },
+            ]}
+          />
+        ) : (
+          <div />
+        )}
+      </div>
+      <TokenGateRuleFields rule={rule} onReplace={onReplace} />
+    </div>
+  );
+}
+
+function TokenGateRuleFields({
+  rule,
+  onReplace,
+}: {
+  rule: TokenGateRule;
+  onReplace: (ruleId: string | undefined, nextRule: TokenGateRule) => void;
+}) {
+  if (rule.type === "ERC20")
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Contract</span>
+          <input
+            value={rule.contractAddress}
+            onChange={(e) => onReplace(rule.id, { ...rule, contractAddress: e.target.value })}
+            placeholder="0x..."
+            className={inputClassName}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Minimum Amount</span>
+          <input
+            value={rule.minAmount}
+            onChange={(e) => onReplace(rule.id, { ...rule, minAmount: e.target.value })}
+            placeholder="1000"
+            className={inputClassName}
+          />
+        </label>
+      </div>
+    );
+  if (rule.type === "ERC721")
+    return (
+      <div className="grid gap-2 sm:grid-cols-3">
+        <label className="space-y-1 sm:col-span-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Contract</span>
+          <input
+            value={rule.contractAddress}
+            onChange={(e) => onReplace(rule.id, { ...rule, contractAddress: e.target.value })}
+            placeholder="0x..."
+            className={inputClassName}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Token ID</span>
+          <input
+            value={rule.tokenId ?? ""}
+            onChange={(e) => onReplace(rule.id, { ...rule, tokenId: e.target.value })}
+            placeholder="Optional"
+            className={inputClassName}
+          />
+        </label>
+        <label className="space-y-1 sm:col-span-3">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Minimum NFTs</span>
+          <input
+            value={rule.minAmount}
+            onChange={(e) => onReplace(rule.id, { ...rule, minAmount: e.target.value })}
+            placeholder="1"
+            className={inputClassName}
+          />
+        </label>
+      </div>
+    );
+  if (rule.type === "SPL")
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Mint</span>
+          <input
+            value={rule.mintAddress}
+            onChange={(e) => onReplace(rule.id, { ...rule, mintAddress: e.target.value })}
+            placeholder="So111111..."
+            className={inputClassName}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Minimum Amount</span>
+          <input
+            value={rule.minAmount}
+            onChange={(e) => onReplace(rule.id, { ...rule, minAmount: e.target.value })}
+            placeholder="500000"
+            className={inputClassName}
+          />
+        </label>
+      </div>
+    );
+  if (rule.type === "ORDINAL")
+    return (
+      <label className="space-y-1">
+        <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">
+          {rule.identifierType === "COLLECTION_ID" ? "Collection ID" : "Inscription ID"}
+        </span>
+        <input
+          value={rule.identifier}
+          onChange={(e) => onReplace(rule.id, { ...rule, identifier: e.target.value })}
+          placeholder={rule.identifierType === "COLLECTION_ID" ? "collection-id" : "txidi0"}
+          className={inputClassName}
+        />
+      </label>
+    );
+  if (rule.type === "RUNE")
+    return (
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Rune</span>
+          <input
+            value={rule.identifier}
+            onChange={(e) => onReplace(rule.id, { ...rule, identifier: e.target.value })}
+            placeholder="DOG...TO...THE...MOON or 840000:3"
+            className={inputClassName}
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted">Minimum Amount</span>
+          <input
+            value={rule.minAmount}
+            onChange={(e) => onReplace(rule.id, { ...rule, minAmount: e.target.value })}
+            placeholder="1"
+            className={inputClassName}
+          />
+        </label>
+      </div>
+    );
+  return null;
 }

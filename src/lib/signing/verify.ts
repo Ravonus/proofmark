@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { verifyMessage as verifyEvmMessage, hexToBytes, recoverPublicKey } from "viem";
+import { hexToBytes, recoverPublicKey, verifyMessage as verifyEvmMessage } from "viem";
 import type { WalletChain } from "../crypto/chains";
 import { normalizeAddress } from "../crypto/chains";
 
@@ -241,6 +241,61 @@ async function verifyBip322P2wpkhSignature(address: string, pubkey: Buffer, debu
 
 // ── BIP-322 Dispatch ─────────────────────────────────────────────────────────
 
+async function tryWitnessP2TR(
+  witnessItems: Buffer[],
+  address: string,
+  message: string,
+  debug: string[],
+): Promise<{ ok: boolean; scheme: string } | null> {
+  if (witnessItems.length === 1 && (witnessItems[0]!.length === 64 || witnessItems[0]!.length === 65)) {
+    debug.push("bip322: trying P2TR (single witness item, 64/65 bytes)");
+    const ok = await verifyBip322TaprootSignature(address, message, witnessItems[0]!, debug);
+    return { ok, scheme: "BIP322_P2TR" };
+  }
+  return null;
+}
+
+async function tryWitnessP2WPKH(
+  witnessItems: Buffer[],
+  address: string,
+  debug: string[],
+): Promise<{ ok: boolean; scheme: string } | null> {
+  if (witnessItems.length === 2 && witnessItems[1]!.length === 33) {
+    debug.push("bip322: trying P2WPKH (2 witness items, pubkey=33 bytes)");
+    const ok = await verifyBip322P2wpkhSignature(address, witnessItems[1]!, debug);
+    return { ok, scheme: "BIP322_P2WPKH" };
+  }
+  return null;
+}
+
+async function tryWitnessSchnorrItems(
+  witnessItems: Buffer[],
+  address: string,
+  message: string,
+  isTaproot: boolean,
+  debug: string[],
+): Promise<{ ok: boolean; scheme: string } | null> {
+  if (isTaproot) {
+    for (let i = 0; i < witnessItems.length; i++) {
+      const item = witnessItems[i]!;
+      if (item.length === 64 || item.length === 65) {
+        debug.push(`bip322: trying witness item[${i}] (${item.length} bytes) as P2TR schnorr`);
+        const ok = await verifyBip322TaprootSignature(address, message, item, debug);
+        if (ok) return { ok: true, scheme: "BIP322_P2TR" };
+      }
+    }
+  }
+  for (let i = 0; i < witnessItems.length; i++) {
+    const item = witnessItems[i]!;
+    if (item.length === 33) {
+      debug.push(`bip322: trying witness item[${i}] (33 bytes) as P2WPKH pubkey`);
+      const ok = await verifyBip322P2wpkhSignature(address, item, debug);
+      if (ok) return { ok: true, scheme: "BIP322_P2WPKH" };
+    }
+  }
+  return null;
+}
+
 async function verifyBip322Signature(
   address: string,
   message: string,
@@ -250,48 +305,19 @@ async function verifyBip322Signature(
   const isTaproot = address.toLowerCase().startsWith("bc1p") || address.toLowerCase().startsWith("tb1p");
   debug.push(`bip322: isTaproot=${isTaproot} raw_len=${raw.length} raw_hex=${raw.toString("hex").slice(0, 80)}...`);
 
-  // Try parsing as witness stack
   const witnessItems = parseWitnessStack(raw, debug);
 
   if (witnessItems) {
-    // P2TR: [schnorr_sig(64)] or [schnorr_sig(65 with hashtype)]
-    if (witnessItems.length === 1 && (witnessItems[0]!.length === 64 || witnessItems[0]!.length === 65)) {
-      debug.push("bip322: trying P2TR (single witness item, 64/65 bytes)");
-      const ok = await verifyBip322TaprootSignature(address, message, witnessItems[0]!, debug);
-      return { ok, scheme: "BIP322_P2TR" };
-    }
+    const p2tr = await tryWitnessP2TR(witnessItems, address, message, debug);
+    if (p2tr) return p2tr;
 
-    // P2WPKH: [DER_sig, compressed_pubkey(33)]
-    if (witnessItems.length === 2 && witnessItems[1]!.length === 33) {
-      debug.push("bip322: trying P2WPKH (2 witness items, pubkey=33 bytes)");
-      const ok = await verifyBip322P2wpkhSignature(address, witnessItems[1]!, debug);
-      return { ok, scheme: "BIP322_P2WPKH" };
-    }
+    const p2wpkh = await tryWitnessP2WPKH(witnessItems, address, debug);
+    if (p2wpkh) return p2wpkh;
 
-    // Try any 64/65 byte item as schnorr sig (taproot)
-    if (isTaproot) {
-      for (let i = 0; i < witnessItems.length; i++) {
-        const item = witnessItems[i]!;
-        if (item.length === 64 || item.length === 65) {
-          debug.push(`bip322: trying witness item[${i}] (${item.length} bytes) as P2TR schnorr`);
-          const ok = await verifyBip322TaprootSignature(address, message, item, debug);
-          if (ok) return { ok: true, scheme: "BIP322_P2TR" };
-        }
-      }
-    }
-
-    // Try any 33-byte item as pubkey (p2wpkh)
-    for (let i = 0; i < witnessItems.length; i++) {
-      const item = witnessItems[i]!;
-      if (item.length === 33) {
-        debug.push(`bip322: trying witness item[${i}] (33 bytes) as P2WPKH pubkey`);
-        const ok = await verifyBip322P2wpkhSignature(address, item, debug);
-        if (ok) return { ok: true, scheme: "BIP322_P2WPKH" };
-      }
-    }
+    const items = await tryWitnessSchnorrItems(witnessItems, address, message, isTaproot, debug);
+    if (items) return items;
   }
 
-  // Raw bytes might be the sig directly (no witness wrapping)
   if ((raw.length === 64 || raw.length === 65) && isTaproot) {
     debug.push("bip322: trying raw bytes as bare schnorr sig");
     const ok = await verifyBip322TaprootSignature(address, message, raw, debug);

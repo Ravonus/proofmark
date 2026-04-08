@@ -5,11 +5,11 @@
  *   import { useThemeStore, useWalletStore, useUiStore } from "~/stores";
  */
 
-export { useThemeStore } from "./theme";
-export { useWalletStore } from "./wallet";
-export type { WalletOption } from "./wallet";
-export { useUiStore } from "./ui";
-export { useEditorStore } from "./editor";
+export { filterDocuments, useDashboardStore } from "./dashboard";
 export type { SignerDef } from "./editor";
+export { useEditorStore } from "./editor";
 export { useSigningStore } from "./signing";
-export { useDashboardStore, filterDocuments } from "./dashboard";
+export { useThemeStore } from "./theme";
+export { useUiStore } from "./ui";
+export type { WalletOption } from "./wallet";
+export { useWalletStore } from "./wallet";

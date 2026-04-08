@@ -3,7 +3,7 @@
  * document types, e-sign tags, ligature normalization, corporate execution,
  * notary/witness blocks, and edge cases.
  */
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 

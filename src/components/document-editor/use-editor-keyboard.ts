@@ -8,6 +8,16 @@ type UseEditorKeyboardOptions = {
   onEscape: () => void;
 };
 
+/** Check if the event target is a text input element. */
+function isTextInput(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+}
+
+/** Check if event has the platform modifier key (Cmd on Mac, Ctrl elsewhere). */
+function hasMod(e: KeyboardEvent): boolean {
+  return e.metaKey || e.ctrlKey;
+}
+
 /**
  * Keyboard shortcuts for the document editor.
  * Handles Escape, Cmd+Z (undo), Cmd+Shift+Z / Cmd+Y (redo).
@@ -15,27 +25,28 @@ type UseEditorKeyboardOptions = {
 export function useEditorKeyboard({ fullscreen, setFullscreen, onUndo, onRedo, onEscape }: UseEditorKeyboardOptions) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Fullscreen escape takes priority
       if (e.key === "Escape" && fullscreen) {
         setFullscreen(false);
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+
+      // Undo: Cmd+Z (no shift)
+      if (hasMod(e) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         onUndo();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
+
+      // Redo: Cmd+Shift+Z or Cmd+Y
+      if (hasMod(e) && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
         e.preventDefault();
         onRedo();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "y") {
-        e.preventDefault();
-        onRedo();
-        return;
-      }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === "Escape") {
+
+      // Escape for non-input elements
+      if (e.key === "Escape" && !isTextInput(e.target)) {
         onEscape();
       }
     };

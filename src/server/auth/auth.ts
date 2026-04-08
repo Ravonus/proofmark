@@ -13,11 +13,11 @@
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink, twoFactor, genericOAuth } from "better-auth/plugins";
-import { db } from "~/server/db";
+import { genericOAuth, magicLink, twoFactor } from "better-auth/plugins";
 import { env } from "~/env";
-import * as schema from "~/server/db/schema";
 import { logger } from "~/lib/utils/logger";
+import { db } from "~/server/db";
+import * as schema from "~/server/db/schema";
 
 /**
  * Build SSO providers from env vars at startup.

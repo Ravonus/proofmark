@@ -8,13 +8,13 @@
  * Hash chain: eventHash = SHA-256(prevEventHash + eventType + actor + timestamp + metadata)
  */
 
-import { z } from "zod";
 import { createHash } from "crypto";
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { dispatchDocumentWebhook } from "~/server/audit/webhooks";
 import { db } from "~/server/db";
 import { auditEvents } from "~/server/db/schema";
 import { createId } from "~/server/db/utils";
-import { dispatchDocumentWebhook } from "~/server/audit/webhooks";
 
 export const auditEventTypeSchema = z.enum([
   "DOCUMENT_CREATED",

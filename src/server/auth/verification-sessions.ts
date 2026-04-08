@@ -3,9 +3,9 @@
  * (social OAuth, wallet, email, IDV) with configurable expiry.
  */
 
-import { eq, and, gt, inArray, isNull, or, sql } from "drizzle-orm";
-import { verificationSessions, signers } from "~/server/db/schema";
+import { and, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/server/db";
+import { signers, verificationSessions } from "~/server/db/schema";
 
 /** Default session duration: 30 days */
 const DEFAULT_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;

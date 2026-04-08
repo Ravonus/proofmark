@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link2, Loader2, Mail, Sparkles, Wallet, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { addressPreview } from "~/lib/crypto/chains";
-import { useSession } from "~/lib/auth/auth-client";
 import { useWallet } from "~/components/layout/wallet-provider";
 import { GlassCard, W3SButton } from "~/components/ui/motion";
+import { useSession } from "~/lib/auth/auth-client";
+import { addressPreview } from "~/lib/crypto/chains";
 
 type IdentityStatus = {
   status: "anonymous" | "wallet-only" | "email-only" | "linked" | "linked-now" | "merge-required" | "merge-dismissed";

@@ -1,24 +1,25 @@
 // @ts-nocheck -- dynamic premium module imports are untyped; full type coverage deferred until premium types are exported
-import { computeIpfsCid, computeSha256 } from "~/lib/ipfs";
-import { loadPremiumChains } from "~/lib/platform/premium";
+
 import {
-  normalizeDocumentAutomationPolicy,
   type AutomationReview,
   type DocumentAutomationPolicy,
   type EnhancedForensicEvidence,
   type ForensicPdfSummary,
   type ForensicStorageAnchorRef,
   type ForensicStorageMetadata,
+  normalizeDocumentAutomationPolicy,
 } from "~/lib/forensic/premium";
-import type { ForensicEvidence } from "~/lib/forensic/types";
 import {
   buildForensicSessionProfile,
   buildSignerBaselineProfile,
   type PersistedForensicSessionCapture,
 } from "~/lib/forensic/session";
-import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/forensic/automation-review";
+import type { ForensicEvidence } from "~/lib/forensic/types";
+import { computeIpfsCid, computeSha256 } from "~/lib/ipfs";
+import { loadPremiumChains } from "~/lib/platform/premium";
 import { logger } from "~/lib/utils/logger";
 import type { ReplayTapeVerification } from "~/server/crypto/rust-engine";
+import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/forensic/automation-review";
 
 type ProofMode = "PRIVATE" | "HYBRID" | "CRYPTO_NATIVE";
 
@@ -90,7 +91,12 @@ function buildAnchorRefs(anchorResult: AnchorResult | null): ForensicStorageAnch
         ? { chain: "base", status: "error", error: anchorResult.baseError }
         : { chain: "base", status: "unavailable" },
     anchorResult.sol
-      ? { chain: "sol", status: "anchored", txHash: anchorResult.sol.txHash, slot: anchorResult.sol.slot }
+      ? {
+          chain: "sol",
+          status: "anchored",
+          txHash: anchorResult.sol.txHash,
+          slot: anchorResult.sol.slot,
+        }
       : anchorResult.solError
         ? { chain: "sol", status: "error", error: anchorResult.solError }
         : { chain: "sol", status: "unavailable" },
@@ -152,50 +158,156 @@ function buildPdfSummary(params: {
   };
 }
 
-export async function enrichForensicEvidence(
+async function validateReplayTape(params: EnrichForensicEvidenceParams): Promise<ReplayTapeVerification | null> {
+  const replay = params.evidence.behavioral.replay;
+  if (!replay?.tapeBase64) return null;
+
+  try {
+    const { validateReplayTape: validate } = await import("~/server/crypto/rust-engine");
+    const result = await validate(
+      replay.tapeBase64,
+      replay.metrics as unknown as Record<string, unknown>,
+      params.evidence.behavioral as unknown as Record<string, unknown>,
+    );
+    if (result.mismatches.length > 0) {
+      for (const m of result.mismatches) {
+        params.evidence.flags.push({
+          code: "REPLAY_METRICS_MISMATCH",
+          severity: m.severity as "info" | "warn" | "critical",
+          message: m.message,
+        });
+      }
+      logger.warn("forensic", `Replay tape validation found ${result.mismatches.length} metric mismatches`);
+    }
+    if (result.anomalies.length > 0) {
+      for (const a of result.anomalies) {
+        params.evidence.flags.push({
+          code: a.code,
+          severity: a.severity as "info" | "warn" | "critical",
+          message: a.message,
+        });
+      }
+      logger.warn("forensic", `Replay tape validation found ${result.anomalies.length} anomalies`);
+    }
+    return result;
+  } catch (err) {
+    logger.warn("forensic", `Replay tape validation failed (non-blocking): ${String(err)}`);
+    return null;
+  }
+}
+
+async function runInlineAiReview(
+  heuristicReview: AutomationReview,
+  enrichedBaseEvidence: EnhancedForensicEvidence,
   params: EnrichForensicEvidenceParams,
-): Promise<{ evidence: EnhancedForensicEvidence; hash: string; canonicalObject: string }> {
+): Promise<{ review: AutomationReview; aiReview: AutomationReview | null }> {
+  const policy = normalizeDocumentAutomationPolicy(params.automationPolicy);
+  if (!policy.aiReviewInline) {
+    return { review: heuristicReview, aiReview: null };
+  }
+
+  try {
+    const automationMod = await import("~/generated/premium/ai/automation-review");
+    const keyMod = await import("~/generated/premium/ai/key-resolver");
+    const providers = keyMod.getPlatformProviders().filter((p) => p.available);
+    const first = providers[0];
+    if (!first) return { review: heuristicReview, aiReview: null };
+
+    const ownerAddress = params.aiReviewContext?.ownerAddress ?? "system";
+    const resolved = await keyMod.resolveKeyWithFallback(ownerAddress, first.provider);
+    if (!resolved) return { review: heuristicReview, aiReview: null };
+
+    const result = await automationMod.reviewAutomationEvidence({
+      ownerAddress,
+      documentId: params.aiReviewContext?.documentId,
+      provider: first.provider,
+      model: resolved.model,
+      key: resolved.key,
+      documentTitle: params.aiReviewContext?.documentTitle,
+      signerLabel: params.aiReviewContext?.signerLabel,
+      evidence: {
+        ...enrichedBaseEvidence,
+        automationReview: heuristicReview,
+      } as EnhancedForensicEvidence,
+      policy: params.automationPolicy,
+    });
+    const aiReview = result.review as AutomationReview;
+    // Use the stricter verdict between heuristic and AI
+    const review =
+      aiReview.automationScore > heuristicReview.automationScore
+        ? { ...aiReview, source: "hybrid" as const }
+        : { ...heuristicReview, source: "hybrid" as const };
+    return { review, aiReview };
+  } catch (err) {
+    logger.warn("forensic", `Inline AI review failed, using heuristic only: ${String(err)}`);
+    return { review: heuristicReview, aiReview: null };
+  }
+}
+
+function applyAiAgentVerdictPolicy(
+  aiReview: AutomationReview | null,
+  policyOutcome: ReturnType<typeof applyAutomationPolicy>,
+  automationPolicy: Partial<DocumentAutomationPolicy> | null | undefined,
+): ReturnType<typeof applyAutomationPolicy> {
+  const policy = normalizeDocumentAutomationPolicy(automationPolicy);
+  if (!aiReview || !policy.aiReviewInline || policy.onAiAgentVerdict === "ALLOW") {
+    return policyOutcome;
+  }
+
+  const aiVerdict = aiReview.verdict?.toLowerCase();
+  if (aiVerdict !== "agent") return policyOutcome;
+
+  if (policy.onAiAgentVerdict === "DENY" && !policyOutcome.blocked) {
+    return {
+      action: "DENY",
+      blocked: true,
+      notifyCreator: policy.notifyCreator,
+      reason: "AI review classified this signing session as automated and the document policy requires human signers.",
+      policy,
+    };
+  }
+  if (policy.onAiAgentVerdict === "FLAG" && policyOutcome.action === "ALLOW") {
+    return {
+      action: "FLAG",
+      blocked: false,
+      notifyCreator: policy.notifyCreator,
+      reason: "AI review classified this signing session as automated. Flagged for creator review.",
+      policy,
+    };
+  }
+  return policyOutcome;
+}
+
+async function anchorToChains(
+  proofMode: ProofMode,
+  objectHash: string,
+): Promise<{ anchorResult: AnchorResult | null; useExternalObject: boolean }> {
+  if (proofMode === "PRIVATE") {
+    return { anchorResult: null, useExternalObject: false };
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- loadPremiumChains returns dynamic untyped module
+  const chains = await loadPremiumChains();
+  if (!chains) return { anchorResult: null, useExternalObject: false };
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- dynamic premium chains module
+    const anchorResult: AnchorResult = await chains.autoAnchorToAllChains(objectHash); // eslint-disable-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    return { anchorResult, useExternalObject: true };
+  } catch {
+    return { anchorResult: null, useExternalObject: true };
+  }
+}
+
+export async function enrichForensicEvidence(params: EnrichForensicEvidenceParams): Promise<{
+  evidence: EnhancedForensicEvidence;
+  hash: string;
+  canonicalObject: string;
+}> {
   const priorSessions = params.priorSessions ?? [];
   const sessionProfile = buildForensicSessionProfile(params.evidence.behavioral);
   const signerBaseline = buildSignerBaselineProfile(params.evidence.behavioral, priorSessions);
-  // ── Server-side replay tape validation ──────────────────────────────
-  // Decode the binary tape in Rust and cross-check against claimed metrics.
-  // Inject any mismatches/anomalies as forensic flags before automation review.
-  let replayValidation: ReplayTapeVerification | null = null;
-  const replay = params.evidence.behavioral.replay;
-  if (replay?.tapeBase64) {
-    try {
-      const { validateReplayTape } = await import("~/server/crypto/rust-engine");
-      replayValidation = await validateReplayTape(
-        replay.tapeBase64,
-        replay.metrics as unknown as Record<string, unknown>,
-        params.evidence.behavioral as unknown as Record<string, unknown>,
-      );
-      // Inject mismatch flags into evidence.flags so automation review picks them up
-      if (replayValidation.mismatches.length > 0) {
-        for (const m of replayValidation.mismatches) {
-          params.evidence.flags.push({
-            code: "REPLAY_METRICS_MISMATCH",
-            severity: m.severity as "info" | "warn" | "critical",
-            message: m.message,
-          });
-        }
-        logger.warn("forensic", `Replay tape validation found ${replayValidation.mismatches.length} metric mismatches`);
-      }
-      if (replayValidation.anomalies.length > 0) {
-        for (const a of replayValidation.anomalies) {
-          params.evidence.flags.push({
-            code: a.code,
-            severity: a.severity as "info" | "warn" | "critical",
-            message: a.message,
-          });
-        }
-        logger.warn("forensic", `Replay tape validation found ${replayValidation.anomalies.length} anomalies`);
-      }
-    } catch (err) {
-      logger.warn("forensic", `Replay tape validation failed (non-blocking): ${String(err)}`);
-    }
-  }
+
+  const replayValidation = await validateReplayTape(params);
 
   const enrichedBaseEvidence: EnhancedForensicEvidence = {
     ...params.evidence,
@@ -206,70 +318,10 @@ export async function enrichForensicEvidence(
   };
   const heuristicReview = reviewForensicAutomation(enrichedBaseEvidence, params.reviewContext);
 
-  // Optionally run AI review inline during the signing request
-  const policy = normalizeDocumentAutomationPolicy(params.automationPolicy);
-  let review: AutomationReview = heuristicReview;
-  let aiReview: AutomationReview | null = null;
+  const { review, aiReview } = await runInlineAiReview(heuristicReview, enrichedBaseEvidence, params);
 
-  if (policy.aiReviewInline) {
-    try {
-      const automationMod = await import("~/generated/premium/ai/automation-review");
-      const keyMod = await import("~/generated/premium/ai/key-resolver");
-      const providers = keyMod.getPlatformProviders().filter((p) => p.available);
-      const first = providers[0];
-      if (first) {
-        const ownerAddress = params.aiReviewContext?.ownerAddress ?? "system";
-        const resolved = await keyMod.resolveKeyWithFallback(ownerAddress, first.provider);
-        if (resolved) {
-          const result = await automationMod.reviewAutomationEvidence({
-            ownerAddress,
-            documentId: params.aiReviewContext?.documentId,
-            provider: first.provider,
-            model: resolved.model,
-            key: resolved.key,
-            documentTitle: params.aiReviewContext?.documentTitle,
-            signerLabel: params.aiReviewContext?.signerLabel,
-            evidence: { ...enrichedBaseEvidence, automationReview: heuristicReview } as EnhancedForensicEvidence,
-            policy: params.automationPolicy,
-          });
-          aiReview = result.review as AutomationReview;
-        }
-        // Use the stricter verdict between heuristic and AI
-        if (aiReview.automationScore > heuristicReview.automationScore) {
-          review = { ...aiReview, source: "hybrid" as const };
-        } else {
-          review = { ...heuristicReview, source: "hybrid" as const };
-        }
-      }
-    } catch (err) {
-      logger.warn("forensic", `Inline AI review failed, using heuristic only: ${String(err)}`);
-    }
-  }
-
-  let policyOutcome = applyAutomationPolicy(review, params.automationPolicy);
-
-  // Apply AI-specific policy action when AI says "agent"
-  if (aiReview && policy.aiReviewInline && policy.onAiAgentVerdict !== "ALLOW") {
-    const aiVerdict = aiReview.verdict?.toLowerCase();
-    if (aiVerdict === "agent" && policy.onAiAgentVerdict === "DENY" && !policyOutcome.blocked) {
-      policyOutcome = {
-        action: "DENY",
-        blocked: true,
-        notifyCreator: policy.notifyCreator,
-        reason:
-          "AI review classified this signing session as automated and the document policy requires human signers.",
-        policy,
-      };
-    } else if (aiVerdict === "agent" && policy.onAiAgentVerdict === "FLAG" && policyOutcome.action === "ALLOW") {
-      policyOutcome = {
-        action: "FLAG",
-        blocked: false,
-        notifyCreator: policy.notifyCreator,
-        reason: "AI review classified this signing session as automated. Flagged for creator review.",
-        policy,
-      };
-    }
-  }
+  const basePolicyOutcome = applyAutomationPolicy(review, params.automationPolicy);
+  const policyOutcome = applyAiAgentVerdictPolicy(aiReview, basePolicyOutcome, params.automationPolicy);
 
   const canonicalPayload = stableStringify({
     ...enrichedBaseEvidence,
@@ -280,19 +332,9 @@ export async function enrichForensicEvidence(
   const objectHash = computeSha256(canonicalPayload);
   const objectCid = await computeIpfsCid(canonicalPayload);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- loadPremiumChains returns dynamic untyped module
-  const chains = params.proofMode !== "PRIVATE" ? await loadPremiumChains() : null;
-  let anchorResult: AnchorResult | null = null;
-  const useExternalObject = params.proofMode !== "PRIVATE" && !!chains;
-  if (useExternalObject && chains) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- dynamic premium chains module
-      anchorResult = await chains.autoAnchorToAllChains(objectHash);
-    } catch {
-      anchorResult = null;
-    }
-  }
+  const { anchorResult, useExternalObject } = await anchorToChains(params.proofMode, objectHash);
 
+  const anchorRefs = buildAnchorRefs(anchorResult);
   const storage: ForensicStorageMetadata = {
     version: 1,
     mode: useExternalObject ? "external_cid" : "embedded_pdf",
@@ -300,8 +342,8 @@ export async function enrichForensicEvidence(
     objectHash,
     byteLength: Buffer.byteLength(canonicalPayload, "utf8"),
     recordedAt: new Date().toISOString(),
-    anchors: buildAnchorRefs(anchorResult),
-    anchored: buildAnchorRefs(anchorResult).some((anchor) => anchor.status === "anchored"),
+    anchors: anchorRefs,
+    anchored: anchorRefs.some((anchor) => anchor.status === "anchored"),
   };
 
   const evidence: EnhancedForensicEvidence = {
@@ -311,7 +353,12 @@ export async function enrichForensicEvidence(
     policyOutcome,
     storage,
   };
-  evidence.pdfSummary = buildPdfSummary({ evidence, hash: objectHash, cid: objectCid, storage });
+  evidence.pdfSummary = buildPdfSummary({
+    evidence,
+    hash: objectHash,
+    cid: objectCid,
+    storage,
+  });
 
   return { evidence, hash: objectHash, canonicalObject: canonicalPayload };
 }

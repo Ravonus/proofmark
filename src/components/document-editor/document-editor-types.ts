@@ -1,11 +1,12 @@
 import type { InlineField } from "~/lib/document/document-tokens";
 import type { LogicEffect, RuntimeInputType, ValidationKind, VisibilityOperator } from "~/lib/document/field-runtime";
 import type { SignerTokenGate } from "~/lib/token-gates";
-import { FIELD_REGISTRY, FIELD_CATEGORIES } from "../fields";
+import { FIELD_CATEGORIES, FIELD_REGISTRY } from "../fields";
 import type { DropdownItem } from "../ui/search-dropdown";
 
 // SignerDef is derived from the Zod schema — single source of truth (DRY)
 export type { SignerDef } from "~/lib/schemas/signer";
+
 import type { SignerDef } from "~/lib/schemas/signer";
 
 export const SIGNER_BORDER_COLORS = ["#60a5fa", "#fb923c", "#c084fc", "#34d399", "#f472b6", "#22d3ee"];
@@ -15,7 +16,15 @@ export const fieldDropdownItems: DropdownItem[] = FIELD_CATEGORIES.flatMap(
     cat.fields
       .map((fid) => {
         const f = FIELD_REGISTRY[fid];
-        return f ? { id: fid, label: f.label, description: f.description, icon: f.icon, category: cat.label } : null;
+        return f
+          ? {
+              id: fid,
+              label: f.label,
+              description: f.description,
+              icon: f.icon,
+              category: cat.label,
+            }
+          : null;
       })
       .filter(Boolean) as DropdownItem[],
 );
@@ -49,7 +58,10 @@ export type Props = {
 
 export type PreviewValueMap = Record<string, string>;
 
-export const INPUT_TYPE_OPTIONS: Array<{ value: RuntimeInputType; label: string }> = [
+export const INPUT_TYPE_OPTIONS: Array<{
+  value: RuntimeInputType;
+  label: string;
+}> = [
   { value: "text", label: "Text" },
   { value: "textarea", label: "Paragraph" },
   { value: "email", label: "Email" },
@@ -67,7 +79,10 @@ export const INPUT_TYPE_OPTIONS: Array<{ value: RuntimeInputType; label: string 
   { value: "initials", label: "Initials" },
 ];
 
-export const VALIDATION_KIND_OPTIONS: Array<{ value: ValidationKind | ""; label: string }> = [
+export const VALIDATION_KIND_OPTIONS: Array<{
+  value: ValidationKind | "";
+  label: string;
+}> = [
   { value: "", label: "Default" },
   { value: "credit-card", label: "Credit Card" },
   { value: "credit-card-expiry", label: "Card Expiration" },
@@ -83,7 +98,10 @@ export const VALIDATION_KIND_OPTIONS: Array<{ value: ValidationKind | ""; label:
   { value: "url", label: "URL" },
 ];
 
-export const VISIBILITY_OPERATOR_OPTIONS: Array<{ value: VisibilityOperator; label: string }> = [
+export const VISIBILITY_OPERATOR_OPTIONS: Array<{
+  value: VisibilityOperator;
+  label: string;
+}> = [
   { value: "equals", label: "Equals" },
   { value: "not_equals", label: "Does not equal" },
   { value: "contains", label: "Contains" },
@@ -91,7 +109,10 @@ export const VISIBILITY_OPERATOR_OPTIONS: Array<{ value: VisibilityOperator; lab
   { value: "one_of", label: "Matches one of" },
 ];
 
-export const LOGIC_EFFECT_OPTIONS: Array<{ value: LogicEffect; label: string }> = [
+export const LOGIC_EFFECT_OPTIONS: Array<{
+  value: LogicEffect;
+  label: string;
+}> = [
   { value: "show", label: "Show on match" },
   { value: "hide", label: "Hide on match" },
 ];

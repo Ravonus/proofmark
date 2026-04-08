@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { TSPlaybackController, TSMultiSignerController } from "../playback-controller";
+import { describe, expect, it } from "vitest";
+import { TSMultiSignerController, TSPlaybackController } from "../playback-controller";
 import { encodeReplayEventsSync, type ForensicReplayEncodedEvent } from "../replay-codec";
 
 function sampleEvents(): ForensicReplayEncodedEvent[] {
@@ -7,8 +7,23 @@ function sampleEvents(): ForensicReplayEncodedEvent[] {
     { type: "scroll", delta: 0, scrollY: 0, scrollMax: 2000 },
     { type: "click", delta: 5, targetId: 1, x: 100, y: 200, button: 0 },
     { type: "page", delta: 3, page: 2, totalPages: 5 },
-    { type: "signatureStart", delta: 2, targetId: 3, strokeId: 1, x: 10, y: 20, pressure: 128 },
-    { type: "signaturePoint", delta: 1, strokeId: 1, x: 15, y: 25, pressure: 140 },
+    {
+      type: "signatureStart",
+      delta: 2,
+      targetId: 3,
+      strokeId: 1,
+      x: 10,
+      y: 20,
+      pressure: 128,
+    },
+    {
+      type: "signaturePoint",
+      delta: 1,
+      strokeId: 1,
+      x: 15,
+      y: 25,
+      pressure: 140,
+    },
     { type: "signatureEnd", delta: 1, strokeId: 1 },
     { type: "fieldCommit", delta: 5, targetId: 2, valueId: 7 },
   ];

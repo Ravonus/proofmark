@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Ambient mesh gradient background.
@@ -21,9 +21,30 @@ export function AmbientBackground() {
     let h = 0;
 
     const blobs = [
-      { x: 0.15, y: 0.2, r: 0.3, vx: 0.00006, vy: 0.00005, color: [124, 92, 252] }, // accent purple
-      { x: 0.75, y: 0.15, r: 0.25, vx: -0.00005, vy: 0.00007, color: [0, 212, 255] }, // cyan accent-2
-      { x: 0.5, y: 0.7, r: 0.28, vx: 0.00005, vy: -0.00004, color: [99, 70, 224] }, // deep violet
+      {
+        x: 0.15,
+        y: 0.2,
+        r: 0.3,
+        vx: 0.00006,
+        vy: 0.00005,
+        color: [124, 92, 252],
+      }, // accent purple
+      {
+        x: 0.75,
+        y: 0.15,
+        r: 0.25,
+        vx: -0.00005,
+        vy: 0.00007,
+        color: [0, 212, 255],
+      }, // cyan accent-2
+      {
+        x: 0.5,
+        y: 0.7,
+        r: 0.28,
+        vx: 0.00005,
+        vy: -0.00004,
+        color: [99, 70, 224],
+      }, // deep violet
     ];
 
     const resize = () => {

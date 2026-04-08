@@ -1,12 +1,13 @@
-import { type NextRequest, NextResponse } from "next/server";
+/* eslint-disable @typescript-eslint/consistent-type-imports */
 import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+import { resolveDocumentContent } from "~/server/api/routers/document-helpers";
 import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
+import { generateSignedPDF } from "~/server/crypto/rust-engine";
 import { db } from "~/server/db";
+import { findSignersByDocumentId } from "~/server/db/compat";
 import { documents, pdfStyleTemplates } from "~/server/db/schema";
 import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
-import { generateSignedPDF } from "~/server/crypto/rust-engine";
-import { resolveDocumentContent } from "~/server/api/routers/document-helpers";
-import { findSignersByDocumentId } from "~/server/db/compat";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const resolvedContent = await resolveDocumentContent(doc);
 
     // Resolve PDF style template if one is assigned
-    let styleSettings = null;
+    let styleSettings: import("~/server/db/schema").PdfStyleSettings | null = null;
     if (doc.pdfStyleTemplateId) {
       const template = await db.query.pdfStyleTemplates.findFirst({
         where: eq(pdfStyleTemplates.id, doc.pdfStyleTemplateId),
@@ -62,7 +63,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Also check query param for theme override (e.g. ?theme=modern)
     const themeOverride = request.nextUrl.searchParams.get("theme");
     if (themeOverride && !styleSettings) {
-      styleSettings = { themePreset: themeOverride };
+      styleSettings = {
+        themePreset: themeOverride,
+      } as import("~/server/db/schema").PdfStyleSettings;
     }
 
     const baseUrl = process.env.NEXTAUTH_URL ?? "https://docu.technomancy.it";
@@ -88,7 +91,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch (err) {
     console.error("PDF generation failed:", err);
     return NextResponse.json(
-      { error: `PDF generation failed: ${err instanceof Error ? err.message : "Unknown error"}` },
+      {
+        error: `PDF generation failed: ${err instanceof Error ? err.message : "Unknown error"}`,
+      },
       { status: 500 },
     );
   }

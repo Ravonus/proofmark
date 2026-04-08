@@ -8,24 +8,24 @@
  * Run: npx vitest run src/server/__tests__/rust-engine.test.ts
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
-  hashDocument,
-  hashHandSignature,
-  buildSigningMessage,
-  isEncryptionAvailable,
-  encryptDocument,
-  decryptDocument,
-  verifySignature,
-  analyzePdf,
-  generateSignedPDF,
-  computeAuditEventHash,
-  verifyAuditChain,
-  generateQrSvg,
-  generateQrDataUrl,
-  hashForensicEvidence,
   analyzeForensicFlags,
+  analyzePdf,
+  buildSigningMessage,
+  computeAuditEventHash,
+  decryptDocument,
+  encryptDocument,
+  generateQrDataUrl,
+  generateQrSvg,
+  generateSignedPDF,
   getEngineStatus,
+  hashDocument,
+  hashForensicEvidence,
+  hashHandSignature,
+  isEncryptionAvailable,
+  verifyAuditChain,
+  verifySignature,
 } from "~/server/crypto/rust-engine";
 import { createFakePdf } from "./helpers/fake-pdf";
 
@@ -243,8 +243,20 @@ describe("audit", () => {
     const h2 = await computeAuditEventHash(h1, "SIGNED", "bob", "2024-01-01T01:00:00Z");
 
     const result = await verifyAuditChain([
-      { eventType: "CREATED", actor: "alice", timestamp: "2024-01-01T00:00:00Z", eventHash: h1, prevEventHash: null },
-      { eventType: "SIGNED", actor: "bob", timestamp: "2024-01-01T01:00:00Z", eventHash: h2, prevEventHash: h1 },
+      {
+        eventType: "CREATED",
+        actor: "alice",
+        timestamp: "2024-01-01T00:00:00Z",
+        eventHash: h1,
+        prevEventHash: null,
+      },
+      {
+        eventType: "SIGNED",
+        actor: "bob",
+        timestamp: "2024-01-01T01:00:00Z",
+        eventHash: h2,
+        prevEventHash: h1,
+      },
     ]);
     expect(result.valid).toBe(true);
   });
@@ -253,7 +265,13 @@ describe("audit", () => {
     const h1 = await computeAuditEventHash(null, "CREATED", "alice", "2024-01-01T00:00:00Z");
 
     const result = await verifyAuditChain([
-      { eventType: "CREATED", actor: "alice", timestamp: "2024-01-01T00:00:00Z", eventHash: h1, prevEventHash: null },
+      {
+        eventType: "CREATED",
+        actor: "alice",
+        timestamp: "2024-01-01T00:00:00Z",
+        eventHash: h1,
+        prevEventHash: null,
+      },
       {
         eventType: "SIGNED",
         actor: "bob",
@@ -289,7 +307,11 @@ describe("qr", () => {
 
 describe("forensic", () => {
   it("hashes evidence deterministically", async () => {
-    const evidence = { version: 1, fingerprint: { visitorId: "abc" }, geo: null };
+    const evidence = {
+      version: 1,
+      fingerprint: { visitorId: "abc" },
+      geo: null,
+    };
     const a = await hashForensicEvidence(evidence);
     const b = await hashForensicEvidence(evidence);
     expect(a).toBe(b);
@@ -300,7 +322,12 @@ describe("forensic", () => {
     const flags = await analyzeForensicFlags({
       geo: { isVpn: true, isTor: true },
       fingerprint: { webdriver: true },
-      behavioral: { timeOnPage: 500, mouseMoveCount: 0, scrolledToBottom: false, maxScrollDepth: 5 },
+      behavioral: {
+        timeOnPage: 500,
+        mouseMoveCount: 0,
+        scrolledToBottom: false,
+        maxScrollDepth: 5,
+      },
     });
     expect(flags.length).toBeGreaterThan(0);
     expect(flags.some((f) => f.code === "VPN_DETECTED")).toBe(true);
@@ -313,7 +340,12 @@ describe("forensic", () => {
     const flags = await analyzeForensicFlags({
       geo: { isVpn: false, isTor: false },
       fingerprint: { webdriver: false, cookieEnabled: true },
-      behavioral: { timeOnPage: 60000, mouseMoveCount: 100, scrolledToBottom: true, maxScrollDepth: 100 },
+      behavioral: {
+        timeOnPage: 60000,
+        mouseMoveCount: 100,
+        scrolledToBottom: true,
+        maxScrollDepth: 100,
+      },
     });
     expect(flags.length).toBe(0);
   });
@@ -332,15 +364,15 @@ describe("engine status", () => {
 // ── Post-Quantum Encryption ──────────────────────────────────────────────────
 
 import {
-  pqGenerateKeypair,
-  pqEncrypt,
-  pqDecrypt,
   createDocumentProof,
-  verifyDocumentProof,
-  createSignatureProof,
-  verifySignatureProof,
   createFieldProof,
+  createSignatureProof,
+  pqDecrypt,
+  pqEncrypt,
+  pqGenerateKeypair,
+  verifyDocumentProof,
   verifyFieldProof,
+  verifySignatureProof,
 } from "~/server/crypto/rust-engine";
 
 describe("post-quantum encryption", () => {

@@ -11,15 +11,15 @@
  * A future version could return an actual ZIP.
  */
 
-import { type NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { resolveUnifiedRequestIdentity } from "~/server/auth/auth-identity";
+import { logAuditEvent } from "~/server/crypto/rust-engine";
 import { db } from "~/server/db";
-import { documents } from "~/server/db/schema";
 import { findSignersByDocumentId } from "~/server/db/compat";
+import { documents } from "~/server/db/schema";
 import { resolveDocumentViewerAccess } from "~/server/documents/document-access";
 import { generateProofPacket } from "~/server/documents/proof-packet";
-import { logAuditEvent } from "~/server/crypto/rust-engine";
 
 export const dynamic = "force-dynamic";
 

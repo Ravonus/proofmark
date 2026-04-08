@@ -1,6 +1,6 @@
 import { createConfig, http } from "wagmi";
-import { injected, coinbaseWallet } from "wagmi/connectors";
-import { mainnet, sepolia, base } from "wagmi/chains";
+import { base, mainnet, sepolia } from "wagmi/chains";
+import { coinbaseWallet, injected } from "wagmi/connectors";
 
 const chains = [mainnet, sepolia, base] as const;
 

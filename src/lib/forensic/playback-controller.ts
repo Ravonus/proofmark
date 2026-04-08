@@ -235,7 +235,12 @@ export class TSPlaybackController {
         case "signaturePoint": {
           const stroke = activeStrokes.get(event.strokeId);
           if (stroke) {
-            stroke.points.push({ x: event.x, y: event.y, pressure: event.pressure, atMs });
+            stroke.points.push({
+              x: event.x,
+              y: event.y,
+              pressure: event.pressure,
+              atMs,
+            });
           }
           break;
         }

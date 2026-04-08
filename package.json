@@ -20,8 +20,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "lint": "npm run prematerialize && next lint",
-    "lint:fix": "npm run prematerialize && next lint --fix",
+    "lint": "npm run prematerialize && next lint && npm run lint:biome && npm run lint:repo",
+    "lint:fix": "npm run prematerialize && next lint --fix && npm run lint:repo",
+    "lint:biome": "biome lint .",
+    "lint:repo": "node scripts/lint-repo-policy.mjs",
     "type-check": "npm run prematerialize && tsc --noEmit",
     "bench:pdf-analysis": "tsx scripts/benchmark-pdf-analysis.ts",
     "forensic:thresholds": "tsx scripts/evaluate-forensic-thresholds.ts",
@@ -29,6 +31,7 @@
     "seed:eye-tracking-test": "tsx --env-file=.env scripts/create-eye-tracking-test-contract.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
+    "docs:structure": "node scripts/generate-oss-structure.mjs",
     "validate": "npm run prematerialize && npm run type-check && npm run lint && npm run format:check && npm run test",
     "validate:oss": "bash scripts/validate-oss.sh",
     "test": "vitest run",
@@ -86,6 +89,7 @@
     "yjs": "^13.6.20"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.4",
     "@eslint/eslintrc": "^3.3.5",
     "@types/node": "^22.10.0",
     "@types/nodemailer": "^6.4.0",

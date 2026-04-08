@@ -5,17 +5,32 @@
 
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
-import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
+import { type DocToken, tokensToContent } from "~/lib/document/document-tokens";
 import type { AppRouter } from "~/server/api/root";
 
 const text = (t: string): DocToken => ({ kind: "text", text: t });
-const heading = (t: string, n: number): DocToken => ({ kind: "heading", text: t, sectionNum: n });
+const heading = (t: string, n: number): DocToken => ({
+  kind: "heading",
+  text: t,
+  sectionNum: n,
+});
 const br = (): DocToken => ({ kind: "break" });
 const field = (id: string, type: string, label: string, idx: number, opts: Record<string, unknown> = {}): DocToken => ({
   kind: "field",
-  field: { id, type, label, placeholder: (opts.placeholder as string) ?? label, signerIdx: idx, required: true },
+  field: {
+    id,
+    type,
+    label,
+    placeholder: (opts.placeholder as string) ?? label,
+    signerIdx: idx,
+    required: true,
+  },
 });
-const sig = (label: string, idx: number): DocToken => ({ kind: "signatureBlock", label, signerIdx: idx });
+const sig = (label: string, idx: number): DocToken => ({
+  kind: "signatureBlock",
+  label,
+  signerIdx: idx,
+});
 
 // signerIdx 0 = contractor (recipient), signerIdx 1 = discloser
 // (createGroup puts recipient at idx 0, discloser at idx 1)
@@ -32,12 +47,16 @@ const tokens: DocToken[] = [
   heading("PARTIES", 2),
   br(),
   text("Contractor Full Name: "),
-  field("name-contractor", "full-name", "Contractor Name", 0, { placeholder: "Your full name" }),
+  field("name-contractor", "full-name", "Contractor Name", 0, {
+    placeholder: "Your full name",
+  }),
   br(),
   br(),
 
   text("Discloser Full Name: "),
-  field("name-discloser", "full-name", "Discloser Name", 1, { placeholder: "Your full name" }),
+  field("name-discloser", "full-name", "Discloser Name", 1, {
+    placeholder: "Your full name",
+  }),
   br(),
   br(),
 

@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 
 export const dynamic = "force-dynamic";

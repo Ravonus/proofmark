@@ -1,9 +1,8 @@
+import { spawnSync } from "child_process";
 import { createHash } from "crypto";
 import { existsSync, mkdtempSync, readFileSync } from "fs";
-import { homedir, hostname, platform } from "os";
+import { homedir, hostname, platform, tmpdir } from "os";
 import { join } from "path";
-import { tmpdir } from "os";
-import { spawnSync } from "child_process";
 import type { AiCompletionTaskPayload, ConnectorTaskPayload } from "~/premium/ai/connector-protocol";
 
 type SupportedTool = "codex" | "claude-code";
@@ -97,10 +96,7 @@ function detectTools(): DetectedTools {
 }
 
 function stableMachineId(workdir: string): string {
-  return createHash("sha256")
-    .update(`${hostname()}|${platform()}|${workdir}`)
-    .digest("hex")
-    .slice(0, 32);
+  return createHash("sha256").update(`${hostname()}|${platform()}|${workdir}`).digest("hex").slice(0, 32);
 }
 
 function buildPrompt(payload: AiCompletionTaskPayload): string {
@@ -130,7 +126,12 @@ function buildPrompt(payload: AiCompletionTaskPayload): string {
   return parts.join("\n");
 }
 
-function maybeAddModelHint(args: string[], tool: SupportedTool, providerHint: string | undefined, modelHint: string | undefined) {
+function maybeAddModelHint(
+  args: string[],
+  tool: SupportedTool,
+  providerHint: string | undefined,
+  modelHint: string | undefined,
+) {
   if (!modelHint) return false;
   if (tool === "claude-code" && (providerHint === "anthropic" || modelHint.startsWith("claude"))) {
     args.push("--model", modelHint);
@@ -193,14 +194,7 @@ function runCodex(binary: string, prompt: string, workdir: string, payload: AiCo
 }
 
 function runClaude(binary: string, prompt: string, payload: AiCompletionTaskPayload): ConnectorResult {
-  const args = [
-    "-p",
-    "--output-format",
-    "text",
-    "--permission-mode",
-    "bypassPermissions",
-    "--no-session-persistence",
-  ];
+  const args = ["-p", "--output-format", "text", "--permission-mode", "bypassPermissions", "--no-session-persistence"];
 
   const appliedModelHint = maybeAddModelHint(args, "claude-code", payload.providerHint, payload.modelHint);
   args.push(prompt);
@@ -243,7 +237,11 @@ function orderedTools(payload: AiCompletionTaskPayload, detected: DetectedTools)
   return byProvider.filter((tool, index) => tool in detected && byProvider.indexOf(tool) === index);
 }
 
-function executeAiCompletionTask(payload: AiCompletionTaskPayload, detected: DetectedTools, workdir: string): ConnectorResult {
+function executeAiCompletionTask(
+  payload: AiCompletionTaskPayload,
+  detected: DetectedTools,
+  workdir: string,
+): ConnectorResult {
   const prompt = buildPrompt(payload);
   const tools = orderedTools(payload, detected);
   if (tools.length === 0) {
@@ -318,7 +316,13 @@ async function fetchJsonWithRetry<T>(url: string, token: string, init?: RequestI
   throw lastError ?? new Error("connector fetch failed");
 }
 
-async function processTask(baseUrl: string, token: string, task: ConnectorTask, detected: DetectedTools, workdir: string) {
+async function processTask(
+  baseUrl: string,
+  token: string,
+  task: ConnectorTask,
+  detected: DetectedTools,
+  workdir: string,
+) {
   try {
     if (task.taskType !== "ai_completion" || task.payload.type !== "ai_completion") {
       throw new Error(`Unsupported connector task type: ${task.taskType}`);
@@ -338,6 +342,31 @@ async function processTask(baseUrl: string, token: string, task: ConnectorTask, 
         error: (error as Error).message,
       },
     });
+  }
+}
+
+async function pollLoop(
+  baseUrl: string,
+  token: string,
+  sessionId: string,
+  detected: DetectedTools,
+  workdir: string,
+): Promise<void> {
+  while (true) {
+    try {
+      const poll = await getJson<{ tasks: ConnectorTask[] }>(
+        `${baseUrl}/api/connector/poll?sessionId=${encodeURIComponent(sessionId)}`,
+        token,
+      );
+      for (const task of poll.tasks) {
+        await processTask(baseUrl, token, task, detected, workdir);
+      }
+    } catch (error) {
+      const message = (error as Error).message;
+      console.error(`[local-connector] ${message}`);
+      if (/401|403|404|session/i.test(message)) return;
+      await sleep(NETWORK_RETRY_BASE_MS);
+    }
   }
 }
 
@@ -369,23 +398,7 @@ async function main() {
       console.log(`connector online: ${register.sessionId}`);
       console.log(`tools: ${supportedTools.join(", ")}`);
 
-      while (true) {
-        try {
-          const poll = await getJson<{ tasks: ConnectorTask[] }>(
-            `${baseUrl}/api/connector/poll?sessionId=${encodeURIComponent(register.sessionId)}`,
-            token,
-          );
-
-          for (const task of poll.tasks) {
-            await processTask(baseUrl, token, task, detected, workdir);
-          }
-        } catch (error) {
-          const message = (error as Error).message;
-          console.error(`[local-connector] ${message}`);
-          if (/401|403|404|session/i.test(message)) break;
-          await sleep(NETWORK_RETRY_BASE_MS);
-        }
-      }
+      await pollLoop(baseUrl, token, register.sessionId, detected, workdir);
     } catch (error) {
       const message = (error as Error).message;
       console.error(`[local-connector] ${message}`);

@@ -1,8 +1,8 @@
 import { createHash } from "crypto";
+import { base32 } from "multiformats/bases/base32";
 import { CID } from "multiformats/cid";
 import * as raw from "multiformats/codecs/raw";
 import { sha256 } from "multiformats/hashes/sha2";
-import { base32 } from "multiformats/bases/base32";
 
 // Compute an IPFS CIDv1 (raw + sha256) from content
 // This is the same CID you'd get from `ipfs add --cid-version=1 --raw-leaves`

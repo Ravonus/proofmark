@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BehavioralTracker } from "../fingerprint";
 
 function dispatchClipboardEvent(type: "paste" | "copy" | "cut", target: HTMLElement, text: string) {
-  const event = new Event(type, { bubbles: true, cancelable: true }) as ClipboardEvent;
+  const event = new Event(type, {
+    bubbles: true,
+    cancelable: true,
+  }) as ClipboardEvent;
   Object.defineProperty(event, "clipboardData", {
     value: {
       getData: () => text,

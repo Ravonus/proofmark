@@ -1,6 +1,6 @@
-import type { ForensicReplayTape } from "./types";
-import type { CaptureResult, CapturedGeometry } from "./capture-adapter";
+import type { CapturedGeometry, CaptureResult } from "./capture-adapter";
 import { REPLAY_ENCODING, REPLAY_FORMAT_LIMITS } from "./replay-format";
+import type { ForensicReplayTape } from "./types";
 
 const TIME_QUANTUM_MS = REPLAY_FORMAT_LIMITS.timeQuantumMs;
 
@@ -99,8 +99,17 @@ export function buildEmbeddedPayload(
     encoding: REPLAY_ENCODING,
     timeQuantumMs: TIME_QUANTUM_MS,
     viewport: opts.viewport,
-    targets: capture.targets.map((t) => ({ id: t.id, hash: t.hash, descriptor: t.descriptor })),
-    strings: capture.strings.map((s) => ({ id: s.id, kind: s.kind, hash: s.hash, value: s.value })),
+    targets: capture.targets.map((t) => ({
+      id: t.id,
+      hash: t.hash,
+      descriptor: t.descriptor,
+    })),
+    strings: capture.strings.map((s) => ({
+      id: s.id,
+      kind: s.kind,
+      hash: s.hash,
+      value: s.value,
+    })),
     tapeBase64: capture.tapeBase64,
     tapeHash: opts.tapeHash,
     capabilities: [...capabilities].sort() as ForensicReplayTape["capabilities"],

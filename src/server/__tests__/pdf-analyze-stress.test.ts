@@ -6,7 +6,7 @@
  * pipeline via a thin wrapper around analyzePdf that accepts a fake PDF buffer
  * whose text content we control.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { analyzePdf, type PdfAnalysisResult } from "../documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 

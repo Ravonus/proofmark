@@ -9,13 +9,13 @@
  * 5. We exchange the code for user info, record the verification, and close the popup
  */
 
+import { createHash, randomBytes } from "crypto";
+import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { randomBytes, createHash } from "crypto";
-import { eq, and } from "drizzle-orm";
+import type { SocialVerificationFieldValue } from "~/lib/document/field-values";
+import { encodeStructuredFieldValue } from "~/lib/document/field-values";
 import { db } from "~/server/db";
 import { signers } from "~/server/db/schema";
-import { encodeStructuredFieldValue } from "~/lib/document/field-values";
-import type { SocialVerificationFieldValue } from "~/lib/document/field-values";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,10 @@ const PROVIDERS: Record<
     scopes: string;
     clientIdEnv: string;
     clientSecretEnv: string;
-    parseUser: (data: Record<string, unknown>) => { username: string; profileId: string };
+    parseUser: (data: Record<string, unknown>) => {
+      username: string;
+      profileId: string;
+    };
   }
 > = {
   x: {
@@ -150,74 +153,233 @@ function detectOrigin(req: NextRequest, callbackOrigin: string | null): string {
   return new URL(req.url).origin;
 }
 
-export async function GET(req: NextRequest) {
-  cleanupStates();
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const stateParam = url.searchParams.get("state");
+type PendingState = {
+  provider: string;
+  documentId: string;
+  claimToken: string;
+  fieldId: string;
+  codeVerifier: string;
+  origin: string;
+  expiresAt: number;
+};
 
-  // ── Step 1: Initiate OAuth ──
-  if (!code) {
-    const provider = url.searchParams.get("provider");
-    const documentId = url.searchParams.get("documentId");
-    const claimToken = url.searchParams.get("claimToken");
-    const fieldId = url.searchParams.get("fieldId");
+function initiateOAuth(req: NextRequest, url: URL): NextResponse | Response {
+  const provider = url.searchParams.get("provider");
+  const documentId = url.searchParams.get("documentId");
+  const claimToken = url.searchParams.get("claimToken");
+  const fieldId = url.searchParams.get("fieldId");
 
-    if (!provider || !documentId || !claimToken || !fieldId) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
-    }
-
-    const config = PROVIDERS[provider];
-    if (!config) {
-      return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
-    }
-
-    const clientId = process.env[config.clientIdEnv];
-    if (!clientId) {
-      return NextResponse.json({ error: `${provider} OAuth not configured` }, { status: 400 });
-    }
-
-    // Prefix state with "sv:" so the auth catch-all can distinguish
-    // social-verify callbacks from regular Better Auth login callbacks.
-    const state = `sv:${randomBytes(24).toString("hex")}`;
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
-
-    // The client passes window.location.origin so we always know the real
-    // public domain, regardless of what the reverse proxy does to headers.
-    const callbackOrigin = url.searchParams.get("callbackOrigin");
-    const origin = detectOrigin(req, callbackOrigin);
-
-    pendingStates.set(state, {
-      provider,
-      documentId,
-      claimToken,
-      fieldId,
-      codeVerifier,
-      origin,
-      expiresAt: Date.now() + 10 * 60 * 1000,
-    });
-
-    // Use the same callback URL as Better Auth so only one redirect_uri
-    // needs to be registered per provider (e.g. on X's developer portal).
-    const redirectUri = `${origin}/api/auth/callback/${provider}`;
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope: config.scopes,
-      state,
-      ...(provider === "x" ? { code_challenge: codeChallenge, code_challenge_method: "S256" } : {}),
-    });
-
-    const authUrl = `${config.authorizeUrl}?${params.toString()}`;
-    console.warn(`[social-verify] Detected origin: ${origin}`);
-    console.warn(`[social-verify] Redirecting to ${provider}:`, authUrl);
-    console.warn(`[social-verify] redirect_uri:`, redirectUri);
-    return NextResponse.redirect(authUrl);
+  if (!provider || !documentId || !claimToken || !fieldId) {
+    return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
   }
 
-  // ── Step 2: Handle OAuth callback ──
+  const config = PROVIDERS[provider];
+  if (!config) {
+    return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
+  }
+
+  const clientId = process.env[config.clientIdEnv];
+  if (!clientId) {
+    return NextResponse.json({ error: `${provider} OAuth not configured` }, { status: 400 });
+  }
+
+  const state = `sv:${randomBytes(24).toString("hex")}`;
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+
+  const callbackOrigin = url.searchParams.get("callbackOrigin");
+  const origin = detectOrigin(req, callbackOrigin);
+
+  pendingStates.set(state, {
+    provider,
+    documentId,
+    claimToken,
+    fieldId,
+    codeVerifier,
+    origin,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+
+  const redirectUri = `${origin}/api/auth/callback/${provider}`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: config.scopes,
+    state,
+    ...(provider === "x" ? { code_challenge: codeChallenge, code_challenge_method: "S256" } : {}),
+  });
+
+  const authUrl = `${config.authorizeUrl}?${params.toString()}`;
+  console.warn(`[social-verify] Detected origin: ${origin}`);
+  console.warn(`[social-verify] Redirecting to ${provider}:`, authUrl);
+  console.warn(`[social-verify] redirect_uri:`, redirectUri);
+  return NextResponse.redirect(authUrl);
+}
+
+async function exchangeCodeForToken(
+  code: string,
+  pending: PendingState,
+  config: (typeof PROVIDERS)[string],
+  clientId: string,
+  clientSecret: string,
+): Promise<{ accessToken: string } | Response> {
+  const redirectUri = `${pending.origin}/api/auth/callback/${pending.provider}`;
+  const tokenBody: Record<string, string> = {
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    client_id: clientId,
+    client_secret: clientSecret,
+  };
+
+  if (pending.provider === "x") {
+    tokenBody.code_verifier = pending.codeVerifier;
+  }
+
+  const tokenRes = await fetch(config.tokenUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": pending.provider === "github" ? "application/json" : "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      ...(pending.provider === "x"
+        ? {
+            Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+          }
+        : {}),
+    },
+    body: pending.provider === "github" ? JSON.stringify(tokenBody) : new URLSearchParams(tokenBody).toString(),
+  });
+
+  if (!tokenRes.ok) {
+    const errText = await tokenRes.text();
+    console.error(`[social-verify] Token exchange failed for ${pending.provider}:`, errText);
+    return closePopup("Verification failed: could not authenticate with provider");
+  }
+
+  const tokenData = (await tokenRes.json()) as Record<string, string>;
+  const accessToken = tokenData.access_token;
+  if (!accessToken) {
+    return closePopup("Verification failed: no access token received");
+  }
+
+  return { accessToken };
+}
+
+async function fetchOAuthUserInfo(
+  config: (typeof PROVIDERS)[string],
+  accessToken: string,
+): Promise<{ username: string; profileId: string } | Response> {
+  const userRes = await fetch(config.userInfoUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!userRes.ok) {
+    const errBody = await userRes.text();
+    console.error(`[social-verify] User info fetch failed (${userRes.status}):`, errBody);
+    return closePopup(`Verification failed: could not fetch user info (${userRes.status})`);
+  }
+
+  const userData = (await userRes.json()) as Record<string, unknown>;
+  const { username, profileId } = config.parseUser(userData);
+
+  if (!username || !profileId) {
+    return closePopup("Verification failed: could not determine username");
+  }
+
+  return { username, profileId };
+}
+
+async function recordVerification(
+  pending: PendingState,
+  username: string,
+  profileId: string,
+): Promise<Response | null> {
+  const [signer] = await db
+    .select()
+    .from(signers)
+    .where(and(eq(signers.documentId, pending.documentId), eq(signers.claimToken, pending.claimToken)))
+    .limit(1);
+
+  if (!signer) {
+    return closePopup("Verification failed: signer not found");
+  }
+
+  // Enforce requiredUsername if set on the field
+  const signerFields =
+    (signer.fields as Array<{
+      id?: string;
+      settings?: Record<string, unknown>;
+    }> | null) ?? [];
+  const fieldDef = signerFields.find((f) => f.id === pending.fieldId);
+  const requiredUsername = fieldDef?.settings?.requiredUsername as string | undefined;
+  if (requiredUsername) {
+    const normalizedRequired = requiredUsername.replace(/^@/, "").toLowerCase();
+    const normalizedActual = username.toLowerCase();
+    if (normalizedActual !== normalizedRequired) {
+      return closePopup(
+        `Verification failed: this field requires the account @${normalizedRequired}, but you authenticated as @${username}`,
+      );
+    }
+  }
+
+  const verification = {
+    provider: pending.provider as "x" | "github" | "discord" | "google",
+    username,
+    profileId,
+    verifiedAt: new Date().toISOString(),
+    fieldId: pending.fieldId,
+  };
+
+  const existing = (signer.socialVerifications as (typeof verification)[] | null) ?? [];
+  const updated = [...existing.filter((v) => v.fieldId !== pending.fieldId), verification];
+
+  const fieldValue: SocialVerificationFieldValue = {
+    kind: "social-verification",
+    provider: verification.provider,
+    status: "verified",
+    username,
+    profileId,
+    verifiedAt: verification.verifiedAt,
+  };
+
+  const currentFieldValues = signer.fieldValues ?? {};
+  const updatedFieldValues = {
+    ...currentFieldValues,
+    [pending.fieldId]: encodeStructuredFieldValue(fieldValue),
+  };
+
+  console.warn(
+    `[social-verify] Saving verification for signer ${signer.id}, field ${pending.fieldId}, username: ${username}`,
+  );
+  console.warn(`[social-verify] fieldValues being saved:`, JSON.stringify(updatedFieldValues));
+
+  await db
+    .update(signers)
+    .set({
+      socialVerifications: updated,
+      fieldValues: updatedFieldValues,
+    })
+    .where(eq(signers.id, signer.id));
+
+  console.warn(`[social-verify] DB update complete for signer ${signer.id}`);
+
+  try {
+    const { storeVerificationSession } = await import("~/server/auth/verification-sessions");
+    await storeVerificationSession({
+      identifier: username,
+      provider: pending.provider as "x" | "github" | "discord" | "google",
+      profileId,
+      displayName: username,
+    });
+  } catch (e) {
+    console.warn("[social-verify] Failed to store verification session:", (e as Error).message);
+  }
+
+  return null;
+}
+
+async function handleOAuthCallback(code: string, stateParam: string | null): Promise<Response> {
   if (!stateParam || !pendingStates.has(stateParam)) {
     return closePopup("Verification failed: invalid or expired state");
   }
@@ -240,154 +402,33 @@ export async function GET(req: NextRequest) {
     return closePopup("Verification failed: provider not configured");
   }
 
-  // Must match the redirect_uri used in the authorization request — use the
-  // origin we captured in step 1, not the current request headers (which may
-  // differ after the redirect chain through X → auth catch-all → here).
-  const redirectUri = `${pending.origin}/api/auth/callback/${pending.provider}`;
-
   try {
-    // Exchange code for token
-    const tokenBody: Record<string, string> = {
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      client_secret: clientSecret,
-    };
+    const tokenResult = await exchangeCodeForToken(code, pending, config, clientId, clientSecret);
+    if (!("accessToken" in tokenResult)) return tokenResult;
 
-    // X/Twitter uses PKCE
-    if (pending.provider === "x") {
-      tokenBody.code_verifier = pending.codeVerifier;
-    }
+    const userResult = await fetchOAuthUserInfo(config, tokenResult.accessToken);
+    if (!("username" in userResult)) return userResult;
 
-    const tokenRes = await fetch(config.tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": pending.provider === "github" ? "application/json" : "application/x-www-form-urlencoded",
-        Accept: "application/json",
-        ...(pending.provider === "x"
-          ? { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` }
-          : {}),
-      },
-      body: pending.provider === "github" ? JSON.stringify(tokenBody) : new URLSearchParams(tokenBody).toString(),
-    });
-
-    if (!tokenRes.ok) {
-      const errText = await tokenRes.text();
-      console.error(`[social-verify] Token exchange failed for ${pending.provider}:`, errText);
-      return closePopup("Verification failed: could not authenticate with provider");
-    }
-
-    const tokenData = (await tokenRes.json()) as Record<string, string>;
-    const accessToken = tokenData.access_token;
-    if (!accessToken) {
-      return closePopup("Verification failed: no access token received");
-    }
-
-    // Fetch user info
-    const userRes = await fetch(config.userInfoUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!userRes.ok) {
-      const errBody = await userRes.text();
-      console.error(`[social-verify] User info fetch failed (${userRes.status}):`, errBody);
-      return closePopup(`Verification failed: could not fetch user info (${userRes.status})`);
-    }
-
-    const userData = (await userRes.json()) as Record<string, unknown>;
-    const { username, profileId } = config.parseUser(userData);
-
-    if (!username || !profileId) {
-      return closePopup("Verification failed: could not determine username");
-    }
-
-    // Record verification on the signer
-    const [signer] = await db
-      .select()
-      .from(signers)
-      .where(and(eq(signers.documentId, pending.documentId), eq(signers.claimToken, pending.claimToken)))
-      .limit(1);
-
-    if (!signer) {
-      return closePopup("Verification failed: signer not found");
-    }
-
-    // Enforce requiredUsername if set on the field
-    const signerFields = (signer.fields as Array<{ id?: string; settings?: Record<string, unknown> }> | null) ?? [];
-    const fieldDef = signerFields.find((f) => f.id === pending.fieldId);
-    const requiredUsername = fieldDef?.settings?.requiredUsername as string | undefined;
-    if (requiredUsername) {
-      const normalizedRequired = requiredUsername.replace(/^@/, "").toLowerCase();
-      const normalizedActual = username.toLowerCase();
-      if (normalizedActual !== normalizedRequired) {
-        return closePopup(
-          `Verification failed: this field requires the account @${normalizedRequired}, but you authenticated as @${username}`,
-        );
-      }
-    }
-
-    const verification = {
-      provider: pending.provider as "x" | "github" | "discord" | "google",
-      username,
-      profileId,
-      verifiedAt: new Date().toISOString(),
-      fieldId: pending.fieldId,
-    };
-
-    const existing = (signer.socialVerifications as (typeof verification)[] | null) ?? [];
-    // Replace any previous verification for the same field
-    const updated = [...existing.filter((v) => v.fieldId !== pending.fieldId), verification];
-
-    // Also update field values with the structured value
-    const fieldValue: SocialVerificationFieldValue = {
-      kind: "social-verification",
-      provider: verification.provider,
-      status: "verified",
-      username,
-      profileId,
-      verifiedAt: verification.verifiedAt,
-    };
-
-    const currentFieldValues = signer.fieldValues ?? {};
-    const updatedFieldValues = {
-      ...currentFieldValues,
-      [pending.fieldId]: encodeStructuredFieldValue(fieldValue),
-    };
-
-    console.warn(
-      `[social-verify] Saving verification for signer ${signer.id}, field ${pending.fieldId}, username: ${username}`,
-    );
-    console.warn(`[social-verify] fieldValues being saved:`, JSON.stringify(updatedFieldValues));
-
-    await db
-      .update(signers)
-      .set({
-        socialVerifications: updated,
-        fieldValues: updatedFieldValues,
-      })
-      .where(eq(signers.id, signer.id));
-
-    console.warn(`[social-verify] DB update complete for signer ${signer.id}`);
-
-    // Store verification session for reuse across contracts
-    try {
-      const { storeVerificationSession } = await import("~/server/auth/verification-sessions");
-      await storeVerificationSession({
-        identifier: username,
-        provider: pending.provider as "x" | "github" | "discord" | "google",
-        profileId,
-        displayName: username,
-      });
-    } catch (e) {
-      console.warn("[social-verify] Failed to store verification session:", (e as Error).message);
-    }
+    const errorResponse = await recordVerification(pending, userResult.username, userResult.profileId);
+    if (errorResponse) return errorResponse;
 
     return closePopup(null);
   } catch (err) {
     console.error("[social-verify] Error:", err);
     return closePopup("Verification failed: unexpected error");
   }
+}
+
+export async function GET(req: NextRequest) {
+  cleanupStates();
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+
+  if (!code) {
+    return initiateOAuth(req, url);
+  }
+
+  return handleOAuthCallback(code, url.searchParams.get("state"));
 }
 
 function escapeHtml(s: string): string {

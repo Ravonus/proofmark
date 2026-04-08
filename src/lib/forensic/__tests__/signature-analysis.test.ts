@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DeterministicReplayRecorder, analyzeTimedSignature, extractReplaySignatureAnalysis } from "../index";
+import { analyzeTimedSignature, DeterministicReplayRecorder, extractReplaySignatureAnalysis } from "../index";
 import type { TimedSignatureStroke } from "../types";
 
 describe("signature analysis", () => {

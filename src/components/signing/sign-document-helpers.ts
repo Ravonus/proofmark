@@ -1,16 +1,16 @@
-import type { SignerField } from "~/server/db/schema";
+import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
+import { type DocToken as SharedDocToken, type InlineField as SharedInlineField } from "~/lib/document/document-tokens";
+import { resolveFieldInputType, resolveFieldPlaceholder, validateFieldValue } from "~/lib/document/field-runtime";
 import {
-  decodeStructuredFieldValue,
   type AttachmentFieldValue,
+  decodeStructuredFieldValue,
   type IdentityVerificationFieldValue,
+  isImageDataUrl,
   type PaymentFieldValue,
   type SocialVerificationFieldValue,
-  isImageDataUrl,
 } from "~/lib/document/field-values";
-import { resolveFieldInputType, resolveFieldPlaceholder, validateFieldValue } from "~/lib/document/field-runtime";
-import { normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
 import type { SignerTokenGate, TokenGateEvaluation } from "~/lib/token-gates";
-import { type InlineField as SharedInlineField, type DocToken as SharedDocToken } from "~/lib/document/document-tokens";
+import type { SignerField } from "~/server/db/schema";
 import { getField } from "../fields";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -132,7 +132,10 @@ export function getFieldMinWidth(field: InlineField): string {
 export function validateField(
   field: InlineField,
   value: string | undefined,
-  options: { signatureReady?: boolean; allValues?: Record<string, string> } = {},
+  options: {
+    signatureReady?: boolean;
+    allValues?: Record<string, string>;
+  } = {},
 ): string | null {
   return validateFieldValue(field, value, options);
 }
@@ -148,6 +151,28 @@ export function formatCurrency(amount: number, currency: string) {
   }
 }
 
+function getStructuredDisplayText(inputType: string, value: string, placeholder: string): string | null {
+  if (inputType === "file") {
+    const attachment = decodeStructuredFieldValue<AttachmentFieldValue>(value);
+    return attachment?.kind === "attachment" ? attachment.originalName : placeholder;
+  }
+  if (inputType === "payment") {
+    const payment = decodeStructuredFieldValue<PaymentFieldValue>(value);
+    return payment?.kind === "payment" ? `${formatCurrency(payment.amount, payment.currency)} paid` : placeholder;
+  }
+  if (inputType === "idv") {
+    const verification = decodeStructuredFieldValue<IdentityVerificationFieldValue>(value);
+    return verification?.kind === "id-verification"
+      ? `Verified (${verification.score}/${verification.threshold})`
+      : placeholder;
+  }
+  if (inputType === "social-verify") {
+    const social = decodeStructuredFieldValue<SocialVerificationFieldValue>(value);
+    return social?.kind === "social-verification" ? `@${social.username} (verified)` : placeholder;
+  }
+  return null;
+}
+
 export function getFieldDisplayText(field: InlineField, value: string | undefined) {
   const placeholder = resolveFieldPlaceholder(field);
   const inputType = resolveFieldInputType(field);
@@ -157,36 +182,11 @@ export function getFieldDisplayText(field: InlineField, value: string | undefine
   if (field.type === "signature") {
     return isImageDataUrl(value) ? "Handwritten signature" : value || "Signed";
   }
+  if (inputType === "initials") return value || placeholder;
+  if (inputType === "checkbox") return value === "true" ? "Checked" : placeholder;
 
-  if (inputType === "initials") {
-    return value || placeholder;
-  }
-
-  if (inputType === "checkbox") {
-    return value === "true" ? "Checked" : placeholder;
-  }
-
-  if (inputType === "file") {
-    const attachment = decodeStructuredFieldValue<AttachmentFieldValue>(value);
-    return attachment?.kind === "attachment" ? attachment.originalName : placeholder;
-  }
-
-  if (inputType === "payment") {
-    const payment = decodeStructuredFieldValue<PaymentFieldValue>(value);
-    return payment?.kind === "payment" ? `${formatCurrency(payment.amount, payment.currency)} paid` : placeholder;
-  }
-
-  if (inputType === "idv") {
-    const verification = decodeStructuredFieldValue<IdentityVerificationFieldValue>(value);
-    return verification?.kind === "id-verification"
-      ? `Verified (${verification.score}/${verification.threshold})`
-      : placeholder;
-  }
-
-  if (inputType === "social-verify") {
-    const social = decodeStructuredFieldValue<SocialVerificationFieldValue>(value);
-    return social?.kind === "social-verification" ? `@${social.username} (verified)` : placeholder;
-  }
+  const structured = getStructuredDisplayText(inputType, value, placeholder);
+  if (structured !== null) return structured;
 
   return value;
 }

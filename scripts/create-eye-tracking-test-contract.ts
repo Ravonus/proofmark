@@ -12,20 +12,21 @@
  *   npm run dev   # start the app first
  *   npx tsx scripts/create-eye-tracking-test-contract.ts
  */
+
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { randomBytes } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { Wallet } from "ethers";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, resolve } from "path";
-import { eq, and } from "drizzle-orm";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import { Wallet } from "ethers";
 import superjson from "superjson";
-import { db } from "~/server/db";
-import { sessions, signers } from "~/server/db/schema";
-import { findSignersByDocumentId } from "~/server/db/compat";
-import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
-import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
+import { type DocToken, tokensToContent } from "~/lib/document/document-tokens";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
+import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
 import type { AppRouter } from "~/server/api/root";
+import { db } from "~/server/db";
+import { findSignersByDocumentId } from "~/server/db/compat";
+import { sessions, signers } from "~/server/db/schema";
 
 const DEFAULT_OWNER_ADDRESS = process.env.PM_OWNER_ADDRESS ?? "0x2000000000000000000000000000000000000B22";
 const DEFAULT_BASE_URL = process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3100";
@@ -35,7 +36,11 @@ const DEFAULT_OUTPUT_PATH = resolve(process.cwd(), "tmp/eye-tracking-test-contra
 
 function buildContent(): string {
   const tokens: DocToken[] = [
-    { kind: "heading", text: "INDEPENDENT CONSULTING AGREEMENT", sectionNum: 1 },
+    {
+      kind: "heading",
+      text: "INDEPENDENT CONSULTING AGREEMENT",
+      sectionNum: 1,
+    },
     { kind: "break" },
     {
       kind: "text",
@@ -192,14 +197,22 @@ function buildContent(): string {
     },
     { kind: "break" },
 
-    { kind: "heading", text: "7. Representations and Warranties", sectionNum: 8 },
+    {
+      kind: "heading",
+      text: "7. Representations and Warranties",
+      sectionNum: 8,
+    },
     {
       kind: "text",
       text: "The Consultant represents and warrants that: (a) it has the legal right and authority to enter into this Agreement; (b) the services will be performed in a professional manner consistent with industry standards; (c) the Work Product will be original and will not infringe upon the rights of any third party; and (d) the Consultant is not subject to any agreement that would prevent or restrict it from fulfilling its obligations under this Agreement.",
     },
     { kind: "break" },
 
-    { kind: "heading", text: "8. Limitation of Liability and Indemnification", sectionNum: 9 },
+    {
+      kind: "heading",
+      text: "8. Limitation of Liability and Indemnification",
+      sectionNum: 9,
+    },
     {
       kind: "text",
       text: "IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF WHETHER SUCH DAMAGES ARE BASED ON CONTRACT, TORT, STRICT LIABILITY, OR ANY OTHER THEORY. Each party's total aggregate liability under this Agreement shall not exceed the total fees paid or payable under this Agreement during the twelve (12) month period preceding the event giving rise to such liability.",
@@ -409,6 +422,90 @@ async function presignPartyA(params: { baseUrl: string; documentId: string; clai
   return wallet.address;
 }
 
+// ── Output helpers ──────────────────────────────────────────
+
+function buildOutput(params: {
+  baseUrl: string;
+  created: { id: string };
+  partyAAddress: string;
+  storedFirst: { status: string; forensicHash: string | null } | undefined;
+  firstEvidence: EnhancedForensicEvidence | null;
+  secondSigner: { status: string; claimToken: string };
+  signingUrl: string;
+}) {
+  const { baseUrl, created, partyAAddress, storedFirst, firstEvidence, secondSigner, signingUrl } = params;
+  return {
+    createdAt: new Date().toISOString(),
+    document: {
+      id: created.id,
+      title: "Independent Consulting Agreement — Eye Tracking Test",
+      gazeTracking: "full",
+      proofMode: "HYBRID",
+      creatorViewUrl: `${baseUrl}/view/${created.id}`,
+    },
+    partyA: {
+      label: "Client (Party A)",
+      status: storedFirst?.status ?? "SIGNED",
+      walletAddress: partyAAddress,
+      forensicHash: storedFirst?.forensicHash ?? null,
+      automationReview: firstEvidence?.automationReview ?? null,
+      policyOutcome: firstEvidence?.policyOutcome ?? null,
+      note: "Pre-signed by automation script — webdriver=true, no gaze, no signature, instant completion.",
+    },
+    partyB: {
+      label: "Consultant (Party B)",
+      status: secondSigner.status,
+      claimToken: secondSigner.claimToken,
+      signUrl: signingUrl,
+    },
+    instructions: [
+      "Party A has been pre-signed with realistic human gaze data (1420 points, 86 fixations, 15.3 blinks/min, 82% coverage).",
+      "",
+      "YOUR TURN — open the signing URL below in your browser:",
+      signingUrl,
+      "",
+      "The eye tracking system will:",
+      "  1. Ask for camera permission",
+      "  2. Run a 5-point calibration",
+      "  3. Track your gaze as you read and sign",
+      "",
+      "To test the system naturally:",
+      "  - Read through the agreement (scroll all the way through)",
+      "  - Fill in your name, address, and email",
+      "  - Copy 'CONSULTING-2026-VERIFIED' from Section 9 and paste it into the verification field",
+      "  - Enter the execution date",
+      "  - Draw your signature",
+      "  - Finalize with your wallet",
+      "",
+      "To TRY to trick the eye tracking:",
+      "  - Look away from the screen while scrolling",
+      "  - Cover the camera briefly",
+      "  - Stare at one spot without moving your eyes",
+      "  - Skip reading and jump straight to signature",
+      "  - The system should flag low coverage, missing blinks, or lack of reading patterns",
+    ],
+  };
+}
+
+function printResult(params: {
+  signingUrl: string;
+  outputPath: string;
+  firstEvidence: EnhancedForensicEvidence | null;
+}) {
+  const { signingUrl, outputPath, firstEvidence } = params;
+  console.log("\n" + "=".repeat(70));
+  console.log("EYE TRACKING TEST CONTRACT READY");
+  console.log("=".repeat(70));
+  console.log(`\nParty A: PRE-SIGNED (automation — webdriver, no gaze, no signature)`);
+  console.log(`  - Automation review verdict: ${firstEvidence?.automationReview?.verdict ?? "pending"}`);
+  console.log(`  - Score: ${firstEvidence?.automationReview?.automationScore ?? "N/A"}`);
+  console.log(`\nParty B: YOUR TURN`);
+  console.log(`\n  ${signingUrl}`);
+  console.log(`\nOpen that URL in your browser. The eye tracker will activate.`);
+  console.log(`\nSaved full output to: ${outputPath}`);
+  console.log("=".repeat(70));
+}
+
 // ── Main ────────────────────────────────────────────────────
 
 async function main() {
@@ -484,72 +581,20 @@ async function main() {
 
   const signingUrl = `${baseUrl}/sign/${created.id}?claim=${secondSigner.claimToken}`;
 
-  const output = {
-    createdAt: new Date().toISOString(),
-    document: {
-      id: created.id,
-      title: "Independent Consulting Agreement — Eye Tracking Test",
-      gazeTracking: "full",
-      proofMode: "HYBRID",
-      creatorViewUrl: `${baseUrl}/view/${created.id}`,
-    },
-    partyA: {
-      label: "Client (Party A)",
-      status: storedFirst?.status ?? "SIGNED",
-      walletAddress: partyAAddress,
-      forensicHash: storedFirst?.forensicHash ?? null,
-      automationReview: firstEvidence?.automationReview ?? null,
-      policyOutcome: firstEvidence?.policyOutcome ?? null,
-      note: "Pre-signed by automation script — webdriver=true, no gaze, no signature, instant completion.",
-    },
-    partyB: {
-      label: "Consultant (Party B)",
-      status: secondSigner.status,
-      claimToken: secondSigner.claimToken,
-      signUrl: signingUrl,
-    },
-    instructions: [
-      "Party A has been pre-signed with realistic human gaze data (1420 points, 86 fixations, 15.3 blinks/min, 82% coverage).",
-      "",
-      "YOUR TURN — open the signing URL below in your browser:",
-      signingUrl,
-      "",
-      "The eye tracking system will:",
-      "  1. Ask for camera permission",
-      "  2. Run a 5-point calibration",
-      "  3. Track your gaze as you read and sign",
-      "",
-      "To test the system naturally:",
-      "  - Read through the agreement (scroll all the way through)",
-      "  - Fill in your name, address, and email",
-      "  - Copy 'CONSULTING-2026-VERIFIED' from Section 9 and paste it into the verification field",
-      "  - Enter the execution date",
-      "  - Draw your signature",
-      "  - Finalize with your wallet",
-      "",
-      "To TRY to trick the eye tracking:",
-      "  - Look away from the screen while scrolling",
-      "  - Cover the camera briefly",
-      "  - Stare at one spot without moving your eyes",
-      "  - Skip reading and jump straight to signature",
-      "  - The system should flag low coverage, missing blinks, or lack of reading patterns",
-    ],
-  };
+  const output = buildOutput({
+    baseUrl,
+    created,
+    partyAAddress,
+    storedFirst,
+    firstEvidence,
+    secondSigner,
+    signingUrl,
+  });
 
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 
-  console.log("\n" + "=".repeat(70));
-  console.log("EYE TRACKING TEST CONTRACT READY");
-  console.log("=".repeat(70));
-  console.log(`\nParty A: PRE-SIGNED (automation — webdriver, no gaze, no signature)`);
-  console.log(`  - Automation review verdict: ${firstEvidence?.automationReview?.verdict ?? "pending"}`);
-  console.log(`  - Score: ${firstEvidence?.automationReview?.automationScore ?? "N/A"}`);
-  console.log(`\nParty B: YOUR TURN`);
-  console.log(`\n  ${signingUrl}`);
-  console.log(`\nOpen that URL in your browser. The eye tracker will activate.`);
-  console.log(`\nSaved full output to: ${outputPath}`);
-  console.log("=".repeat(70));
+  printResult({ signingUrl, outputPath, firstEvidence });
 }
 
 void main().catch((error) => {

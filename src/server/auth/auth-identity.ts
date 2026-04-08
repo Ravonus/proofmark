@@ -1,23 +1,10 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { auth } from "~/server/auth/auth";
-import { db } from "~/server/db";
-import {
-  accounts,
-  accountMergeRequests,
-  aiRateLimits,
-  aiUsageLogs,
-  connectorAccessTokens,
-  connectorSessions,
-  managedWallets,
-  mergeRequestStatusEnum,
-  signers,
-  userVaults,
-  userWallets,
-  users,
-  walletSessions,
-} from "~/server/db/schema";
+import { performAccountMerge } from "~/server/auth/auth-merge";
 import { normalizeStoredWalletAddress, type StoredWalletChain } from "~/server/auth/wallet-identity";
 import { getWalletSessionFromRequest } from "~/server/auth/wallet-session";
+import { db } from "~/server/db";
+import { accountMergeRequests, mergeRequestStatusEnum, users, userWallets, walletSessions } from "~/server/db/schema";
 
 type RequestLike = Request | { headers?: Headers | null | undefined };
 type BetterAuthSession = {
@@ -86,7 +73,9 @@ export async function getBetterAuthSessionFromHeaders(headersInput: RequestLike 
   if (!headers) return null;
 
   try {
-    const session = (await auth.api.getSession({ headers })) as BetterAuthSession | null;
+    const session = (await auth.api.getSession({
+      headers,
+    })) as BetterAuthSession | null;
     if (!session?.user?.id || !session.user.email) return null;
     return session;
   } catch {
@@ -189,7 +178,10 @@ async function setUserPrimaryWallet(params: { userId: string; address: string; c
 
 export async function linkWalletToUser(params: { userId: string; address: string; chain: StoredWalletChain }) {
   const normalizedAddress = normalizeStoredWalletAddress(params.chain, params.address);
-  const existing = await findUserByWallet({ address: normalizedAddress, chain: params.chain });
+  const existing = await findUserByWallet({
+    address: normalizedAddress,
+    chain: params.chain,
+  });
 
   if (existing && existing.user.id !== params.userId) {
     return { linked: false as const, conflictingUser: existing.user };
@@ -216,7 +208,11 @@ export async function linkWalletToUser(params: { userId: string; address: string
       },
     });
 
-  await setUserPrimaryWallet({ userId: params.userId, address: normalizedAddress, chain: params.chain });
+  await setUserPrimaryWallet({
+    userId: params.userId,
+    address: normalizedAddress,
+    chain: params.chain,
+  });
 
   return { linked: true as const, conflictingUser: null };
 }
@@ -505,7 +501,11 @@ export async function mergeCurrentIdentityAccounts(request: RequestLike | Header
 
   const walletOwner = await findUserByWallet(wallet);
   if (!walletOwner) {
-    await linkWalletToUser({ userId: identity.authSession.user.id, address: wallet.address, chain: wallet.chain });
+    await linkWalletToUser({
+      userId: identity.authSession.user.id,
+      address: wallet.address,
+      chain: wallet.chain,
+    });
     await db
       .update(walletSessions)
       .set({ userId: identity.authSession.user.id })
@@ -524,120 +524,18 @@ export async function mergeCurrentIdentityAccounts(request: RequestLike | Header
   const primaryUserId = identity.authSession.user.id;
   const secondaryUserId = walletOwner.user.id;
 
-  await db.transaction(async (tx) => {
-    const [primaryUser] = await tx.select().from(users).where(eq(users.id, primaryUserId)).limit(1);
-    const [secondaryUser] = await tx.select().from(users).where(eq(users.id, secondaryUserId)).limit(1);
-
-    if (!primaryUser || !secondaryUser) {
-      throw new Error("One of the accounts could not be found");
-    }
-
-    const primaryVaults = await tx.select().from(userVaults).where(eq(userVaults.userId, primaryUserId));
-    const secondaryVaults = await tx.select().from(userVaults).where(eq(userVaults.userId, secondaryUserId));
-    if (
-      secondaryVaults.some((vault) => primaryVaults.some((existing) => existing.unlockMethod === vault.unlockMethod))
-    ) {
-      throw new Error("Merge blocked because both accounts already have vault credentials configured");
-    }
-
-    const primaryManagedWallets = await tx
-      .select()
-      .from(managedWallets)
-      .where(eq(managedWallets.userId, primaryUserId));
-    const secondaryManagedWallets = await tx
-      .select()
-      .from(managedWallets)
-      .where(eq(managedWallets.userId, secondaryUserId));
-    if (
-      secondaryManagedWallets.some((managed) =>
-        primaryManagedWallets.some((existing) => existing.chain === managed.chain),
-      )
-    ) {
-      throw new Error("Merge blocked because both accounts already have managed wallets on the same chain");
-    }
-
-    await tx
-      .update(accounts)
-      .set({ userId: primaryUserId, updatedAt: new Date() })
-      .where(eq(accounts.userId, secondaryUserId));
-    await tx.update(userVaults).set({ userId: primaryUserId }).where(eq(userVaults.userId, secondaryUserId));
-    await tx.update(managedWallets).set({ userId: primaryUserId }).where(eq(managedWallets.userId, secondaryUserId));
-    await tx.update(signers).set({ userId: primaryUserId }).where(eq(signers.userId, secondaryUserId));
-    await tx
-      .update(aiRateLimits)
-      .set({ userId: primaryUserId, updatedAt: new Date() })
-      .where(eq(aiRateLimits.userId, secondaryUserId));
-    await tx.update(aiUsageLogs).set({ userId: primaryUserId }).where(eq(aiUsageLogs.userId, secondaryUserId));
-    await tx
-      .update(connectorSessions)
-      .set({ userId: primaryUserId, updatedAt: new Date() })
-      .where(eq(connectorSessions.userId, secondaryUserId));
-    await tx
-      .update(connectorAccessTokens)
-      .set({ userId: primaryUserId })
-      .where(eq(connectorAccessTokens.userId, secondaryUserId));
-    await tx.update(walletSessions).set({ userId: primaryUserId }).where(eq(walletSessions.userId, secondaryUserId));
-
-    const secondaryWalletLinks = await tx.select().from(userWallets).where(eq(userWallets.userId, secondaryUserId));
-    const primaryWalletLinks = await tx.select().from(userWallets).where(eq(userWallets.userId, primaryUserId));
-
-    for (const link of secondaryWalletLinks) {
-      const duplicate = primaryWalletLinks.some(
-        (existing) => existing.address === link.address && existing.chain === link.chain,
-      );
-      if (duplicate) {
-        await tx.delete(userWallets).where(eq(userWallets.id, link.id));
-        continue;
-      }
-      await tx
-        .update(userWallets)
-        .set({ userId: primaryUserId, updatedAt: new Date(), isPrimary: false })
-        .where(eq(userWallets.id, link.id));
-    }
-
-    const nextPrimaryWalletAddress = primaryUser.walletAddress ?? secondaryUser.walletAddress ?? wallet.address;
-    const nextPrimaryWalletChain = primaryUser.walletChain ?? secondaryUser.walletChain ?? wallet.chain;
-
-    await tx
-      .update(users)
-      .set({
-        name: primaryUser.name ?? secondaryUser.name ?? null,
-        image: primaryUser.image ?? secondaryUser.image ?? null,
-        walletAddress: nextPrimaryWalletAddress,
-        walletChain: nextPrimaryWalletChain,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, primaryUserId));
-
-    await tx
-      .update(accountMergeRequests)
-      .set({
-        status: "MERGED",
-        updatedAt: new Date(),
-        resolvedAt: new Date(),
-      })
-      .where(
-        or(
-          and(
-            eq(accountMergeRequests.currentUserId, primaryUserId),
-            eq(accountMergeRequests.conflictingUserId, secondaryUserId),
-          ),
-          and(
-            eq(accountMergeRequests.currentUserId, secondaryUserId),
-            eq(accountMergeRequests.conflictingUserId, primaryUserId),
-          ),
-        ),
-      );
-
-    await tx.delete(users).where(eq(users.id, secondaryUserId));
+  await performAccountMerge({
+    primaryUserId,
+    secondaryUserId,
+    wallet,
+    walletSessionId: identity.walletSession.id,
   });
 
-  await db
-    .update(walletSessions)
-    .set({ userId: primaryUserId })
-    .where(eq(walletSessions.id, identity.walletSession.id));
-
-  await linkWalletToUser({ userId: primaryUserId, address: wallet.address, chain: wallet.chain });
+  await linkWalletToUser({
+    userId: primaryUserId,
+    address: wallet.address,
+    chain: wallet.chain,
+  });
 
   return { merged: true, linked: true };
 }

@@ -1,10 +1,10 @@
+import { FORENSIC_PROFILE_THRESHOLDS } from "./thresholds";
 import type {
   GazeLivenessChallengeKind,
   GazeLivenessChallengePlanStep,
   GazeLivenessStepResult,
   GazeLivenessSummary,
 } from "./types";
-import { FORENSIC_PROFILE_THRESHOLDS } from "./thresholds";
 
 const TARGET_POOL: Array<{ x: number; y: number; label: string }> = [
   { x: 0.18, y: 0.22, label: "top-left target" },

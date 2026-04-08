@@ -1,40 +1,30 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
+import {
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  Inbox,
+  Lock,
+  PenLine,
+  Search,
+  Wallet,
+} from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useSession } from "~/lib/auth/auth-client";
 import { trpc } from "~/lib/platform/trpc";
 import { useWallet } from "../layout/wallet-provider";
-import { PostSignDownloadManager } from "../post-sign/post-sign-download-manager";
-import { CHAIN_META, addressPreview, type WalletChain } from "~/lib/crypto/chains";
 import { FadeIn, GlassCard } from "../ui/motion";
-import {
-  Lock,
-  AlertCircle,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Download,
-  ExternalLink,
-  Eye,
-  Send,
-  Ban,
-  PackageOpen,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Wallet,
-  PenLine,
-  Inbox,
-  Link2,
-  Check,
-} from "lucide-react";
+import { DocCard, GroupCard } from "./dashboard-cards";
+import { type DashboardItem, type DocWithSigners, groupDocuments, isGroup } from "./dashboard-types";
 
 const ITEMS_PER_PAGE = 10;
 
-/* ── Skeleton Loading ─────────────────────────────────────────────────────── */
+/* ── Skeleton Loading ────────────────────────────────────────── */
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return <div className={`shimmer-skeleton rounded-xs ${className}`} />;
@@ -51,41 +41,7 @@ function SkeletonRow() {
   );
 }
 
-/* ── Status Badge ─────────────────────────────────────────────────────────── */
-
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { cls: string; icon: React.ReactNode; dot: string }> = {
-    COMPLETED: {
-      cls: "text-[var(--success)]",
-      icon: <CheckCircle className="h-3 w-3" />,
-      dot: "status-dot-success",
-    },
-    PENDING: {
-      cls: "text-[var(--warning)]",
-      icon: <Clock className="h-3 w-3" />,
-      dot: "status-dot-warning",
-    },
-    EXPIRED: {
-      cls: "text-[var(--danger)]",
-      icon: <AlertCircle className="h-3 w-3" />,
-      dot: "status-dot-danger",
-    },
-    VOIDED: {
-      cls: "text-[var(--danger)]",
-      icon: <XCircle className="h-3 w-3" />,
-      dot: "status-dot-danger",
-    },
-  };
-  const c = config[status] ?? { cls: "text-muted", icon: null, dot: "" };
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.1em] ${c.cls}`}>
-      <span className={`status-dot ${c.dot}`} />
-      {status}
-    </span>
-  );
-}
-
-/* ── Pagination Controls ──────────────────────────────────────────────────── */
+/* ── Pagination Controls ─────────────────────────────────────── */
 
 function Pagination({
   page,
@@ -140,7 +96,7 @@ function Pagination({
   );
 }
 
-/* ── Onboarding Empty State ───────────────────────────────────────────────── */
+/* ── Onboarding Empty State ──────────────────────────────────── */
 
 function OnboardingChecklist() {
   const steps = [
@@ -172,53 +128,7 @@ function OnboardingChecklist() {
         <h3 className="mb-5 text-xs font-semibold uppercase tracking-[0.1em] text-muted">Get started</h3>
         <div className="mx-auto max-w-sm">
           {steps.map((step, i) => (
-            <div key={step.label} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border ${
-                    step.done
-                      ? "border-[var(--success)] bg-[var(--success-subtle)] text-[var(--success)]"
-                      : step.locked
-                        ? "border-[var(--border)] bg-[var(--bg-inset)] text-faint"
-                        : "border-[var(--border-accent)] bg-[var(--accent-subtle)] text-accent"
-                  }`}
-                >
-                  {step.done ? <CheckCircle className="h-3.5 w-3.5" /> : step.icon}
-                </div>
-                {i < steps.length - 1 && (
-                  <div className={`my-0.5 h-8 w-px ${step.done ? "bg-[var(--success-30)]" : "bg-[var(--border)]"}`} />
-                )}
-              </div>
-
-              <div className="pb-3 pt-0.5">
-                <p
-                  className={`text-[13px] font-medium ${
-                    step.done
-                      ? "text-[var(--success)] line-through decoration-[var(--success-30)]"
-                      : step.locked
-                        ? "text-faint"
-                        : "text-primary"
-                  }`}
-                >
-                  {step.label}
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted">{step.description}</p>
-                {step.cta && (
-                  <Link
-                    href="/"
-                    className="mt-2 inline-flex items-center gap-1 rounded-sm bg-[var(--accent)] px-2.5 py-1 text-[10px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
-                  >
-                    Create Document
-                  </Link>
-                )}
-                {step.locked && (
-                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-faint">
-                    <Lock className="h-2.5 w-2.5" />
-                    Complete previous step
-                  </span>
-                )}
-              </div>
-            </div>
+            <OnboardingStep key={step.label} step={step} isLast={i === steps.length - 1} />
           ))}
         </div>
       </GlassCard>
@@ -226,7 +136,72 @@ function OnboardingChecklist() {
   );
 }
 
-/* ── Filter Tab ───────────────────────────────────────────────────────────── */
+function OnboardingStep({
+  step,
+  isLast,
+}: {
+  step: {
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    done: boolean;
+    cta?: boolean;
+    locked?: boolean;
+  };
+  isLast: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border ${
+            step.done
+              ? "border-[var(--success)] bg-[var(--success-subtle)] text-[var(--success)]"
+              : step.locked
+                ? "border-[var(--border)] bg-[var(--bg-inset)] text-faint"
+                : "border-[var(--border-accent)] bg-[var(--accent-subtle)] text-accent"
+          }`}
+        >
+          {step.done ? <CheckCircle className="h-3.5 w-3.5" /> : step.icon}
+        </div>
+        {!isLast && (
+          <div className={`my-0.5 h-8 w-px ${step.done ? "bg-[var(--success-30)]" : "bg-[var(--border)]"}`} />
+        )}
+      </div>
+
+      <div className="pb-3 pt-0.5">
+        <p
+          className={`text-[13px] font-medium ${
+            step.done
+              ? "text-[var(--success)] line-through decoration-[var(--success-30)]"
+              : step.locked
+                ? "text-faint"
+                : "text-primary"
+          }`}
+        >
+          {step.label}
+        </p>
+        <p className="mt-0.5 text-[11px] text-muted">{step.description}</p>
+        {step.cta && (
+          <Link
+            href="/"
+            className="mt-2 inline-flex items-center gap-1 rounded-sm bg-[var(--accent)] px-2.5 py-1 text-[10px] font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
+          >
+            Create Document
+          </Link>
+        )}
+        {step.locked && (
+          <span className="mt-1 inline-flex items-center gap-1 text-[10px] text-faint">
+            <Lock className="h-2.5 w-2.5" />
+            Complete previous step
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Filter Tab ──────────────────────────────────────────────── */
 
 function FilterTab({
   active,
@@ -262,7 +237,69 @@ function FilterTab({
   );
 }
 
-/* ── Dashboard (main export) ──────────────────────────────────────────────── */
+/* ── Hooks ───────────────────────────────────────────────────── */
+
+function useFilteredDocs(docsQuery: { data?: unknown[] }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [page, setPage] = useState(1);
+
+  const { filtered, counts } = useMemo(() => {
+    const docs = (docsQuery.data ?? []) as unknown as DocWithSigners[];
+    const items = groupDocuments(docs);
+    const c = {
+      ALL: items.length,
+      PENDING: items.filter((d) => d.status === "PENDING").length,
+      COMPLETED: items.filter((d) => d.status === "COMPLETED").length,
+    };
+
+    let result = items;
+    if (statusFilter !== "ALL") {
+      result = result.filter((d) => d.status === statusFilter);
+    }
+    if (search.trim()) {
+      result = filterBySearch(result, search);
+    }
+    return { filtered: result, counts: c };
+  }, [docsQuery.data, statusFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const effectivePage = Math.min(page, totalPages);
+  const paginatedDocs = filtered.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
+
+  return {
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    page: effectivePage,
+    setPage,
+    totalPages,
+    filtered,
+    paginatedDocs,
+    counts,
+  };
+}
+
+function filterBySearch(items: DashboardItem[], search: string): DashboardItem[] {
+  const q = search.toLowerCase();
+  return items.filter((d) => {
+    if (isGroup(d)) {
+      return (
+        d.title.toLowerCase().includes(q) ||
+        d.recipients.some((r) => r.label.toLowerCase().includes(q)) ||
+        (d.discloser?.label.toLowerCase().includes(q) ?? false)
+      );
+    }
+    return (
+      d.title.toLowerCase().includes(q) ||
+      d.contentHash.toLowerCase().includes(q) ||
+      d.signers.some((s) => s.label.toLowerCase().includes(q))
+    );
+  });
+}
+
+/* ── Dashboard (main export) ─────────────────────────────────── */
 
 export function Dashboard() {
   const { connected, authenticated, authenticating } = useWallet();
@@ -279,79 +316,21 @@ export function Dashboard() {
     enabled: signedIn,
   });
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [page, setPage] = useState(1);
-
-  // Derive filtered docs with useMemo instead of useEffect for page reset
-  const { filtered, counts } = useMemo(() => {
-    const docs = (docsQuery.data ?? []) as unknown as DocWithSigners[];
-    // Group documents by groupId before counting/filtering
-    const items = groupDocuments(docs);
-    const c = {
-      ALL: items.length,
-      PENDING: items.filter((d) => d.status === "PENDING").length,
-      COMPLETED: items.filter((d) => d.status === "COMPLETED").length,
-    };
-
-    let result = items;
-    if (statusFilter !== "ALL") {
-      result = result.filter((d) => d.status === statusFilter);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((d) => {
-        if (isGroup(d)) {
-          return (
-            d.title.toLowerCase().includes(q) ||
-            d.recipients.some((r) => r.label.toLowerCase().includes(q)) ||
-            (d.discloser?.label.toLowerCase().includes(q) ?? false)
-          );
-        }
-        return (
-          d.title.toLowerCase().includes(q) ||
-          d.contentHash.toLowerCase().includes(q) ||
-          d.signers.some((s) => s.label.toLowerCase().includes(q))
-        );
-      });
-    }
-    return { filtered: result, counts: c };
-  }, [docsQuery.data, statusFilter, search]);
-
-  // Reset page when filters change
-  const effectivePage = (() => {
-    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-    return Math.min(page, totalPages);
-  })();
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginatedDocs = filtered.slice((effectivePage - 1) * ITEMS_PER_PAGE, effectivePage * ITEMS_PER_PAGE);
+  const {
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    page,
+    setPage,
+    totalPages,
+    filtered,
+    paginatedDocs,
+    counts,
+  } = useFilteredDocs(docsQuery);
 
   if (!signedIn) {
-    const showAuthenticating = mounted && authenticating;
-    return (
-      <FadeIn>
-        <GlassCard className="p-8 text-center" hover={false}>
-          <div className="mb-3 flex justify-center text-faint">
-            <Lock className="h-8 w-8" />
-          </div>
-          <p className="text-sm text-muted">
-            {showAuthenticating
-              ? "Verifying wallet ownership..."
-              : connected
-                ? "Finish wallet verification or sign in with email to view your documents"
-                : "Sign in with email or connect a wallet to view your documents"}
-          </p>
-          {showAuthenticating && (
-            <motion.div
-              className="mt-3 inline-block h-4 w-4 rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
-            />
-          )}
-        </GlassCard>
-      </FadeIn>
-    );
+    return <NotSignedInState mounted={mounted} authenticating={authenticating} connected={connected} />;
   }
 
   if (docsQuery.isLoading || identityQuery.isLoading) {
@@ -367,14 +346,10 @@ export function Dashboard() {
   }
 
   const docs = docsQuery.data ?? [];
-
-  if (docs.length === 0) {
-    return <OnboardingChecklist />;
-  }
+  if (docs.length === 0) return <OnboardingChecklist />;
 
   return (
     <div className="space-y-4">
-      {/* Search + filters */}
       <FadeIn>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
@@ -456,553 +431,49 @@ export function Dashboard() {
         </FadeIn>
       )}
 
-      <Pagination page={effectivePage} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
 
-/* ── Types ────────────────────────────────────────────────────────────────── */
+/* ── Not Signed In State ─────────────────────────────────────── */
 
-type DocWithSigners = {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: Date;
-  createdBy: string;
-  viewerIsCreator: boolean;
-  contentHash: string;
-  groupId: string | null;
-  expiresAt: Date | null;
-  postSignReveal: {
-    enabled: boolean;
-    summary?: string;
-    sections?: Array<{
-      title: string;
-      content: string;
-      icon?: string;
-    }>;
-    downloads?: Array<{
-      label: string;
-      filename: string;
-      description?: string;
-      icon?: string;
-      uploadedByAddress?: string;
-      uploadedByLabel?: string;
-      uploadedAt?: string;
-    }>;
-    testbedAccess?: {
-      enabled: boolean;
-      description?: string;
-      proxyEndpoint?: string;
-    };
-  } | null;
-  signers: Array<{
-    id: string;
-    label: string;
-    address: string | null;
-    chain: string | null;
-    status: string;
-    signedAt: Date | null;
-    isYou: boolean;
-    signUrl: string | null;
-    groupRole: string | null;
-  }>;
-};
-
-/** A group of docs collapsed into a single dashboard row. */
-type GroupedDoc = {
-  kind: "group";
-  groupId: string;
-  title: string;
-  createdAt: Date;
-  createdBy: string;
-  viewerIsCreator: boolean;
-  expiresAt: Date | null;
-  status: string;
-  postSignReveal: DocWithSigners["postSignReveal"];
-  /** The first doc in the group — used for links/actions */
-  primaryDoc: DocWithSigners;
-  /** All docs in the group */
-  docs: DocWithSigners[];
-  /** All recipient signers across all docs in the group */
-  recipients: Array<DocWithSigners["signers"][number] & { documentId: string }>;
-  /** The discloser signer (from the first doc) */
-  discloser: DocWithSigners["signers"][number] | null;
-};
-
-type DashboardItem = (DocWithSigners & { kind?: "single" }) | GroupedDoc;
-
-function isGroup(item: DashboardItem): item is GroupedDoc {
-  return (item as GroupedDoc).kind === "group";
-}
-
-/** Collapse documents that share a groupId into a single GroupedDoc. */
-function groupDocuments(docs: DocWithSigners[]): DashboardItem[] {
-  const groups = new Map<string, DocWithSigners[]>();
-  const singles: DocWithSigners[] = [];
-
-  for (const doc of docs) {
-    if (doc.groupId) {
-      const list = groups.get(doc.groupId) ?? [];
-      list.push(doc);
-      groups.set(doc.groupId, list);
-    } else {
-      singles.push(doc);
-    }
-  }
-
-  const items: DashboardItem[] = [];
-
-  for (const [groupId, groupDocs] of groups) {
-    groupDocs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    const primary = groupDocs[0]!;
-    const allPending = groupDocs.every((d) => d.status === "PENDING");
-    const allCompleted = groupDocs.every((d) => d.status === "COMPLETED");
-    const discloser = primary.signers.find((s) => s.groupRole === "discloser") ?? null;
-
-    const recipients: GroupedDoc["recipients"] = [];
-    for (const d of groupDocs) {
-      for (const s of d.signers) {
-        if (s.groupRole !== "discloser") {
-          recipients.push({ ...s, documentId: d.id });
-        }
-      }
-    }
-
-    items.push({
-      kind: "group",
-      groupId,
-      title: primary.title,
-      createdAt: primary.createdAt,
-      createdBy: primary.createdBy,
-      viewerIsCreator: primary.viewerIsCreator,
-      expiresAt: primary.expiresAt,
-      status: allCompleted ? "COMPLETED" : allPending ? "PENDING" : "PENDING",
-      postSignReveal: primary.postSignReveal,
-      primaryDoc: primary,
-      docs: groupDocs,
-      recipients,
-      discloser,
-    });
-  }
-
-  for (const doc of singles) {
-    items.push(doc);
-  }
-
-  items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  return items;
-}
-
-function ExpirationBadge({ expiresAt }: { expiresAt: Date }) {
-  const now = new Date();
-  const diff = expiresAt.getTime() - now.getTime();
-  if (diff <= 0) return <span className="text-[10px] font-medium text-[var(--danger)]">Expired</span>;
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-  const color = days <= 3 ? "text-[var(--danger)]" : days <= 7 ? "text-[var(--warning)]" : "text-muted";
-  return <span className={`text-[10px] ${color}`}>{days}d left</span>;
-}
-
-/* ── Document Card ────────────────────────────────────────────────────────── */
-
-function DocCard({ doc, isLast }: { doc: DocWithSigners; isLast: boolean }) {
-  const utils = trpc.useUtils();
-  const [showDownloadsManager, setShowDownloadsManager] = useState(false);
-  const [copiedSignerId, setCopiedSignerId] = useState<string | null>(null);
-  const copySignUrl = useCallback((signUrl: string, signerId: string) => {
-    void navigator.clipboard.writeText(signUrl).then(() => {
-      setCopiedSignerId(signerId);
-      setTimeout(() => setCopiedSignerId(null), 2000);
-    });
-  }, []);
-  const voidMut = trpc.document.voidDocument.useMutation({
-    onSuccess: () => utils.document.listByAddress.invalidate(),
-  });
-  const resendMut = trpc.document.resendInvite.useMutation();
-  const signedCount = doc.signers.filter((s) => s.status === "SIGNED").length;
-  const isCreator = doc.viewerIsCreator;
-  const mySigner = doc.signers.find((s) => s.isYou);
-  const needsMySignature = mySigner?.status === "PENDING";
-  const progress = (signedCount / doc.signers.length) * 100;
-  const sharedFileCount = doc.postSignReveal?.downloads?.length ?? 0;
-  const hasFooter = (doc.status === "PENDING" && isCreator) || doc.status === "COMPLETED" || isCreator;
-
-  return (
-    <div className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""}`}>
-      <Link href={`/sign/${doc.id}`} className="group block px-4 py-3 transition-colors hover:bg-[var(--bg-hover)]">
-        {/* Header row */}
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h4 className="truncate text-[13px] font-medium">{doc.title}</h4>
-              {needsMySignature && (
-                <motion.span
-                  className="shrink-0 rounded-xs border border-[var(--border-accent)] bg-[var(--accent-subtle)] px-1.5 py-px text-[9px] font-medium text-accent"
-                  animate={{ opacity: [1, 0.6, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  Action Required
-                </motion.span>
-              )}
-            </div>
-            <p className="mt-0.5 text-[10px] text-muted">
-              {new Date(doc.createdAt).toLocaleDateString()} &bull;{" "}
-              {isCreator ? "Created by you" : `By ${addressPreview(doc.createdBy)}`}
-              {doc.expiresAt && doc.status === "PENDING" && (
-                <>
-                  {" "}
-                  &bull; <ExpirationBadge expiresAt={new Date(doc.expiresAt)} />
-                </>
-              )}
-            </p>
-          </div>
-
-          <StatusBadge status={doc.status} />
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-px flex-1 bg-[var(--border)]">
-            <motion.div
-              className={`h-full ${signedCount === doc.signers.length ? "bg-[var(--success)]" : "bg-accent"}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1], delay: 0.15 }}
-            />
-          </div>
-          <span className="shrink-0 text-[10px] text-muted">
-            {signedCount}/{doc.signers.length}
-          </span>
-        </div>
-
-        {/* Signer chips */}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {doc.signers.map((s) => {
-            const meta = CHAIN_META[s.chain as WalletChain];
-            return (
-              <span
-                key={s.id}
-                className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${
-                  s.status === "SIGNED"
-                    ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
-                    : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
-                }`}
-              >
-                <span style={{ color: meta?.color }}>{meta?.icon}</span>
-                {s.label}
-                {s.status === "SIGNED" && <CheckCircle className="h-2 w-2" />}
-              </span>
-            );
-          })}
-        </div>
-      </Link>
-
-      {hasFooter && (
-        <div className="border-t border-[var(--border-subtle)] px-4 py-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {doc.status === "PENDING" &&
-              isCreator &&
-              doc.signers
-                .filter((s) => s.status === "PENDING")
-                .map((s) => (
-                  <span key={s.id} className="inline-flex items-center gap-0.5">
-                    {s.signUrl && (
-                      <button
-                        onClick={() => copySignUrl(s.signUrl!, s.id)}
-                        className="bg-accent/[0.08] hover:bg-accent/[0.15] inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-accent transition-colors"
-                      >
-                        {copiedSignerId === s.id ? (
-                          <Check className="h-2.5 w-2.5" />
-                        ) : (
-                          <Link2 className="h-2.5 w-2.5" />
-                        )}
-                        {copiedSignerId === s.id ? "Copied!" : `Link ${s.label}`}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        resendMut.mutate({ documentId: doc.id, signerId: s.id });
-                      }}
-                      disabled={resendMut.isPending}
-                      className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
-                    >
-                      <Send className="h-2.5 w-2.5" />
-                      Resend
-                    </button>
-                  </span>
-                ))}
-
-            {doc.status === "COMPLETED" && (
-              <>
-                <ActionLink
-                  href={`/api/pdf/${doc.id}`}
-                  icon={<Download className="h-2.5 w-2.5" />}
-                  label="PDF"
-                  accent
-                />
-                <ActionLink
-                  href={`/view/${doc.id}`}
-                  icon={<ExternalLink className="h-2.5 w-2.5" />}
-                  label="View"
-                  accent
-                />
-                <ActionLink
-                  href={`/verify/${doc.contentHash}`}
-                  icon={<ExternalLink className="h-2.5 w-2.5" />}
-                  label="Verify"
-                />
-                <ActionLink
-                  href={`/api/proof-packet/${doc.id}`}
-                  icon={<Download className="h-2.5 w-2.5" />}
-                  label="Evidence"
-                  external
-                />
-                <ActionLink href={`/sign/${doc.id}`} icon={<Eye className="h-2.5 w-2.5" />} label="Document" />
-              </>
-            )}
-
-            {isCreator && (
-              <button
-                onClick={() => setShowDownloadsManager((current) => !current)}
-                className="inline-flex items-center gap-1 rounded-xs bg-[var(--bg-inset)] px-2 py-1 text-[9px] font-medium text-secondary transition-colors hover:bg-[var(--bg-hover)]"
-              >
-                <PackageOpen className="h-2.5 w-2.5" />
-                {showDownloadsManager
-                  ? "Hide documents"
-                  : sharedFileCount > 0
-                    ? `Manage documents (${sharedFileCount})`
-                    : "Add documents"}
-              </button>
-            )}
-
-            {doc.status === "PENDING" && isCreator && (
-              <button
-                onClick={() => {
-                  if (confirm("Void this document? All pending signatures will be cancelled.")) {
-                    voidMut.mutate({ documentId: doc.id });
-                  }
-                }}
-                disabled={voidMut.isPending}
-                className="ml-auto inline-flex items-center gap-1 rounded-xs bg-[var(--danger-subtle)] px-2 py-1 text-[9px] font-medium text-[var(--danger)] transition-colors hover:bg-red-500/15 disabled:opacity-40"
-              >
-                <Ban className="h-2.5 w-2.5" />
-                Void
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {isCreator && showDownloadsManager && (
-        <div className="border-t border-[var(--border-subtle)] px-4 py-3">
-          <PostSignDownloadManager documentId={doc.id} documentTitle={doc.title} reveal={doc.postSignReveal} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Group Card (collapsed view of a document group) ──────────────────────── */
-
-function GroupCard({ group, isLast }: { group: GroupedDoc; isLast: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const utils = trpc.useUtils();
-  const resendMut = trpc.document.resendInvite.useMutation();
-  const voidMut = trpc.document.voidDocument.useMutation({
-    onSuccess: () => utils.document.listByAddress.invalidate(),
-  });
-
-  const copyUrl = useCallback((url: string, id: string) => {
-    void navigator.clipboard.writeText(url).then(() => {
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    });
-  }, []);
-
-  const signedRecipients = group.recipients.filter((r) => r.status === "SIGNED").length;
-  const totalRecipients = group.recipients.length;
-  const discloserSigned = group.discloser?.status === "SIGNED";
-  const progress = ((signedRecipients + (discloserSigned ? 1 : 0)) / (totalRecipients + 1)) * 100;
-
-  return (
-    <div className={`overflow-hidden bg-[var(--bg-card)] ${!isLast ? "border-b border-[var(--border-subtle)]" : ""}`}>
-      {/* Header — click to expand/collapse */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="group block w-full px-4 py-3 text-left transition-colors hover:bg-[var(--bg-hover)]"
-      >
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h4 className="truncate text-[13px] font-medium">{group.title}</h4>
-              <span className="shrink-0 rounded-xs border border-[var(--border)] bg-[var(--bg-inset)] px-1.5 py-px text-[9px] font-medium text-muted">
-                {totalRecipients} recipients
-              </span>
-            </div>
-            <p className="mt-0.5 text-[10px] text-muted">
-              {new Date(group.createdAt).toLocaleDateString()} &bull; Created by you
-              {group.expiresAt && group.status === "PENDING" && (
-                <>
-                  {" "}
-                  &bull; <ExpirationBadge expiresAt={new Date(group.expiresAt)} />
-                </>
-              )}
-            </p>
-          </div>
-          <StatusBadge status={group.status} />
-        </div>
-
-        {/* Progress bar */}
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-px flex-1 bg-[var(--border)]">
-            <motion.div
-              className={`h-full ${signedRecipients === totalRecipients && discloserSigned ? "bg-[var(--success)]" : "bg-accent"}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1], delay: 0.15 }}
-            />
-          </div>
-          <span className="shrink-0 text-[10px] text-muted">
-            {signedRecipients + (discloserSigned ? 1 : 0)}/{totalRecipients + 1}
-          </span>
-        </div>
-
-        {/* Discloser chip + summary */}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {group.discloser && (
-            <span
-              className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] transition-colors ${
-                discloserSigned
-                  ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
-                  : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
-              }`}
-            >
-              {group.discloser.label}
-              {discloserSigned && <CheckCircle className="h-2 w-2" />}
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1 rounded-xs border border-[var(--border)] bg-[var(--bg-inset)] px-1.5 py-px text-[9px] text-muted">
-            {signedRecipients}/{totalRecipients} recipients signed
-          </span>
-          <span className="ml-auto text-[9px] text-muted">{expanded ? "▲ Collapse" : "▼ Expand"}</span>
-        </div>
-      </button>
-
-      {/* Expanded: individual recipient rows */}
-      {expanded && (
-        <div className="border-t border-[var(--border-subtle)]">
-          {group.recipients.map((r) => {
-            const meta = CHAIN_META[r.chain as WalletChain];
-            return (
-              <div
-                key={r.id}
-                className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2 last:border-b-0"
-              >
-                <span
-                  className={`inline-flex items-center gap-1 rounded-xs px-1.5 py-px text-[9px] ${
-                    r.status === "SIGNED"
-                      ? "border border-[var(--success-10)] bg-[var(--success-subtle)] text-[var(--success)]"
-                      : "border border-[var(--border)] bg-[var(--bg-inset)] text-muted"
-                  }`}
-                >
-                  {meta && <span style={{ color: meta.color }}>{meta.icon}</span>}
-                  {r.label}
-                  {r.status === "SIGNED" && <CheckCircle className="h-2 w-2" />}
-                </span>
-
-                <div className="flex-1" />
-
-                {r.status === "SIGNED" && (
-                  <Link
-                    href={`/sign/${r.documentId}`}
-                    className="inline-flex items-center gap-1 rounded-xs bg-[var(--bg-inset)] px-2 py-1 text-[9px] font-medium text-secondary transition-colors hover:bg-[var(--bg-hover)]"
-                  >
-                    <Eye className="h-2.5 w-2.5" />
-                    View
-                  </Link>
-                )}
-
-                {r.signUrl && r.status === "PENDING" && (
-                  <button
-                    onClick={() => copyUrl(r.signUrl!, r.id)}
-                    className="bg-accent/[0.08] hover:bg-accent/[0.15] inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium text-accent transition-colors"
-                  >
-                    {copiedId === r.id ? <Check className="h-2.5 w-2.5" /> : <Link2 className="h-2.5 w-2.5" />}
-                    {copiedId === r.id ? "Copied!" : "Copy Link"}
-                  </button>
-                )}
-
-                {r.status === "PENDING" && (
-                  <button
-                    onClick={() => resendMut.mutate({ documentId: r.documentId, signerId: r.id })}
-                    disabled={resendMut.isPending}
-                    className="inline-flex items-center gap-1 rounded-xs bg-blue-500/[0.08] px-2 py-1 text-[9px] font-medium text-blue-400 transition-colors hover:bg-blue-500/[0.15] disabled:opacity-40"
-                  >
-                    <Send className="h-2.5 w-2.5" />
-                    Resend
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Footer actions */}
-      {group.viewerIsCreator && (
-        <div className="border-t border-[var(--border-subtle)] px-4 py-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {group.status === "PENDING" && (
-              <button
-                onClick={() => {
-                  if (confirm("Void ALL contracts in this group? All pending signatures will be cancelled.")) {
-                    for (const d of group.docs) {
-                      if (d.status === "PENDING") voidMut.mutate({ documentId: d.id });
-                    }
-                  }
-                }}
-                disabled={voidMut.isPending}
-                className="ml-auto inline-flex items-center gap-1 rounded-xs bg-[var(--danger-subtle)] px-2 py-1 text-[9px] font-medium text-[var(--danger)] transition-colors hover:bg-red-500/15 disabled:opacity-40"
-              >
-                <Ban className="h-2.5 w-2.5" />
-                Void Group
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActionLink({
-  href,
-  icon,
-  label,
-  accent,
-  external,
+function NotSignedInState({
+  mounted,
+  authenticating,
+  connected,
 }: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  accent?: boolean;
-  external?: boolean;
+  mounted: boolean;
+  authenticating: boolean;
+  connected: boolean;
 }) {
+  const showAuthenticating = mounted && authenticating;
   return (
-    <a
-      href={href}
-      target={external ? "_blank" : undefined}
-      rel={external ? "noopener noreferrer" : undefined}
-      onClick={(e) => e.stopPropagation()}
-      className={`inline-flex items-center gap-1 rounded-xs px-2 py-1 text-[9px] font-medium transition-colors ${
-        accent
-          ? "bg-[var(--accent-subtle)] text-accent hover:bg-[var(--accent-muted)]"
-          : "bg-[var(--bg-inset)] text-secondary hover:bg-[var(--bg-hover)]"
-      }`}
-    >
-      {icon}
-      {label}
-    </a>
+    <FadeIn>
+      <GlassCard className="p-8 text-center" hover={false}>
+        <div className="mb-3 flex justify-center text-faint">
+          <Lock className="h-8 w-8" />
+        </div>
+        <p className="text-sm text-muted">
+          {showAuthenticating
+            ? "Verifying wallet ownership..."
+            : connected
+              ? "Finish wallet verification or sign in with email to view your documents"
+              : "Sign in with email or connect a wallet to view your documents"}
+        </p>
+        {showAuthenticating && (
+          <motion.div
+            className="mt-3 inline-block h-4 w-4 rounded-full border border-[var(--accent-30)] border-t-[var(--accent)]"
+            animate={{ rotate: 360 }}
+            transition={{
+              duration: 0.7,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+        )}
+      </GlassCard>
+    </FadeIn>
   );
 }
+// build 1775607265

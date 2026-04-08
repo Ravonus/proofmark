@@ -1,7 +1,8 @@
 import { z } from "zod";
-import type { ForensicEvidence } from "./types";
-import type { PersistedForensicSessionCapture, ForensicSessionProfile, SignerBaselineProfile } from "./session";
 import type { ReplayTapeVerification } from "~/server/crypto/rust-engine";
+import type { ForensicSessionProfile, PersistedForensicSessionCapture, SignerBaselineProfile } from "./session";
+import type { ForensicEvidence } from "./types";
+
 // GazeBehaviorFeatures is defined inline to avoid hard dependency on premium gaze module
 type GazeBehaviorFeatures = Record<string, unknown>;
 

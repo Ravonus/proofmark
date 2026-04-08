@@ -9,7 +9,7 @@
 import { randomInt } from "crypto";
 import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
-import { signers, type BrandingSettings } from "~/server/db/schema";
+import { type BrandingSettings, signers } from "~/server/db/schema";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes

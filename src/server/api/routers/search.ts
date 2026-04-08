@@ -6,14 +6,14 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, authedProcedure } from "~/server/api/trpc";
+import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
 import {
-  searchDocuments,
-  getOwnerTags,
   getCategoryCounts,
-  updateTags,
-  updateCategory,
+  getOwnerTags,
   type SearchFilters,
+  searchDocuments,
+  updateCategory,
+  updateTags,
 } from "~/server/documents/search-index";
 
 export const searchRouter = createTRPCRouter({

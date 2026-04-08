@@ -23,6 +23,8 @@ Code style is enforced automatically:
 
 - **Prettier** formats all code on save and pre-commit
 - **ESLint** enforces TypeScript strict rules, no `any` types, no bare `console.log`
+- **Biome** enforces file/function size, cognitive complexity, and max-parameter guardrails
+- **Repo policy lint** enforces separation-of-concern boundaries and keeps the OSS directory map current
 - **TypeScript** runs in strict mode with `noUncheckedIndexedAccess`
 
 Run `npm run validate` before pushing. Pre-commit hooks run Prettier and ESLint automatically.
@@ -64,6 +66,14 @@ Write comments that explain _why_, not _what_. If the function name and types al
 
 - Use `type` imports for type-only imports: `import type { Foo } from "./bar"`
 - Import from `~/` path alias (maps to `src/`)
+- Respect the architecture contract in [`oss-structure.md`](oss-structure.md)
+
+### Maintainability
+
+- Biome warns when files grow beyond 650 lines or functions grow beyond 120 lines
+- Biome warns when function cognitive complexity exceeds 20
+- Biome warns when a function takes more than 5 parameters
+- Route, component, lib, server, and store boundaries are documented and linted via the repo policy
 
 ### Error Handling
 

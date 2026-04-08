@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
+import { logAuditEvent } from "~/server/crypto/rust-engine";
 import { db } from "~/server/db";
 import { documents, signers } from "~/server/db/schema";
-import { logAuditEvent } from "~/server/crypto/rust-engine";
 import { sendSignerInvite } from "~/server/messaging/delivery";
 import { advanceReminderConfig } from "~/server/workspace/workspace";
 

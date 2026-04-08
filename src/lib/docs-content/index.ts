@@ -1,22 +1,22 @@
-export { type DocEntry, type DocAnchor, extractAnchors, hashContent } from "./types";
-export { GETTING_STARTED_DOCS } from "./getting-started";
-export { PROTOCOL_DOCS } from "./protocol";
-export { MULTI_CHAIN_DOCS } from "./multi-chain";
-export { SECURITY_DOCS } from "./security";
-export { NETWORK_DOCS } from "./network";
-export { GOVERNANCE_DOCS } from "./governance";
 export { DEVELOPER_DOCS } from "./developer";
+export { GETTING_STARTED_DOCS } from "./getting-started";
+export { GOVERNANCE_DOCS } from "./governance";
 export { MARKETPLACE_DOCS } from "./marketplace";
+export { MULTI_CHAIN_DOCS } from "./multi-chain";
+export { NETWORK_DOCS } from "./network";
+export { PROTOCOL_DOCS } from "./protocol";
+export { SECURITY_DOCS } from "./security";
+export { type DocAnchor, type DocEntry, extractAnchors, hashContent } from "./types";
 
-import type { DocEntry } from "./types";
-import { GETTING_STARTED_DOCS } from "./getting-started";
-import { PROTOCOL_DOCS } from "./protocol";
-import { MULTI_CHAIN_DOCS } from "./multi-chain";
-import { SECURITY_DOCS } from "./security";
-import { NETWORK_DOCS } from "./network";
-import { GOVERNANCE_DOCS } from "./governance";
 import { DEVELOPER_DOCS } from "./developer";
+import { GETTING_STARTED_DOCS } from "./getting-started";
+import { GOVERNANCE_DOCS } from "./governance";
 import { MARKETPLACE_DOCS } from "./marketplace";
+import { MULTI_CHAIN_DOCS } from "./multi-chain";
+import { NETWORK_DOCS } from "./network";
+import { PROTOCOL_DOCS } from "./protocol";
+import { SECURITY_DOCS } from "./security";
+import type { DocEntry } from "./types";
 
 export const DOC_SECTIONS: DocEntry[] = [
   ...GETTING_STARTED_DOCS,

@@ -1,4 +1,3 @@
-import type { TimedSignatureStroke } from "./types";
 import {
   decodeReplayEventsSync,
   decodeTimedSignatureSync,
@@ -7,6 +6,7 @@ import {
   type ForensicReplayEncodedEvent,
   type ForensicReplayEncodedPayload,
 } from "./replay-codec";
+import type { TimedSignatureStroke } from "./types";
 
 export type ForensicReplayCoreKind = "wasm" | "ts";
 

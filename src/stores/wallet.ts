@@ -77,6 +77,8 @@ type WalletActions = {
   setAvailableWallets: (wallets: WalletOption[]) => void;
 };
 
+export type WalletStoreState = WalletState & WalletActions;
+
 const INITIAL_STATE: WalletState = {
   address: null,
   chain: null,

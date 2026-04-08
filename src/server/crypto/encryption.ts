@@ -9,7 +9,7 @@
  * If not set, encryption at rest is disabled and documents are stored plaintext.
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, hkdfSync } from "crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "crypto";
 
 const ALGO = "aes-256-gcm";
 const IV_LEN = 12;

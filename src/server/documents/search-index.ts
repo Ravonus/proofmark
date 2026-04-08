@@ -12,8 +12,8 @@
  * - Index is scoped per owner — users can only search their own docs
  */
 
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { eq, and, or, ilike, desc, asc, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { documentIndex, documents, signers } from "~/server/db/schema";
 import { createId } from "~/server/db/utils";

@@ -1,30 +1,30 @@
 "use client";
 
-import { memo, useState } from "react";
-import { FIELD_CATEGORIES, FIELD_REGISTRY, SIGNER_COLORS, type FieldTypeId } from "./field-registry";
-import {
-  User,
-  Calendar,
-  MapPin,
-  Mail,
-  PenTool,
-  Type,
-  Building2,
-  MoreHorizontal,
-  Phone,
-  Globe,
-  DollarSign,
-  Wallet,
-  Scale,
-  ShieldCheck,
-  FileText,
-  Hash,
-  GripVertical,
-  Search,
-  X,
-  ChevronRight,
-} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  Building2,
+  Calendar,
+  ChevronRight,
+  DollarSign,
+  FileText,
+  Globe,
+  GripVertical,
+  Hash,
+  Mail,
+  MapPin,
+  MoreHorizontal,
+  PenTool,
+  Phone,
+  Scale,
+  Search,
+  ShieldCheck,
+  Type,
+  User,
+  Wallet,
+  X,
+} from "lucide-react";
+import { memo, useState } from "react";
+import { FIELD_CATEGORIES, FIELD_REGISTRY, type FieldTypeId, SIGNER_COLORS } from "./field-registry";
 
 const FIELD_ICONS: Record<string, LucideIcon> = {
   "full-name": User,

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronDown } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Check } from "lucide-react";
 
 export type SelectOption = {
   value: string;
@@ -38,7 +38,11 @@ export function Select({
   const [dropUp, setDropUp] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const selected = options.find((o) => o.value === value);
 
@@ -150,68 +154,101 @@ export function Select({
       {open &&
         position &&
         createPortal(
-          <AnimatePresence>
-            <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
-
-            <motion.div
-              ref={dropdownRef}
-              initial={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.98 }}
-              transition={{ duration: 0.12, ease: "easeOut" }}
-              className="fixed z-[9999] overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--bg-card)] shadow-lg backdrop-blur-xl"
-              style={{
-                top: position.top,
-                left: position.left,
-                width: position.width,
-                minWidth: 180,
-                maxHeight: 260,
-              }}
-            >
-              <div className="overflow-y-auto p-0.5" style={{ maxHeight: 252 }}>
-                {(() => {
-                  const enabledOpts = options.filter((o) => !o.disabled);
-                  return options.map((opt) => {
-                    const isSelected = opt.value === value;
-                    const enabledIdx = enabledOpts.indexOf(opt);
-                    const isHighlighted = !opt.disabled && enabledIdx === highlightedIdx;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        disabled={opt.disabled}
-                        onMouseEnter={() => {
-                          if (!opt.disabled && enabledIdx >= 0) setHighlightedIdx(enabledIdx);
-                        }}
-                        onClick={() => {
-                          onChange(opt.value);
-                          setOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
-                          isSelected
-                            ? "bg-[var(--accent-subtle)] text-accent"
-                            : opt.disabled
-                              ? "cursor-not-allowed opacity-40"
-                              : isHighlighted
-                                ? "bg-[var(--bg-hover)] text-primary"
-                                : "text-primary hover:bg-[var(--bg-hover)]"
-                        }`}
-                      >
-                        {opt.icon && <span className="shrink-0">{opt.icon}</span>}
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate">{opt.label}</div>
-                          {opt.description && <div className="truncate text-[9px] text-muted">{opt.description}</div>}
-                        </div>
-                        {isSelected && <Check className="h-3 w-3 shrink-0 text-accent" />}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-            </motion.div>
-          </AnimatePresence>,
+          <SelectDropdown
+            dropdownRef={dropdownRef}
+            dropUp={dropUp}
+            position={position}
+            options={options}
+            value={value}
+            highlightedIdx={highlightedIdx}
+            setHighlightedIdx={setHighlightedIdx}
+            onChange={onChange}
+            onClose={() => setOpen(false)}
+          />,
           document.body,
         )}
     </div>
+  );
+}
+
+function SelectDropdown({
+  dropdownRef,
+  dropUp,
+  position,
+  options,
+  value,
+  highlightedIdx,
+  setHighlightedIdx,
+  onChange,
+  onClose,
+}: {
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
+  dropUp: boolean;
+  position: { top: number; left: number; width: number };
+  options: SelectOption[];
+  value: string;
+  highlightedIdx: number;
+  setHighlightedIdx: (idx: number) => void;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const enabledOpts = options.filter((o) => !o.disabled);
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+      <motion.div
+        ref={dropdownRef}
+        initial={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: dropUp ? 4 : -4, scale: 0.98 }}
+        transition={{ duration: 0.12, ease: "easeOut" }}
+        className="fixed z-[9999] overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--bg-card)] shadow-lg backdrop-blur-xl"
+        style={{
+          top: position.top,
+          left: position.left,
+          width: position.width,
+          minWidth: 180,
+          maxHeight: 260,
+        }}
+      >
+        <div className="overflow-y-auto p-0.5" style={{ maxHeight: 252 }}>
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            const enabledIdx = enabledOpts.indexOf(opt);
+            const isHighlighted = !opt.disabled && enabledIdx === highlightedIdx;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={opt.disabled}
+                onMouseEnter={() => {
+                  if (!opt.disabled && enabledIdx >= 0) setHighlightedIdx(enabledIdx);
+                }}
+                onClick={() => {
+                  onChange(opt.value);
+                  onClose();
+                }}
+                className={`flex w-full items-center gap-2 rounded-sm px-2.5 py-1.5 text-left text-[11px] transition-colors ${
+                  isSelected
+                    ? "bg-[var(--accent-subtle)] text-accent"
+                    : opt.disabled
+                      ? "cursor-not-allowed opacity-40"
+                      : isHighlighted
+                        ? "bg-[var(--bg-hover)] text-primary"
+                        : "text-primary hover:bg-[var(--bg-hover)]"
+                }`}
+              >
+                {opt.icon && <span className="shrink-0">{opt.icon}</span>}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">{opt.label}</div>
+                  {opt.description && <div className="truncate text-[9px] text-muted">{opt.description}</div>}
+                </div>
+                {isSelected && <Check className="h-3 w-3 shrink-0 text-accent" />}
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

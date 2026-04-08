@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { analyzePdf as analyzePdfTs } from "~/server/documents/pdf-analyze";
-import { analyzePdf as analyzePdfRust, getEngineStatus } from "~/server/crypto/rust-engine";
 import type { PdfAnalysisResult } from "~/lib/document/pdf-types";
+import { analyzePdf as analyzePdfRust, getEngineStatus } from "~/server/crypto/rust-engine";
+import { analyzePdf as analyzePdfTs } from "~/server/documents/pdf-analyze";
 import { createFakePdf } from "./helpers/fake-pdf";
 
 function canonicalize(result: PdfAnalysisResult) {

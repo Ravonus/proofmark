@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DeterministicReplayRecorder } from "~/lib/forensic";
-import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/forensic/automation-review";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
 import type { TimedSignatureStroke } from "~/lib/forensic/types";
+import { applyAutomationPolicy, reviewForensicAutomation } from "~/server/forensic/automation-review";
 
 function buildEvidence(overrides: Partial<EnhancedForensicEvidence> = {}): EnhancedForensicEvidence {
   return {
@@ -240,7 +240,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "WALLET", hasHandSignature: true });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "WALLET",
+      hasHandSignature: true,
+    });
     const outcome = applyAutomationPolicy(review, {
       enabled: true,
       onPreparationAutomation: "FLAG",
@@ -271,10 +274,19 @@ describe("automation review heuristics", () => {
         pasteEvents: 2,
         replay: null,
       },
-      flags: [{ code: "WEBDRIVER_DETECTED", severity: "critical", message: "webdriver" }],
+      flags: [
+        {
+          code: "WEBDRIVER_DETECTED",
+          severity: "critical",
+          message: "webdriver",
+        },
+      ],
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "EMAIL_OTP", hasHandSignature: true });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "EMAIL_OTP",
+      hasHandSignature: true,
+    });
     const outcome = applyAutomationPolicy(review, {
       enabled: true,
       onPreparationAutomation: "ALLOW",
@@ -310,7 +322,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "WALLET", hasHandSignature: true });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "WALLET",
+      hasHandSignature: true,
+    });
 
     expect(review.indicators.some((indicator) => indicator.code === "SIGNATURE_MOTION_TOO_UNIFORM")).toBe(true);
     expect(review.indicators.some((indicator) => indicator.code === "SIGNATURE_MOTION_TOO_FAST")).toBe(true);
@@ -333,7 +348,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "EMAIL_OTP", hasHandSignature: false });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "EMAIL_OTP",
+      hasHandSignature: false,
+    });
 
     expect(review.indicators.some((indicator) => indicator.code === "SYNTHETIC_GAZE_CRITICAL")).toBe(true);
     expect(review.stages.find((stage) => stage.stage === "critical")?.score).toBeGreaterThan(0.3);
@@ -356,7 +374,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "EMAIL_OTP", hasHandSignature: false });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "EMAIL_OTP",
+      hasHandSignature: false,
+    });
 
     expect(review.indicators.some((indicator) => indicator.code === "NATURAL_GAZE_CRITICAL")).toBe(true);
     expect(review.stages.find((stage) => stage.stage === "critical")?.score).toBeLessThan(0.25);
@@ -381,7 +402,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "WALLET", hasHandSignature: true });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "WALLET",
+      hasHandSignature: true,
+    });
 
     expect(review.indicators.some((indicator) => indicator.code === "GAZE_LIVENESS_FAILED")).toBe(true);
     expect(review.stages.find((stage) => stage.stage === "critical")?.score).toBeGreaterThan(0.3);
@@ -410,7 +434,10 @@ describe("automation review heuristics", () => {
       },
     });
 
-    const review = reviewForensicAutomation(evidence, { signMethod: "WALLET", hasHandSignature: true });
+    const review = reviewForensicAutomation(evidence, {
+      signMethod: "WALLET",
+      hasHandSignature: true,
+    });
 
     expect(review.indicators.some((indicator) => indicator.code === "SIGNER_BASELINE_DEVIATION_CRITICAL")).toBe(true);
     expect(review.stages.find((stage) => stage.stage === "critical")?.score).toBeGreaterThan(0.05);

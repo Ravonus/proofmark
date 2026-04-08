@@ -1,17 +1,17 @@
+import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
 import { randomBytes } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { Wallet } from "ethers";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, resolve } from "path";
-import { eq, and } from "drizzle-orm";
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import { Wallet } from "ethers";
 import superjson from "superjson";
-import { db } from "~/server/db";
-import { sessions, signers } from "~/server/db/schema";
-import { findSignersByDocumentId } from "~/server/db/compat";
-import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
-import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
+import { type DocToken, tokensToContent } from "~/lib/document/document-tokens";
 import type { EnhancedForensicEvidence } from "~/lib/forensic/premium";
+import type { BehavioralSignals, ClientFingerprint } from "~/lib/forensic/types";
 import type { AppRouter } from "~/server/api/root";
+import { db } from "~/server/db";
+import { findSignersByDocumentId } from "~/server/db/compat";
+import { sessions, signers } from "~/server/db/schema";
 
 const DEFAULT_OWNER_ADDRESS = process.env.PM_OWNER_ADDRESS ?? "0x1000000000000000000000000000000000000A11";
 const DEFAULT_BASE_URL = process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3100";
@@ -61,7 +61,11 @@ function parseArgs(argv: string[]): SeedOptions {
 
 function buildContent(): string {
   const tokens: DocToken[] = [
-    { kind: "heading", text: "AUTOMATION REVIEW TEST AGREEMENT", sectionNum: 1 },
+    {
+      kind: "heading",
+      text: "AUTOMATION REVIEW TEST AGREEMENT",
+      sectionNum: 1,
+    },
     { kind: "break" },
     {
       kind: "text",

@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { eq, and, gt } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import superjson from "superjson";
 import { db } from "~/server/db";
 import { walletSessions } from "~/server/db/schema";
@@ -36,6 +36,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
 });
 
 export const createTRPCRouter = t.router;
+export const mergeRouters = t.mergeRouters;
 export const publicProcedure = t.procedure;
 
 /**
@@ -48,7 +49,11 @@ export const authedProcedure = t.procedure.use(async ({ ctx, next }) => {
     return next({
       ctx: {
         ...ctx,
-        session: { address: ctx.apiKeyAuth.address, chain: ctx.apiKeyAuth.chain, userId: null },
+        session: {
+          address: ctx.apiKeyAuth.address,
+          chain: ctx.apiKeyAuth.chain,
+          userId: null,
+        },
       },
     });
   }
@@ -74,7 +79,11 @@ export const authedProcedure = t.procedure.use(async ({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      session: { address: session.address, chain: session.chain, userId: session.userId },
+      session: {
+        address: session.address,
+        chain: session.chain,
+        userId: session.userId,
+      },
     },
   });
 });

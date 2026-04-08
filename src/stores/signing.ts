@@ -82,6 +82,8 @@ type SigningActions = {
   clearDraft: () => void;
 };
 
+export type SigningStoreState = SigningState & SigningActions;
+
 const INITIAL: SigningState = {
   phase: "idle",
   email: "",
@@ -147,8 +149,21 @@ export const useSigningStore = create<SigningState & SigningActions>()((set, get
   // ── QR ─────────────────────────────────────────────────────────────────────
 
   setQrData: (token, url, image, mode = "signature", fieldId = null) =>
-    set({ qrToken: token, qrUrl: url, qrImage: image, qrMode: mode, qrFieldId: fieldId }),
-  clearQr: () => set({ qrToken: null, qrUrl: null, qrImage: null, qrMode: "signature", qrFieldId: null }),
+    set({
+      qrToken: token,
+      qrUrl: url,
+      qrImage: image,
+      qrMode: mode,
+      qrFieldId: fieldId,
+    }),
+  clearQr: () =>
+    set({
+      qrToken: null,
+      qrUrl: null,
+      qrImage: null,
+      qrMode: "signature",
+      qrFieldId: null,
+    }),
 
   // ── Modals ─────────────────────────────────────────────────────────────────
 
@@ -174,7 +189,10 @@ export const useSigningStore = create<SigningState & SigningActions>()((set, get
     try {
       const raw = sessionStorage.getItem(draftStorageKey);
       if (!raw) return false;
-      const draft = JSON.parse(raw) as { fieldValues?: Record<string, string>; email?: string };
+      const draft = JSON.parse(raw) as {
+        fieldValues?: Record<string, string>;
+        email?: string;
+      };
       set({
         fieldValues: draft.fieldValues ?? {},
         email: draft.email ?? "",

@@ -11,12 +11,11 @@
  *   npx tsx scripts/create-nda-partners.ts --base-url https://docu.technomancy.it
  */
 
-import { resolve } from "path";
-import { mkdir, writeFile } from "fs/promises";
-import { dirname } from "path";
 import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
+import { mkdir, writeFile } from "fs/promises";
+import { dirname, resolve } from "path";
 import superjson from "superjson";
-import { tokensToContent, type DocToken } from "~/lib/document/document-tokens";
+import { type DocToken, tokensToContent } from "~/lib/document/document-tokens";
 import type { AppRouter } from "~/server/api/root";
 
 const DEFAULT_BASE_URL = process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3100";
@@ -86,22 +85,24 @@ interface RecipientConfig {
 
 const RECIPIENTS: RecipientConfig[] = [
   { name: "paperd", xHandle: "paperdstudio", outputFile: "nda-paperd.json" },
-  { name: "superpot", xHandle: "superpotsecret", outputFile: "nda-superpot.json" },
+  {
+    name: "superpot",
+    xHandle: "superpotsecret",
+    outputFile: "nda-superpot.json",
+  },
   { name: "kthings", xHandle: "_Kthings", outputFile: "nda-kthings.json" },
 ];
 
-function buildContent(recipient: RecipientConfig): string {
-  const tokens: DocToken[] = [
+function buildPartiesAndVerificationTokens(): DocToken[] {
+  return [
     heading("MUTUAL NON-DISCLOSURE AND CONFIDENTIALITY AGREEMENT", 1),
     br(),
     text("Effective Date: April 2, 2026"),
     br(),
     br(),
-
     text('This Non-Disclosure and Confidentiality Agreement ("Agreement") is entered into by and between:'),
     br(),
     br(),
-
     text("DISCLOSING PARTY:"),
     br(),
     text("Full Legal Name: "),
@@ -112,7 +113,6 @@ function buildContent(recipient: RecipientConfig): string {
     text('Known as: R4vonus ("Discloser")'),
     br(),
     br(),
-
     text("RECEIVING PARTY:"),
     br(),
     text("Full Legal Name: "),
@@ -120,11 +120,9 @@ function buildContent(recipient: RecipientConfig): string {
       placeholder: "Enter your full legal name",
     }),
     br(),
-    text(`Known as: ${recipient.name} / @${recipient.xHandle} ("Recipient")`),
+    text('Known as: [see X verification below] ("Recipient")'),
     br(),
     br(),
-
-    // ── SECTION 1: IDENTITY VERIFICATION ──
     heading("1. IDENTITY VERIFICATION", 2),
     br(),
     text(
@@ -139,14 +137,11 @@ function buildContent(recipient: RecipientConfig): string {
     }),
     br(),
     text("Recipient X Verification: "),
-    field("x-verify-recipient", "x-verify", `X Account (${recipient.xHandle})`, 0, {
-      placeholder: `Verify as @${recipient.xHandle}`,
-      settings: { requiredUsername: recipient.xHandle },
+    field("x-verify-recipient", "x-verify", "Recipient X Account", 0, {
+      placeholder: "Verify your X account",
     }),
     br(),
     br(),
-
-    // ── SECTION 2: PURPOSE ──
     heading("2. PURPOSE", 2),
     br(),
     text(
@@ -154,8 +149,11 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
+  ];
+}
 
-    // ── SECTION 3: DEFINITION OF CONFIDENTIAL INFORMATION ──
+function buildDefinitionTokens(): DocToken[] {
+  return [
     heading("3. DEFINITION OF CONFIDENTIAL INFORMATION", 2),
     br(),
     text(
@@ -198,17 +196,22 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // Initials
     text("Recipient Initials: "),
-    field("initials-def-r", "initials", "Initials", 0, { placeholder: "Initials" }),
+    field("initials-def-r", "initials", "Initials", 0, {
+      placeholder: "Initials",
+    }),
     br(),
     text("Discloser Initials: "),
-    field("initials-def-d", "initials", "Initials", 1, { placeholder: "Initials" }),
+    field("initials-def-d", "initials", "Initials", 1, {
+      placeholder: "Initials",
+    }),
     br(),
     br(),
+  ];
+}
 
-    // ── SECTION 4: OBLIGATIONS ──
+function buildObligationsAndDisclosureTokens(): DocToken[] {
+  return [
     heading("4. OBLIGATIONS OF THE RECIPIENT", 2),
     br(),
     text("The Recipient agrees to the following:"),
@@ -244,14 +247,12 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // Initials for obligations
     text("Recipient Initials: "),
-    field("initials-oblig-r", "initials", "Initials", 0, { placeholder: "Initials" }),
+    field("initials-oblig-r", "initials", "Initials", 0, {
+      placeholder: "Initials",
+    }),
     br(),
     br(),
-
-    // ── SECTION 5: AUTHORIZED DISCLOSURE ──
     heading("5. AUTHORIZED DISCLOSURE AND DELEGATION", 2),
     br(),
     text(
@@ -279,16 +280,17 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // Acknowledgment
     text("I acknowledge and accept the Authorized Disclosure terms: "),
     field("ack-auth-disclosure-r", "acknowledge-checkbox", "I acknowledge the authorized disclosure terms", 0, {
       placeholder: "I acknowledge",
     }),
     br(),
     br(),
+  ];
+}
 
-    // ── SECTION 6: EXCLUSIONS ──
+function buildLegalAndSignatureTokens(): DocToken[] {
+  return [
     heading("6. EXCLUSIONS FROM CONFIDENTIAL INFORMATION", 2),
     br(),
     text("Confidential Information does not include information that:"),
@@ -316,8 +318,6 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // ── SECTION 7: TERM ──
     heading("7. TERM AND SURVIVAL", 2),
     br(),
     text(
@@ -330,8 +330,6 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // ── SECTION 8: RETURN OF MATERIALS ──
     heading("8. RETURN AND DESTRUCTION OF MATERIALS", 2),
     br(),
     text(
@@ -339,8 +337,6 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // ── SECTION 9: REMEDIES ──
     heading("9. REMEDIES AND ENFORCEMENT", 2),
     br(),
     text(
@@ -358,8 +354,6 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // ── SECTION 10: NO LICENSE ──
     heading("10. NO LICENSE OR RIGHTS GRANTED", 2),
     br(),
     text(
@@ -367,8 +361,6 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // ── SECTION 11: GOVERNING LAW ──
     heading("11. GOVERNING LAW AND JURISDICTION", 2),
     br(),
     text(
@@ -376,8 +368,11 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
+  ];
+}
 
-    // ── SECTION 12: MISCELLANEOUS ──
+function buildGeneralProvisionsAndSignatureTokens(): DocToken[] {
+  return [
     heading("12. GENERAL PROVISIONS", 2),
     br(),
     text(
@@ -410,17 +405,17 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
-    // Initials for sections 7-12
     text("Recipient Initials: "),
-    field("initials-general-r", "initials", "Initials", 0, { placeholder: "Initials" }),
+    field("initials-general-r", "initials", "Initials", 0, {
+      placeholder: "Initials",
+    }),
     br(),
     text("Discloser Initials: "),
-    field("initials-general-d", "initials", "Initials", 1, { placeholder: "Initials" }),
+    field("initials-general-d", "initials", "Initials", 1, {
+      placeholder: "Initials",
+    }),
     br(),
     br(),
-
-    // ── SIGNATURES ──
     heading("EXECUTION", 2),
     br(),
     text(
@@ -428,16 +423,15 @@ function buildContent(recipient: RecipientConfig): string {
     ),
     br(),
     br(),
-
     text("DISCLOSING PARTY"),
     br(),
     text("Full Legal Name: "),
-    field("sig-fullname-discloser", "full-name", "Discloser Full Legal Name", 1, {
-      placeholder: "Full legal name",
-    }),
+    field("sig-fullname-discloser", "full-name", "Discloser Full Legal Name", 1, { placeholder: "Full legal name" }),
     br(),
     text("X Username: "),
-    field("sig-x-discloser", "twitter-handle", "X Username", 1, { placeholder: "@R4vonus" }),
+    field("sig-x-discloser", "twitter-handle", "X Username", 1, {
+      placeholder: "@R4vonus",
+    }),
     br(),
     text("Date: "),
     field("date-discloser", "date", "Date", 1, { placeholder: "Signing Date" }),
@@ -445,16 +439,15 @@ function buildContent(recipient: RecipientConfig): string {
     sig("Discloser Signature", 1),
     br(),
     br(),
-
     text("RECEIVING PARTY"),
     br(),
     text("Full Legal Name: "),
-    field("sig-fullname-recipient", "full-name", "Recipient Full Legal Name", 0, {
-      placeholder: "Full legal name",
-    }),
+    field("sig-fullname-recipient", "full-name", "Recipient Full Legal Name", 0, { placeholder: "Full legal name" }),
     br(),
     text("X Username: "),
-    field("sig-x-recipient", "twitter-handle", "X Username", 0, { placeholder: `@${recipient.xHandle}` }),
+    field("sig-x-recipient", "twitter-handle", "X Username", 0, {
+      placeholder: `@${recipient.xHandle}`,
+    }),
     br(),
     text("Date: "),
     field("date-recipient", "date", "Date", 0, { placeholder: "Signing Date" }),
@@ -462,7 +455,16 @@ function buildContent(recipient: RecipientConfig): string {
     sig("Recipient Signature", 0),
     br(),
   ];
+}
 
+function buildContent(): string {
+  const tokens: DocToken[] = [
+    ...buildPartiesAndVerificationTokens(),
+    ...buildDefinitionTokens(),
+    ...buildObligationsAndDisclosureTokens(),
+    ...buildLegalAndSignatureTokens(),
+    ...buildGeneralProvisionsAndSignatureTokens(),
+  ];
   return tokensToContent(tokens);
 }
 
@@ -491,13 +493,15 @@ async function main() {
 
   await mkdir(OUTPUT_DIR, { recursive: true });
 
-  // Build per-recipient content — each contract embeds the recipient's name
-  // and X handle in the body text and field settings, so content must differ.
-  const fallbackContent = buildContent(RECIPIENTS[0]!);
+  // Content is identical for all contracts — recipient-specific settings
+  // (like requiredUsername for X verification) come from the signer's fields
+  // metadata, not the document content. This lets the discloser sign once
+  // and have the signature propagate to all siblings.
+  const content = buildContent();
 
   const result = await trpc.document.createGroup.mutate({
     title: "Non-Disclosure Agreement",
-    content: fallbackContent,
+    content,
     createdByEmail: "",
     proofMode: "HYBRID",
     signingOrder: "parallel",
@@ -515,7 +519,11 @@ async function main() {
         },
       ],
       downloads: [
-        { label: "Pitch Deck", filename: "pitch-deck.pdf", description: "High-level pitch deck" },
+        {
+          label: "Pitch Deck",
+          filename: "pitch-deck.pdf",
+          description: "High-level pitch deck",
+        },
         {
           label: "Agorix Investor Deck",
           filename: "agorix-investor-deck.pdf",
@@ -545,7 +553,12 @@ async function main() {
       signMethod: "WALLET",
       fields: [
         { type: "full-name", label: "Full Legal Name", required: true },
-        { type: "x-verify", label: "X Account (R4vonus)", required: true, settings: { requiredUsername: "R4vonus" } },
+        {
+          type: "x-verify",
+          label: "X Account (R4vonus)",
+          required: true,
+          settings: { requiredUsername: "R4vonus" },
+        },
         { type: "initials", label: "Initials", required: true },
         { type: "twitter-handle", label: "X Username", required: true },
         { type: "date", label: "Date", required: true },
@@ -558,7 +571,6 @@ async function main() {
       email: "",
       signMethod: "WALLET" as const,
       role: "SIGNER" as const,
-      content: buildContent(r),
       fields: [
         { type: "full-name", label: "Full Legal Name", required: true },
         {
@@ -568,7 +580,11 @@ async function main() {
           settings: { requiredUsername: r.xHandle },
         },
         { type: "initials", label: "Initials", required: true },
-        { type: "acknowledge-checkbox", label: "I acknowledge the authorized disclosure terms", required: true },
+        {
+          type: "acknowledge-checkbox",
+          label: "I acknowledge the authorized disclosure terms",
+          required: true,
+        },
         { type: "twitter-handle", label: "X Username", required: true },
         { type: "date", label: "Date", required: true },
         { type: "signature", label: "Signature", required: true },
@@ -579,7 +595,10 @@ async function main() {
   console.log(`\nGroup ID: ${result.groupId}`);
   console.log(`Created ${result.documents.length} contracts:\n`);
 
-  const allOutput: Record<string, unknown> = { groupId: result.groupId, documents: [] };
+  const allOutput: Record<string, unknown> = {
+    groupId: result.groupId,
+    documents: [],
+  };
 
   for (let i = 0; i < result.documents.length; i++) {
     const doc = result.documents[i]!;

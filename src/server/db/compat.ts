@@ -1,6 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
-import { documents, signers, type ReminderConfig } from "~/server/db/schema";
 import type { db as _dbRef } from "~/server/db";
+import { documents, type ReminderConfig, signers } from "~/server/db/schema";
 
 type Db = typeof _dbRef;
 type LegacyDocumentRow = Omit<
@@ -125,7 +125,12 @@ function withSignerDefaults(row: typeof signers.$inferSelect | LegacySignerRow):
     declinedAt: (row as { declinedAt?: Date | null }).declinedAt ?? null,
     forensicEvidence: (row as { forensicEvidence?: unknown }).forensicEvidence ?? null,
     forensicHash: (row as { forensicHash?: string | null }).forensicHash ?? null,
-    tokenGates: (row as { tokenGates?: (typeof signers.$inferSelect)["tokenGates"] | null }).tokenGates ?? null,
+    tokenGates:
+      (
+        row as {
+          tokenGates?: (typeof signers.$inferSelect)["tokenGates"] | null;
+        }
+      ).tokenGates ?? null,
     socialVerifications:
       ((row as { socialVerifications?: unknown })
         .socialVerifications as (typeof signers.$inferSelect)["socialVerifications"]) ?? null,
@@ -167,7 +172,9 @@ async function withSchemaDriftFallback<T>(primary: () => Promise<T>, fallback: (
 export function findDocumentById(db: Db, id: string): Promise<CompatDocument | undefined> {
   return withSchemaDriftFallback(
     async () => {
-      const doc = await db.query.documents.findFirst({ where: eq(documents.id, id) });
+      const doc = await db.query.documents.findFirst({
+        where: eq(documents.id, id),
+      });
       return doc ? withDocumentDefaults(doc) : undefined;
     },
     async () => {
@@ -180,7 +187,9 @@ export function findDocumentById(db: Db, id: string): Promise<CompatDocument | u
 export function findDocumentByContentHash(db: Db, contentHash: string): Promise<CompatDocument | undefined> {
   return withSchemaDriftFallback(
     async () => {
-      const doc = await db.query.documents.findFirst({ where: eq(documents.contentHash, contentHash) });
+      const doc = await db.query.documents.findFirst({
+        where: eq(documents.contentHash, contentHash),
+      });
       return doc ? withDocumentDefaults(doc) : undefined;
     },
     async () => {
@@ -197,7 +206,9 @@ export function findDocumentByContentHash(db: Db, contentHash: string): Promise<
 export function findDocumentByIpfsCid(db: Db, ipfsCid: string): Promise<CompatDocument | undefined> {
   return withSchemaDriftFallback(
     async () => {
-      const doc = await db.query.documents.findFirst({ where: eq(documents.ipfsCid, ipfsCid) });
+      const doc = await db.query.documents.findFirst({
+        where: eq(documents.ipfsCid, ipfsCid),
+      });
       return doc ? withDocumentDefaults(doc) : undefined;
     },
     async () => {
@@ -269,7 +280,9 @@ export function findDocumentsByGroupId(db: Db, groupId: string): Promise<CompatD
 export function findSignersByAddress(db: Db, address: string): Promise<CompatSigner[]> {
   return withSchemaDriftFallback(
     async () => {
-      const rows = await db.query.signers.findMany({ where: eq(signers.address, address) });
+      const rows = await db.query.signers.findMany({
+        where: eq(signers.address, address),
+      });
       return rows.map(withSignerDefaults);
     },
     async () => {
@@ -307,15 +320,20 @@ export async function insertDocumentCompat(db: Db, values: typeof documents.$inf
     return (await db.insert(documents).values(values).returning()).map(withDocumentDefaults);
   } catch (error) {
     if (!isSchemaDriftError(error)) throw error;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stripping new columns for legacy fallback
-    const { templateId, brandingProfileId, pdfStyleTemplateId, reminderConfig, groupId, ...legacyValues } =
-      values as typeof values & {
-        templateId?: string | null;
-        brandingProfileId?: string | null;
-        pdfStyleTemplateId?: string | null;
-        reminderConfig?: ReminderConfig | null;
-        groupId?: string | null;
-      };
+    const {
+      templateId: _templateId, // eslint-disable-line @typescript-eslint/no-unused-vars
+      brandingProfileId: _brandingProfileId, // eslint-disable-line @typescript-eslint/no-unused-vars
+      pdfStyleTemplateId: _pdfStyleTemplateId, // eslint-disable-line @typescript-eslint/no-unused-vars
+      reminderConfig: _reminderConfig, // eslint-disable-line @typescript-eslint/no-unused-vars
+      groupId: _groupId, // eslint-disable-line @typescript-eslint/no-unused-vars
+      ...legacyValues
+    } = values as typeof values & {
+      templateId?: string | null;
+      brandingProfileId?: string | null;
+      pdfStyleTemplateId?: string | null;
+      reminderConfig?: ReminderConfig | null;
+      groupId?: string | null;
+    };
     return (await db.insert(documents).values(legacyValues).returning()).map(withDocumentDefaults);
   }
 }

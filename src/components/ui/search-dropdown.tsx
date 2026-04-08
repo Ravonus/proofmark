@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, memo, type ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 export type DropdownItem = {
   id: string;
@@ -38,19 +38,14 @@ export const SearchDropdown = memo(function SearchDropdown({
 
   useEffect(() => {
     if (!open) return;
+    inputRef.current?.focus();
+    setSearch("");
+    setHighlightIdx(0);
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  useEffect(() => {
-    if (open) {
-      inputRef.current?.focus();
-      setSearch("");
-      setHighlightIdx(0);
-    }
   }, [open]);
 
   const filtered = search.trim()
@@ -62,13 +57,7 @@ export const SearchDropdown = memo(function SearchDropdown({
       })
     : items;
 
-  const grouped = new Map<string, DropdownItem[]>();
-  for (const item of filtered) {
-    const cat = item.category || "";
-    if (!grouped.has(cat)) grouped.set(cat, []);
-    grouped.get(cat)!.push(item);
-  }
-
+  const grouped = groupByCategory(filtered);
   const flatList = filtered;
 
   const handleKeyDown = useCallback(
@@ -126,7 +115,10 @@ export const SearchDropdown = memo(function SearchDropdown({
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="absolute left-0 right-0 top-full z-50 mt-1.5 min-w-[280px] max-w-[360px] overflow-hidden rounded-xl border border-[var(--border)] shadow-2xl"
-            style={{ background: "var(--bg-card)", backdropFilter: "blur(16px)" }}
+            style={{
+              background: "var(--bg-card)",
+              backdropFilter: "blur(16px)",
+            }}
           >
             <div className="border-b border-[var(--border)] p-2">
               <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-surface)] px-3 py-2">
@@ -211,6 +203,16 @@ export const SearchDropdown = memo(function SearchDropdown({
     </div>
   );
 });
+
+function groupByCategory(items: DropdownItem[]): Map<string, DropdownItem[]> {
+  const grouped = new Map<string, DropdownItem[]>();
+  for (const item of items) {
+    const cat = item.category || "";
+    if (!grouped.has(cat)) grouped.set(cat, []);
+    grouped.get(cat)!.push(item);
+  }
+  return grouped;
+}
 
 function highlightMatch(text: string, query: string): ReactNode {
   if (!query.trim()) return text;

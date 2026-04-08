@@ -114,92 +114,128 @@ export const FIELD_TYPES = [
   { type: "other", icon: "📝", label: "Custom" },
 ] as const;
 
+type FieldTypeRule = {
+  test: (label: string, context: string, both: string) => boolean;
+  type: InlineField["type"];
+};
+
+const FIELD_TYPE_RULES: FieldTypeRule[] = [
+  // 1. Signature (highest priority)
+  {
+    test: (_l, _c, both) => /\bsignature\b|\bsign\s*here\b|\bautograph\b/i.test(both),
+    type: "signature",
+  },
+  {
+    test: (label) => /\binitials?\b/i.test(label),
+    type: "signature",
+  },
+  // 2. Date
+  { test: (label) => /\bdate\b/i.test(label), type: "date" },
+  {
+    test: (_l, context) =>
+      /\bdate\s*of\b|\beffective\s*date\b|\bexpir\w*\s*date\b|\bstart\s*date\b|\bend\s*date\b|\bterminat\w*\s*date\b|\bexecut\w*\s*date\b|\bdated?\s*this\b|\b\d+(st|nd|rd|th)?\s*day\s*of\b|\bon\s*the\s*date\b/i.test(
+        context,
+      ),
+    type: "date",
+  },
+  // 3. Email
+  {
+    test: (_l, _c, both) => /\be-?mail\b|\belectronic\s*mail\b|@.*\.\w/i.test(both),
+    type: "email",
+  },
+  // 4. Phone
+  {
+    test: (_l, _c, both) => /\bphone\b|\btelephone\b|\btel\b|\bfax\b|\bmobile\b|\bcell\b/i.test(both),
+    type: "email",
+  },
+  // 5. Address
+  { test: (label) => /\baddress\b/i.test(label), type: "address" },
+  {
+    test: (_l, context) =>
+      /\bmailing\s*address\b|\bstreet\b|\baddress\s*of\b|\bwith\s*a\s*mailing\s*address\b/i.test(context),
+    type: "address",
+  },
+  {
+    test: (_l, _c, both) =>
+      /\bsuite\b|\bapt\b|\bcity\b|\bstate\b|\bzip\b|\bpostal\b|\bcounty\b|\bcountry\b|\bresidence\b|\bdomicile\b|\bp\.?o\.?\s*box\b/i.test(
+        both,
+      ),
+    type: "address",
+  },
+  // 6. Company / organization
+  {
+    test: (_l, _c, both) =>
+      /\bcompany\b|\bcorporation\b|\bcorp\.?\b|\bllc\b|\binc\.?\b|\bentity\b|\borgani[sz]ation\b|\bfirm\b|\bemployer\b|\bbusiness\b|\benterprise\b/i.test(
+        both,
+      ),
+    type: "company",
+  },
+  // 7. Job title / role
+  {
+    test: (label) =>
+      /\btitle\b|\brole\b|\bposition\b|\bdesignation\b|\boccupation\b|\bdepartment\b|\bauthori[sz]ed\s*representative\b/i.test(
+        label,
+      ),
+    type: "title",
+  },
+  // 8. Name
+  {
+    test: (label) =>
+      /\bname\b|\bprint\w*\s*name\b|\bfull\s*name\b|\blegal\s*name\b|\btyped.*name\b|\bprinted.*name\b/i.test(label),
+    type: "name",
+  },
+  {
+    test: (label) => /\bparty\b.*\binformation\b|\bparty\b.*\bdisclos\b|\bparty\b.*\breceiv\b/i.test(label),
+    type: "name",
+  },
+  {
+    test: (label, context) =>
+      !/\bdate\b|\baddress\b/i.test(context) &&
+      /\bparty\b|\bprincipal\b|\brecipient\b|\bbeneficiary\b|\bwitness\b|\bnotary\b|\blandlord\b|\btenant\b|\blessor\b|\blessee\b|\bbuyer\b|\bseller\b|\bclient\b|\bvendor\b|\bcontractor\b/i.test(
+        label,
+      ),
+    type: "name",
+  },
+  // 9. Web3
+  {
+    test: (_l, _c, both) => /\bwallet\b|\b0x[a-f0-9]/i.test(both),
+    type: "other",
+  },
+  // 10. Financial
+  {
+    test: (_l, _c, both) =>
+      /\bamount\b|\bprice\b|\bfee\b|\bcost\b|\bpayment\b|\bcompensation\b|\bsalary\b|\b\$\b/i.test(both),
+    type: "other",
+  },
+  // 11. Legal
+  {
+    test: (_l, _c, both) => /\bjurisdiction\b|\bgoverning\s*law\b/i.test(both),
+    type: "other",
+  },
+  {
+    test: (label) => /\bterm\b|\bduration\b|\bperiod\b/i.test(label),
+    type: "date",
+  },
+  // 12. Last resort context hints
+  {
+    test: (_l, context) => /\bname\b/i.test(context) && !/\bdate\b|\baddress\b|\bmailing\b/i.test(context),
+    type: "name",
+  },
+  { test: (_l, context) => /\bdate\b/i.test(context), type: "date" },
+  {
+    test: (_l, context) => /\baddress\b|\bmailing\b/i.test(context),
+    type: "address",
+  },
+];
+
 export function guessFieldType(label: string, lineContext?: string): InlineField["type"] {
-  // Use just the label for primary match, context for fallback
   const labelLower = label.toLowerCase();
   const contextLower = (lineContext || "").toLowerCase();
-  // Combined for broader matching — but label takes priority
-  const both = labelLower + " " + contextLower;
+  const both = `${labelLower} ${contextLower}`;
 
-  // ── 1. Signature (highest priority) ──
-  if (/\bsignature\b|\bsign\s*here\b|\bautograph\b/i.test(both)) return "signature";
-  if (/\binitials?\b/i.test(labelLower)) return "signature";
-
-  // ── 2. Date (before name — "date of ___" must beat "party name" in context) ──
-  if (/\bdate\b/i.test(labelLower)) return "date";
-  // Check context: "on the date of" "effective date" "dated this" "day of"
-  if (
-    /\bdate\s*of\b|\beffective\s*date\b|\bexpir\w*\s*date\b|\bstart\s*date\b|\bend\s*date\b|\bterminat\w*\s*date\b|\bexecut\w*\s*date\b|\bdated?\s*this\b|\b\d+(st|nd|rd|th)?\s*day\s*of\b|\bon\s*the\s*date\b/i.test(
-      contextLower,
-    )
-  )
-    return "date";
-
-  // ── 3. Email ──
-  if (/\be-?mail\b|\belectronic\s*mail\b|@.*\.\w/i.test(both)) return "email";
-
-  // ── 4. Phone ──
-  if (/\bphone\b|\btelephone\b|\btel\b|\bfax\b|\bmobile\b|\bcell\b/i.test(both)) return "email";
-
-  // ── 5. Address (before name — "mailing address of" must beat "party") ──
-  if (/\baddress\b/i.test(labelLower)) return "address";
-  if (/\bmailing\s*address\b|\bstreet\b|\baddress\s*of\b|\bwith\s*a\s*mailing\s*address\b/i.test(contextLower))
-    return "address";
-  if (
-    /\bsuite\b|\bapt\b|\bcity\b|\bstate\b|\bzip\b|\bpostal\b|\bcounty\b|\bcountry\b|\bresidence\b|\bdomicile\b|\bp\.?o\.?\s*box\b/i.test(
-      both,
-    )
-  )
-    return "address";
-
-  // ── 6. Company / organization ──
-  if (
-    /\bcompany\b|\bcorporation\b|\bcorp\.?\b|\bllc\b|\binc\.?\b|\bentity\b|\borgani[sz]ation\b|\bfirm\b|\bemployer\b|\bbusiness\b|\benterprise\b/i.test(
-      both,
-    )
-  )
-    return "company";
-
-  // ── 7. Job title / role ──
-  if (
-    /\btitle\b|\brole\b|\bposition\b|\bdesignation\b|\boccupation\b|\bdepartment\b|\bauthori[sz]ed\s*representative\b/i.test(
-      labelLower,
-    )
-  )
-    return "title";
-
-  // ── 8. Name (check label strongly, context loosely) ──
-  if (
-    /\bname\b|\bprint\w*\s*name\b|\bfull\s*name\b|\blegal\s*name\b|\btyped.*name\b|\bprinted.*name\b/i.test(labelLower)
-  )
-    return "name";
-  // "Party Disclosing Information:", "Party Receiving Information:" — asking for party name
-  if (/\bparty\b.*\binformation\b|\bparty\b.*\bdisclos\b|\bparty\b.*\breceiv\b/i.test(labelLower)) return "name";
-  if (!/\bdate\b|\baddress\b/i.test(contextLower)) {
-    if (
-      /\bparty\b|\bprincipal\b|\brecipient\b|\bbeneficiary\b|\bwitness\b|\bnotary\b|\blandlord\b|\btenant\b|\blessor\b|\blessee\b|\bbuyer\b|\bseller\b|\bclient\b|\bvendor\b|\bcontractor\b/i.test(
-        labelLower,
-      )
-    )
-      return "name";
+  for (const rule of FIELD_TYPE_RULES) {
+    if (rule.test(labelLower, contextLower, both)) return rule.type;
   }
-
-  // ── 9. Web3 ──
-  if (/\bwallet\b|\b0x[a-f0-9]/i.test(both)) return "other";
-
-  // ── 10. Financial ──
-  if (/\bamount\b|\bprice\b|\bfee\b|\bcost\b|\bpayment\b|\bcompensation\b|\bsalary\b|\b\$\b/i.test(both))
-    return "other";
-
-  // ── 11. Legal ──
-  if (/\bjurisdiction\b|\bgoverning\s*law\b/i.test(both)) return "other";
-  if (/\bterm\b|\bduration\b|\bperiod\b/i.test(labelLower)) return "date";
-
-  // ── 12. Last resort: check context for hints ──
-  if (/\bname\b/i.test(contextLower) && !/\bdate\b|\baddress\b|\bmailing\b/i.test(contextLower)) return "name";
-  if (/\bdate\b/i.test(contextLower)) return "date";
-  if (/\baddress\b|\bmailing\b/i.test(contextLower)) return "address";
-
   return "other";
 }
 
@@ -248,24 +284,48 @@ function serializeSignatureMarker(label: string, signerIdx: number): string {
   return `${SIGNATURE_MARKER_PREFIX}${encodeMarkerPayload({ label, signerIdx })}${MARKER_SUFFIX}`;
 }
 
+function tryParseStandaloneSignature(line: string): DocToken[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith(SIGNATURE_MARKER_PREFIX) || !trimmed.endsWith(MARKER_SUFFIX) || trimmed !== line) return null;
+  const signatureMatch = /^\{\{W3S_SIGNATURE:([^}]+)\}\}$/.exec(trimmed);
+  if (!signatureMatch) return null;
+  const payload = decodeMarkerPayload<{ label?: string; signerIdx?: number }>(signatureMatch[1] || "");
+  return [
+    {
+      kind: "signatureBlock",
+      label: payload?.label || "Signature",
+      signerIdx: payload?.signerIdx ?? 0,
+    },
+  ];
+}
+
+function decodeMarkerToken(
+  kind: string,
+  rawPayload: string,
+  makeField: (field: Partial<InlineField>) => InlineField,
+): DocToken {
+  if (kind === "FIELD") {
+    const fieldPayload = decodeMarkerPayload<Partial<InlineField>>(rawPayload || "");
+    return { kind: "field", field: makeField(fieldPayload ?? {}) };
+  }
+  const signaturePayload = decodeMarkerPayload<{
+    label?: string;
+    signerIdx?: number;
+  }>(rawPayload || "");
+  return {
+    kind: "signatureBlock",
+    label: signaturePayload?.label || "Signature",
+    signerIdx: signaturePayload?.signerIdx ?? 0,
+  };
+}
+
 function parseCanonicalLine(line: string, makeField: (field: Partial<InlineField>) => InlineField): DocToken[] | null {
   const markerRegex = /\{\{W3S_(FIELD|SIGNATURE):([^}]+)\}\}/g;
   if (!markerRegex.test(line)) return null;
   markerRegex.lastIndex = 0;
 
-  if (line.trim().startsWith(SIGNATURE_MARKER_PREFIX) && line.trim().endsWith(MARKER_SUFFIX) && line.trim() === line) {
-    const signatureMatch = /^\{\{W3S_SIGNATURE:([^}]+)\}\}$/.exec(line.trim());
-    if (signatureMatch) {
-      const payload = decodeMarkerPayload<{ label?: string; signerIdx?: number }>(signatureMatch[1] || "");
-      return [
-        {
-          kind: "signatureBlock",
-          label: payload?.label || "Signature",
-          signerIdx: payload?.signerIdx ?? 0,
-        },
-      ];
-    }
-  }
+  const standalone = tryParseStandaloneSignature(line);
+  if (standalone) return standalone;
 
   const tokens: DocToken[] = [];
   let lastIndex = 0;
@@ -276,22 +336,7 @@ function parseCanonicalLine(line: string, makeField: (field: Partial<InlineField
     if (before) {
       tokens.push({ kind: "text", text: before });
     }
-
-    const kind = match[1];
-    const payload = match[2];
-
-    if (kind === "FIELD") {
-      const fieldPayload = decodeMarkerPayload<Partial<InlineField>>(payload || "");
-      tokens.push({ kind: "field", field: makeField(fieldPayload ?? {}) });
-    } else if (kind === "SIGNATURE") {
-      const signaturePayload = decodeMarkerPayload<{ label?: string; signerIdx?: number }>(payload || "");
-      tokens.push({
-        kind: "signatureBlock",
-        label: signaturePayload?.label || "Signature",
-        signerIdx: signaturePayload?.signerIdx ?? 0,
-      });
-    }
-
+    tokens.push(decodeMarkerToken(match[1]!, match[2]!, makeField));
     lastIndex = markerRegex.lastIndex;
   }
 
@@ -300,6 +345,53 @@ function parseCanonicalLine(line: string, makeField: (field: Partial<InlineField
   }
 
   return tokens;
+}
+
+function detectPartySwitch(line: string, currentGuess: number): number {
+  const partyLetterMatch = /party\s+([a-z])\b/i.exec(line);
+  if (partyLetterMatch) {
+    return partyLetterMatch[1]!.toUpperCase().charCodeAt(0) - 65;
+  }
+  if (/\b(disclos|first|landlord|lessor|seller|employer|licensor)\w*/i.test(line) && /party|information/i.test(line)) {
+    return 0;
+  }
+  if (/\b(receiv|second|tenant|lessee|buyer|employee|licensee)\w*/i.test(line) && /party|information/i.test(line)) {
+    return 1;
+  }
+  return currentGuess;
+}
+
+function isHeading(line: string): boolean {
+  if (/^\d+\.\s+\S/.test(line) && line.length < 100) return true;
+  return (
+    /^(?:section|article|clause|part|schedule|exhibit|appendix|recital)\s+[\dIVXivx]+/i.test(line) && line.length < 100
+  );
+}
+
+function isSubheading(line: string): boolean {
+  if (/^\d+\.\d+\.?\d*\s+\S/.test(line) && line.length < 100) return true;
+  return line === line.toUpperCase() && line.length > 3 && line.length < 60 && /^[A-Z][A-Z &/,().-]+$/.test(line);
+}
+
+function classifyStructuralLine(line: string, sectionCounter: number, signerGuess: number): DocToken | null {
+  if (isHeading(line)) {
+    return {
+      kind: "heading",
+      text: line,
+      sectionNum: sectionCounter + 1,
+    };
+  }
+  if (isSubheading(line)) {
+    return { kind: "subheading", text: line };
+  }
+  if (/^\([a-z]\)\s|^\([ivx]+\)\s|^\(\d+\)\s|^[-*•]\s|^[a-z]\)\s|^[ivx]+\)\s/.test(line)) {
+    return { kind: "listItem", text: line };
+  }
+  if (/signature\s*:/i.test(line) && /_{3,}/.test(line)) {
+    const label = line.replace(/signature\s*:\s*_+/i, "").trim() || line.split(/signature/i)[0]!.trim() || "Signature";
+    return { kind: "signatureBlock", label, signerIdx: signerGuess };
+  }
+  return null;
 }
 
 export function tokenizeDocument(
@@ -357,63 +449,15 @@ export function tokenizeDocument(
       continue;
     }
 
-    // Detect party context switches — many formats:
-    // "Party A:", "Party B:", "Disclosing Party:", "Receiving Party:",
-    // "Party Disclosing Information:", "Party Receiving Information:",
-    // "DISCLOSING PARTY", "RECEIVING PARTY"
-    if (/party\s+([a-z])\b/i.test(line)) {
-      const m = /party\s+([a-z])\b/i.exec(line);
-      if (m) currentSignerGuess = m[1]!.toUpperCase().charCodeAt(0) - 65;
-    }
-    if (
-      /\b(disclos|first|landlord|lessor|seller|employer|licensor)\w*/i.test(line) &&
-      /party|information/i.test(line)
-    ) {
-      currentSignerGuess = 0;
-    }
-    if (/\b(receiv|second|tenant|lessee|buyer|employee|licensee)\w*/i.test(line) && /party|information/i.test(line)) {
-      currentSignerGuess = 1;
-    }
+    currentSignerGuess = detectPartySwitch(line, currentSignerGuess);
 
-    // ── Section/clause detection (varied formats from PDFs) ──
-
-    // "1. PURPOSE" or "1. Purpose" or "Section 1: Purpose" or "ARTICLE I" or "Clause 3.2"
-    if (/^\d+\.\s+\S/.test(line) && line.length < 100) {
-      sectionCounter++;
-      tokens.push({ kind: "heading", text: line, sectionNum: sectionCounter });
-      continue;
-    }
-    if (
-      /^(?:section|article|clause|part|schedule|exhibit|appendix|recital)\s+[\dIVXivx]+/i.test(line) &&
-      line.length < 100
-    ) {
-      sectionCounter++;
-      tokens.push({ kind: "heading", text: line, sectionNum: sectionCounter });
-      continue;
-    }
-    // "1.2 Sub-clause" or "3.1.1 Detailed item"
-    if (/^\d+\.\d+\.?\d*\s+\S/.test(line) && line.length < 100) {
-      tokens.push({ kind: "subheading", text: line });
-      continue;
-    }
-
-    // All-caps heading (but not full sentences — max ~60 chars and mostly letters)
-    if (line === line.toUpperCase() && line.length > 3 && line.length < 60 && /^[A-Z][A-Z &/,().-]+$/.test(line)) {
-      tokens.push({ kind: "subheading", text: line });
-      continue;
-    }
-
-    // List items: (a), (i), (1), -, *, •, roman numerals
-    if (/^\([a-z]\)\s|^\([ivx]+\)\s|^\(\d+\)\s|^[-*•]\s|^[a-z]\)\s|^[ivx]+\)\s/.test(line)) {
-      tokens.push({ kind: "listItem", text: line });
-      continue;
-    }
-
-    // Signature line: "Party A Signature: ____"
-    if (/signature\s*:/i.test(line) && /_{3,}/.test(line)) {
-      const label =
-        line.replace(/signature\s*:\s*_+/i, "").trim() || line.split(/signature/i)[0]!.trim() || "Signature";
-      tokens.push({ kind: "signatureBlock", label, signerIdx: currentSignerGuess });
+    const structuralToken = classifyStructuralLine(line, sectionCounter, currentSignerGuess);
+    if (structuralToken) {
+      if (structuralToken.kind === "heading" && "sectionNum" in structuralToken) {
+        sectionCounter = structuralToken.sectionNum;
+      }
+      tokens.push(structuralToken);
+      prevLineText = line;
       continue;
     }
 
@@ -422,6 +466,19 @@ export function tokenizeDocument(
   }
 
   return { tokens, fields };
+}
+
+function inferFieldLabel(rawLabel: string, textBeforeBlank: string, type: InlineField["type"]): string {
+  if (rawLabel) return rawLabel;
+
+  const contextWords = textBeforeBlank.trim().split(/\s+/).slice(-3).join(" ");
+  if (contextWords && type !== "other") {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+  if (contextWords.length > 2) {
+    return contextWords.length > 30 ? contextWords.slice(-30) : contextWords;
+  }
+  return type !== "other" ? type.charAt(0).toUpperCase() + type.slice(1) : "Field";
 }
 
 function processInlineFields(
@@ -441,28 +498,10 @@ function processInlineFields(
     }
 
     const rawLabel = (match[1] || "").trim();
-
-    // Build context: the explicit label + the text before the blank + the prev line
-    // This catches patterns like "date of \n______" and "mailing address of \n______"
     const textBeforeBlank = line.slice(0, match.index);
-    const fullContext = (prevLine || "") + " " + textBeforeBlank + " " + rawLabel;
-
+    const fullContext = `${prevLine || ""} ${textBeforeBlank} ${rawLabel}`;
     const type = guessFieldType(rawLabel, fullContext);
-
-    // Generate a smart label
-    let label = rawLabel;
-    if (!label) {
-      // Try to extract a meaningful label from what precedes the blank
-      const contextWords = textBeforeBlank.trim().split(/\s+/).slice(-3).join(" ");
-      if (contextWords && type !== "other") {
-        label = type.charAt(0).toUpperCase() + type.slice(1);
-      } else if (contextWords.length > 2) {
-        // Use last few words before blank as label
-        label = contextWords.length > 30 ? contextWords.slice(-30) : contextWords;
-      } else {
-        label = type !== "other" ? type.charAt(0).toUpperCase() + type.slice(1) : "Field";
-      }
-    }
+    const label = inferFieldLabel(rawLabel, textBeforeBlank, type);
 
     tokens.push({ kind: "field", field: makeField(label, type) });
     lastIdx = regex.lastIndex;

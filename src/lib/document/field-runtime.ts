@@ -1,12 +1,14 @@
+import { type FieldConfig, getField } from "~/components/fields/field-registry";
 import type { InlineField } from "~/lib/document/document-tokens";
 import {
-  decodeStructuredFieldValue,
-  type AttachmentFieldValue,
-  type IdentityVerificationFieldValue,
-  type PaymentFieldValue,
-  type SocialVerificationFieldValue,
-} from "~/lib/document/field-values";
-import { getField, type FieldConfig } from "~/components/fields/field-registry";
+  SPECIAL_INPUT_VALIDATORS,
+  validateByFieldType,
+  validateByKind,
+  validateLengthConstraints,
+  validateNumberInput,
+  validatePatternConstraint,
+  validateSignatureOrInitials,
+} from "./field-validation";
 
 export type RuntimeInputType = FieldConfig["inputType"] | "url" | "time" | "datetime-local" | "radio";
 
@@ -347,22 +349,6 @@ export function detectCardBrand(value: string): CardBrand | null {
   return null;
 }
 
-function passesLuhn(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  let sum = 0;
-  let shouldDouble = false;
-  for (let index = digits.length - 1; index >= 0; index -= 1) {
-    let digit = Number(digits[index] ?? "0");
-    if (shouldDouble) {
-      digit *= 2;
-      if (digit > 9) digit -= 9;
-    }
-    sum += digit;
-    shouldDouble = !shouldDouble;
-  }
-  return digits.length >= 12 && sum % 10 === 0;
-}
-
 function getValidationKind(field: InlineField): ValidationKind | undefined {
   const settings = getRuntimeFieldSettings(field);
   if (settings.validation?.kind) return settings.validation.kind;
@@ -445,171 +431,33 @@ export function validateFieldValue(
   const settings = getRuntimeFieldSettings(field);
   const inputType = resolveFieldInputType(field);
   const logicState = getFieldLogicState(field, options.allValues ?? {});
-  const required = logicState.required;
-  const visible = logicState.visible;
   const normalizedValue = value?.trim() ?? "";
 
-  if (!visible) return null;
+  if (!logicState.visible) return null;
 
-  if (field.type === "signature") {
-    return required && !options.signatureReady ? "Add your signature" : null;
-  }
+  const sigResult = validateSignatureOrInitials(field, normalizedValue, logicState.required, options.signatureReady);
+  if (sigResult !== undefined) return sigResult;
 
-  if (field.type === "initials") {
-    return required && !normalizedValue ? "Draw your initials" : null;
-  }
-
-  if (inputType === "checkbox") {
-    if (required && value !== "true") return getValidationMessage(field, "Required");
-    return null;
-  }
-
-  if (inputType === "file") {
-    if (!normalizedValue) return required ? getValidationMessage(field, "Upload a file") : null;
-    const attachment = decodeStructuredFieldValue<AttachmentFieldValue>(normalizedValue);
-    return attachment?.kind === "attachment" ? null : getValidationMessage(field, "Upload a valid file");
-  }
-
-  if (inputType === "payment") {
-    if (!normalizedValue) return required ? getValidationMessage(field, "Payment required") : null;
-    const payment = decodeStructuredFieldValue<PaymentFieldValue>(normalizedValue);
-    return payment?.kind === "payment" && payment.status === "paid"
-      ? null
-      : getValidationMessage(field, "Complete payment");
-  }
-
-  if (inputType === "idv") {
-    if (!normalizedValue) return required ? getValidationMessage(field, "Identity verification required") : null;
-    const verification = decodeStructuredFieldValue<IdentityVerificationFieldValue>(normalizedValue);
-    return verification?.kind === "id-verification" && verification.status === "verified"
-      ? null
-      : getValidationMessage(field, "Verify identity");
-  }
-
-  if (inputType === "social-verify") {
-    if (!normalizedValue) return required ? getValidationMessage(field, "Social verification required") : null;
-    const social = decodeStructuredFieldValue<SocialVerificationFieldValue>(normalizedValue);
-    return social?.kind === "social-verification" && social.status === "verified"
-      ? null
-      : getValidationMessage(field, "Verify account");
-  }
+  const specialValidator = SPECIAL_INPUT_VALIDATORS[inputType];
+  if (specialValidator) return specialValidator(field, normalizedValue, logicState.required);
 
   if (!normalizedValue) {
-    return required ? getValidationMessage(field, "Required") : null;
+    return logicState.required ? getValidationMessage(field, "Required") : null;
   }
 
-  const validation = settings.validation;
-  if (validation?.minLength && normalizedValue.length < validation.minLength) {
-    return getValidationMessage(field, `Must be at least ${validation.minLength} characters`);
-  }
-  if (validation?.maxLength && normalizedValue.length > validation.maxLength) {
-    return getValidationMessage(field, `Must be ${validation.maxLength} characters or fewer`);
-  }
-  if (inputType === "number" && normalizedValue) {
-    const numberValue = Number(normalizedValue);
-    if (!Number.isFinite(numberValue)) {
-      return getValidationMessage(field, "Invalid number");
-    }
-    if (typeof validation?.min === "number" && numberValue < validation.min) {
-      return getValidationMessage(field, `Must be at least ${validation.min}`);
-    }
-    if (typeof validation?.max === "number" && numberValue > validation.max) {
-      return getValidationMessage(field, `Must be at most ${validation.max}`);
-    }
+  const lengthError = validateLengthConstraints(field, normalizedValue, settings.validation);
+  if (lengthError) return lengthError;
+
+  if (inputType === "number") {
+    const numberError = validateNumberInput(field, normalizedValue, settings.validation);
+    if (numberError) return numberError;
   }
 
-  if (validation?.pattern) {
-    const pattern = new RegExp(validation.pattern);
-    if (!pattern.test(normalizedValue)) {
-      return getValidationMessage(field, `Invalid ${field.label.toLowerCase()}`);
-    }
-  }
+  const patternError = validatePatternConstraint(field, normalizedValue, settings.validation?.pattern);
+  if (patternError) return patternError;
 
-  const kind = getValidationKind(field);
-  switch (kind) {
-    case "credit-card":
-      if (!passesLuhn(normalizedValue)) return getValidationMessage(field, "Invalid card number");
-      return null;
-    case "credit-card-expiry": {
-      const digits = normalizedValue.replace(/\D/g, "");
-      if (digits.length !== 4) return getValidationMessage(field, "Use MM/YY");
-      const month = Number(digits.slice(0, 2));
-      const year = Number(`20${digits.slice(2)}`);
-      if (month < 1 || month > 12) return getValidationMessage(field, "Invalid expiration month");
-      const expiry = new Date(year, month, 0, 23, 59, 59, 999);
-      if (expiry.getTime() < Date.now()) return getValidationMessage(field, "Card is expired");
-      return null;
-    }
-    case "credit-card-cvc":
-      if (!/^\d{3,4}$/.test(normalizedValue.replace(/\D/g, "")))
-        return getValidationMessage(field, "Invalid security code");
-      return null;
-    case "routing-number":
-      if (!/^\d{9}$/.test(normalizedValue.replace(/\D/g, "")))
-        return getValidationMessage(field, "Routing number must be 9 digits");
-      return null;
-    case "iban":
-      if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/i.test(normalizedValue.replace(/\s+/g, "")))
-        return getValidationMessage(field, "Invalid IBAN");
-      return null;
-    case "swift-bic":
-      if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/i.test(normalizedValue))
-        return getValidationMessage(field, "Invalid SWIFT/BIC");
-      return null;
-    case "tax-id":
-      if (!/^\d{2}-?\d{7}$/.test(normalizedValue)) return getValidationMessage(field, "Invalid tax ID");
-      return null;
-    case "ssn-last4":
-      if (!/^\d{4}$/.test(normalizedValue.replace(/\D/g, ""))) return getValidationMessage(field, "Use last 4 digits");
-      return null;
-    case "ssn-full":
-      if (!/^\d{3}-?\d{2}-?\d{4}$/.test(normalizedValue)) return getValidationMessage(field, "Invalid SSN");
-      return null;
-    case "passport-number":
-      if (!/^[A-Z0-9]{6,12}$/i.test(normalizedValue.replace(/\s+/g, "")))
-        return getValidationMessage(field, "Invalid passport number");
-      return null;
-    case "drivers-license":
-      if (!/^[A-Z0-9-]{5,20}$/i.test(normalizedValue)) return getValidationMessage(field, "Invalid license number");
-      return null;
-    case "url":
-      try {
-        const maybeUrl = normalizedValue.startsWith("http") ? normalizedValue : `https://${normalizedValue}`;
-        new URL(maybeUrl);
-      } catch {
-        return getValidationMessage(field, "Invalid URL");
-      }
-      return null;
-    default:
-      break;
-  }
+  const kindResult = validateByKind(field, normalizedValue, getValidationKind);
+  if (kindResult !== undefined) return kindResult;
 
-  switch (field.type) {
-    case "name":
-    case "full-name":
-    case "legal-name":
-      if (normalizedValue.split(/\s+/).filter(Boolean).length < 2)
-        return getValidationMessage(field, "Enter first and last name");
-      return null;
-    case "email":
-    case "secondary-email":
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedValue)) return getValidationMessage(field, "Invalid email");
-      return null;
-    case "date":
-    case "effective-date":
-    case "expiration-date":
-    case "renewal-date":
-    case "dob":
-      if (Number.isNaN(Date.parse(normalizedValue))) return getValidationMessage(field, "Invalid date");
-      return null;
-    case "address":
-    case "street-address":
-    case "billing-address":
-    case "mailing-address":
-    case "full-address":
-      if (normalizedValue.length < 5) return getValidationMessage(field, "Address too short");
-      return null;
-    default:
-      return null;
-  }
+  return validateByFieldType(field, normalizedValue);
 }

@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 import { env } from "~/env";
-import type { BrandingSettings, Signer, Document } from "~/server/db/schema";
 import { logger } from "~/lib/utils/logger";
 import { generateSignedPDF } from "~/server/crypto/rust-engine";
+import type { BrandingSettings, Document, Signer } from "~/server/db/schema";
 
 const transporter = env.SMTP_HOST
   ? nodemailer.createTransport({
@@ -112,8 +112,16 @@ function layout(content: string, branding?: BrandingSettings): string {
 
 function chainBadge(chain: string | null): string {
   if (!chain) return "";
-  const colors: Record<string, string> = { BTC: "#f7931a", ETH: "#627eea", SOL: "#9945ff" };
-  const icons: Record<string, string> = { BTC: "\u20bf", ETH: "\u039e", SOL: "\u25ce" };
+  const colors: Record<string, string> = {
+    BTC: "#f7931a",
+    ETH: "#627eea",
+    SOL: "#9945ff",
+  };
+  const icons: Record<string, string> = {
+    BTC: "\u20bf",
+    ETH: "\u039e",
+    SOL: "\u25ce",
+  };
   const c = colors[chain] ?? BASE_BRAND.color;
   return `<span style="display:inline-block;background:${c}18;color:${c};font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;font-family:Arial,Helvetica,sans-serif;">${icons[chain] ?? ""} ${chain}</span>`;
 }

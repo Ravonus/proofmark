@@ -7,10 +7,10 @@
  * Auth: Bearer token from connectorAccessTokens (SHA-256 hashed for lookup).
  */
 
+import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
 import { db } from "~/server/db";
-import { connectorTasks, connectorSessions } from "~/server/db/schema";
+import { connectorSessions, connectorTasks } from "~/server/db/schema";
 import { authenticateConnector } from "../_auth";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,11 @@ export async function GET(req: NextRequest) {
   // Update heartbeat
   await db
     .update(connectorSessions)
-    .set({ status: "online", lastHeartbeatAt: new Date(), updatedAt: new Date() })
+    .set({
+      status: "online",
+      lastHeartbeatAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(and(eq(connectorSessions.id, sessionId), eq(connectorSessions.ownerAddress, token.ownerAddress)));
 
   // Long-poll: check for tasks every 2 seconds for up to 30 seconds

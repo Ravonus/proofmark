@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildAddressSuggestionFieldUpdates } from "~/lib/address-autocomplete";
 import type { InlineField } from "~/lib/document/document-tokens";
 import {
-  getFieldLogicState,
   detectCardBrand,
   formatEditableFieldValue,
+  getFieldLogicState,
   isFieldVisible,
   resolveFieldAutocomplete,
   resolveFieldOptions,
@@ -98,10 +98,16 @@ describe("field runtime helpers", () => {
       },
     });
 
-    expect(validateFieldValue(field, "", { allValues: { "needs-approval": "false" } })).toBeNull();
-    expect(validateFieldValue(field, "", { allValues: { "needs-approval": "true" } })).toBe(
-      "Approval code is required",
-    );
+    expect(
+      validateFieldValue(field, "", {
+        allValues: { "needs-approval": "false" },
+      }),
+    ).toBeNull();
+    expect(
+      validateFieldValue(field, "", {
+        allValues: { "needs-approval": "true" },
+      }),
+    ).toBe("Approval code is required");
   });
 
   it("applies specialized formatting for tax ids", () => {

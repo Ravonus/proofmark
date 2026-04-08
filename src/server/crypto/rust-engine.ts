@@ -5,11 +5,11 @@
  * If it's not, operations fail loudly so you know to start it.
  */
 
-import type { AuditEventType, AuditLogParams } from "~/server/audit/audit";
-import type { ForensicEvidence } from "~/lib/forensic/types";
-import type { AssembleForensicInput } from "~/server/forensic/forensic";
 import type { PdfAnalysisResult } from "~/lib/document/pdf-types";
-import type { Document, Signer, PdfStyleSettings } from "~/server/db/schema";
+import type { ForensicEvidence } from "~/lib/forensic/types";
+import type { AuditEventType, AuditLogParams } from "~/server/audit/audit";
+import type { Document, PdfStyleSettings, Signer } from "~/server/db/schema";
+import type { AssembleForensicInput } from "~/server/forensic/forensic";
 
 const ENGINE_URL = process.env.RUST_ENGINE_URL ?? "http://127.0.0.1:9090";
 const TIMEOUT_MS = 30_000;
@@ -149,7 +149,9 @@ function normalizePdfAnalysisResult(input: unknown): PdfAnalysisResult {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function hashDocument(content: string): Promise<string> {
-  const { hash } = await post<{ hash: string }>("/api/v1/crypto/hash", { content });
+  const { hash } = await post<{ hash: string }>("/api/v1/crypto/hash", {
+    content,
+  });
   return hash;
 }
 
@@ -194,7 +196,10 @@ export async function encryptDocument(
     content,
     master_secret: masterSecret,
   });
-  return { encryptedContent: result.encrypted_content, wrappedKey: result.wrapped_key };
+  return {
+    encryptedContent: result.encrypted_content,
+    wrappedKey: result.wrapped_key,
+  };
 }
 
 export async function decryptDocument(encryptedContent: string, wrappedKey: string): Promise<string> {
@@ -299,7 +304,10 @@ function buildRustPdfGenerateRequest(params: {
       scheme: signer.scheme ?? null,
       signature: signer.signature ?? null,
       signed_at: signer.signedAt
-        ? new Date(signer.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+        ? new Date(signer.signedAt).toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
         : null,
       hand_signature_hash: signer.handSignatureHash ?? null,
       hand_signature_data: signer.handSignatureData ?? null,
@@ -416,10 +424,9 @@ export async function hashForensicEvidence(evidence: Record<string, unknown>): P
 export async function analyzeForensicFlags(
   evidence: Record<string, unknown>,
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
-  const { flags } = await post<{ flags: Array<{ code: string; severity: string; message: string }> }>(
-    "/api/v1/forensic/analyze-flags",
-    evidence,
-  );
+  const { flags } = await post<{
+    flags: Array<{ code: string; severity: string; message: string }>;
+  }>("/api/v1/forensic/analyze-flags", evidence);
   return flags;
 }
 
@@ -467,7 +474,7 @@ export async function validateReplayTape(
   });
 }
 
-export type { ForensicEvidence, AssembleForensicInput };
+export type { AssembleForensicInput, ForensicEvidence };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Post-Quantum Encryption — ML-KEM-768 + AES-256-GCM
@@ -485,7 +492,10 @@ export async function pqGenerateKeypair(): Promise<PqKeypair> {
 /** Encrypt with ML-KEM-768 + AES-256-GCM (quantum-resistant). */
 export async function pqEncrypt(plaintext: Buffer, recipientPublicKey: string): Promise<HybridCiphertext> {
   const b64 = plaintext.toString("base64");
-  return post("/api/v1/pq/encrypt", { plaintext: b64, recipient_public_key: recipientPublicKey });
+  return post("/api/v1/pq/encrypt", {
+    plaintext: b64,
+    recipient_public_key: recipientPublicKey,
+  });
 }
 
 /** Decrypt ML-KEM-768 + AES-256-GCM ciphertext. */
@@ -534,7 +544,9 @@ export type FieldProof = {
 
 /** Create ZK proof of document knowledge (without revealing content). */
 export async function createDocumentProof(documentContent: string): Promise<DocumentProof> {
-  return post("/api/v1/zk/document-proof", { document_content: documentContent });
+  return post("/api/v1/zk/document-proof", {
+    document_content: documentContent,
+  });
 }
 
 /** Verify a ZK document proof. */
@@ -589,9 +601,14 @@ export async function verifyFieldProof(proof: FieldProof): Promise<boolean> {
 // Engine Status
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function getEngineStatus(): Promise<{ available: boolean; version?: string }> {
+export async function getEngineStatus(): Promise<{
+  available: boolean;
+  version?: string;
+}> {
   try {
-    const res = await fetch(`${ENGINE_URL}/api/v1/health`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${ENGINE_URL}/api/v1/health`, {
+      signal: AbortSignal.timeout(2000),
+    });
     if (res.ok) {
       const data = (await res.json()) as { version?: string };
       return { available: true, version: data.version };

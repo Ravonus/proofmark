@@ -9,7 +9,11 @@ import { isPremiumAvailable } from "~/lib/platform/premium";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const premiumRouter = isPremiumAvailable()
-  ? (require("../../../../premium/server/routers/connector") as { connectorRouter: unknown }).connectorRouter
+  ? (
+      require("../../../../premium/server/routers/connector") as {
+        connectorRouter: unknown;
+      }
+    ).connectorRouter
   : null;
 
 const stubRouter = createTRPCRouter({

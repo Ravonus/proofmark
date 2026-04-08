@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { documentAutomationPolicySchema } from "~/lib/forensic/premium";
 import { optionalSignerTokenGateSchema } from "~/lib/token-gates";
-import { signMethodSchema, signerRoleSchema } from "./signer";
+import { signerRoleSchema, signMethodSchema } from "./signer";
 
 export const deliveryMethodSchema = z.enum(["EMAIL", "SMS"]);
 export type DeliveryMethod = z.infer<typeof deliveryMethodSchema>;

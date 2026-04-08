@@ -1,9 +1,9 @@
 "use client";
 
-import { memo, useState, useRef } from "react";
-import { getField, getSignerColor, type FieldConfig, type FieldTypeId } from "./field-registry";
-import { getFieldIcon } from "./field-picker";
 import { Lock, Unlock } from "lucide-react";
+import { memo, useRef, useState } from "react";
+import { getFieldIcon } from "./field-picker";
+import { type FieldConfig, type FieldTypeId, getField, getSignerColor } from "./field-registry";
 
 type FieldMode = "edit" | "fill" | "view";
 
@@ -86,133 +86,22 @@ export const FieldRenderer = memo(function FieldRenderer({
   }
 
   // Fill mode
-  switch (config.inputType) {
-    case "checkbox":
-      return (
-        <CheckboxField
-          config={config}
-          fieldId={fieldId}
-          label={displayLabel}
-          value={value}
-          onChange={onChange}
-          c={c}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    case "select":
-      return (
-        <SelectField
-          config={config}
-          fieldId={fieldId}
-          label={displayLabel}
-          value={value}
-          customOptions={customOptions}
-          onChange={onChange}
-          active={active}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          c={c}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    case "textarea":
-      return (
-        <TextareaField
-          config={config}
-          fieldId={fieldId}
-          label={displayLabel}
-          value={value}
-          onChange={onChange}
-          active={active}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          c={c}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    case "signature":
-    case "initials":
-      return (
-        <SignatureFieldPill
-          config={config}
-          label={displayLabel}
-          value={value}
-          active={active}
-          onFocus={onFocus}
-          c={c}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    case "file":
-      return (
-        <FileFieldPill
-          config={config}
-          label={displayLabel}
-          active={active}
-          onFocus={onFocus}
-          c={c}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    case "payment":
-      return (
-        <ActionFieldPill
-          config={config}
-          label={displayLabel}
-          active={active}
-          onFocus={onFocus}
-          c={c}
-          fieldTypeId={fieldTypeId}
-          actionLabel="Pay now"
-        />
-      );
-    case "idv":
-      return (
-        <ActionFieldPill
-          config={config}
-          label={displayLabel}
-          active={active}
-          onFocus={onFocus}
-          c={c}
-          fieldTypeId={fieldTypeId}
-          actionLabel="Verify ID"
-        />
-      );
-    case "wallet":
-      return (
-        <InputField
-          config={config}
-          fieldId={fieldId}
-          label={displayLabel}
-          value={value || autoFillValue}
-          type="text"
-          onChange={onChange}
-          active={active}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          c={c}
-          prefix={config.prefix}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-    default:
-      return (
-        <InputField
-          config={config}
-          fieldId={fieldId}
-          label={displayLabel}
-          value={value || autoFillValue}
-          type={config.inputType}
-          onChange={onChange}
-          active={active}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          c={c}
-          prefix={config.prefix}
-          fieldTypeId={fieldTypeId}
-        />
-      );
-  }
+  return (
+    <FillModeField
+      config={config}
+      fieldTypeId={fieldTypeId}
+      fieldId={fieldId}
+      label={displayLabel}
+      value={value}
+      autoFillValue={autoFillValue}
+      customOptions={customOptions}
+      onChange={onChange}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      active={active}
+      c={c}
+    />
+  );
 });
 
 // Small type icon/label badge inside each field
@@ -222,6 +111,146 @@ function TypeBadge({ fieldTypeId, textClass }: { fieldTypeId: string; textClass:
 }
 
 type ColorSet = { border: string; bg: string; text: string; glow: string };
+
+// ---- Fill mode field (dispatches to the correct input sub-component) ----
+
+type FillModeProps = {
+  config: FieldConfig;
+  fieldTypeId: string;
+  fieldId: string;
+  label: string;
+  value?: string;
+  autoFillValue?: string;
+  customOptions?: string[];
+  onChange?: (v: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  active?: boolean;
+  c: ColorSet;
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  payment: "Pay now",
+  idv: "Verify ID",
+};
+
+function FillModeField({
+  config,
+  fieldTypeId,
+  fieldId,
+  label,
+  value,
+  autoFillValue,
+  customOptions,
+  onChange,
+  onFocus,
+  onBlur,
+  active,
+  c,
+}: FillModeProps) {
+  const { inputType } = config;
+
+  if (inputType === "checkbox") {
+    return (
+      <CheckboxField
+        config={config}
+        fieldId={fieldId}
+        label={label}
+        value={value}
+        onChange={onChange}
+        c={c}
+        fieldTypeId={fieldTypeId}
+      />
+    );
+  }
+
+  if (inputType === "select") {
+    return (
+      <SelectField
+        config={config}
+        fieldId={fieldId}
+        label={label}
+        value={value}
+        customOptions={customOptions}
+        onChange={onChange}
+        active={active}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        c={c}
+        fieldTypeId={fieldTypeId}
+      />
+    );
+  }
+
+  if (inputType === "textarea") {
+    return (
+      <TextareaField
+        config={config}
+        fieldId={fieldId}
+        label={label}
+        value={value}
+        onChange={onChange}
+        active={active}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        c={c}
+        fieldTypeId={fieldTypeId}
+      />
+    );
+  }
+
+  if (inputType === "signature" || inputType === "initials") {
+    return (
+      <SignatureFieldPill
+        config={config}
+        label={label}
+        value={value}
+        active={active}
+        onFocus={onFocus}
+        c={c}
+        fieldTypeId={fieldTypeId}
+      />
+    );
+  }
+
+  if (inputType === "file") {
+    return (
+      <FileFieldPill config={config} label={label} active={active} onFocus={onFocus} c={c} fieldTypeId={fieldTypeId} />
+    );
+  }
+
+  if (ACTION_LABELS[inputType]) {
+    return (
+      <ActionFieldPill
+        config={config}
+        label={label}
+        active={active}
+        onFocus={onFocus}
+        c={c}
+        fieldTypeId={fieldTypeId}
+        actionLabel={ACTION_LABELS[inputType]}
+      />
+    );
+  }
+
+  // Default: text-like input (text, wallet, email, tel, date, number, etc.)
+  return (
+    <InputField
+      config={config}
+      fieldId={fieldId}
+      label={label}
+      value={value || autoFillValue}
+      type={inputType === "wallet" ? "text" : inputType}
+      onChange={onChange}
+      active={active}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      c={c}
+      prefix={config.prefix}
+      fieldTypeId={fieldTypeId}
+    />
+  );
+}
 
 // ---- Input field (text, email, tel, date, number) ----
 
@@ -259,7 +288,9 @@ function InputField({
     <span className="mx-0.5 my-1 inline-block align-baseline" id={fieldId}>
       <span
         className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 transition-all ${c.border} ${c.bg} ${active ? `ring-1 ring-offset-1 ring-offset-transparent ${c.glow}` : ""}`}
-        style={{ minWidth: type === "date" ? "150px" : config.id.includes("address") ? "240px" : "170px" }}
+        style={{
+          minWidth: type === "date" ? "150px" : config.id.includes("address") ? "240px" : "170px",
+        }}
       >
         <TypeBadge fieldTypeId={fieldTypeId} textClass={c.text} />
         <span className={`shrink-0 text-[9px] font-medium uppercase tracking-wider ${c.text}`}>{label}</span>
@@ -291,7 +322,11 @@ function InputField({
           {config.sensitive && !showValue && (
             <div
               className="absolute inset-0 cursor-pointer rounded transition-all"
-              style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", background: "rgba(0,0,0,0.15)" }}
+              style={{
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+                background: "rgba(0,0,0,0.15)",
+              }}
               onClick={() => setShowValue(true)}
               title="Click to reveal"
             />

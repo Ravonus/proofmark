@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
-import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { trpc } from "~/lib/platform/trpc";
-import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
-import { CHAIN_META, addressPreview } from "~/lib/crypto/chains";
-import { Select } from "~/components/ui/select";
+import { Bot, FileText, PaintBucket, Palette, Plug, ToggleRight, User, Users, Webhook } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useMemo, useRef, useState } from "react";
 import { useConnectedIdentity } from "~/components/hooks/use-connected-identity";
+import { FadeIn, GlassCard, W3SButton } from "~/components/ui/motion";
+import { Select } from "~/components/ui/select";
+import { addressPreview, CHAIN_META } from "~/lib/crypto/chains";
+import { trpc } from "~/lib/platform/trpc";
 import { WorkspaceSettings } from "./workspace-settings";
-import { User, ToggleRight, Palette, Bot, PaintBucket, Plug, Webhook, FileText, Users } from "lucide-react";
 
 // Premium AI settings — loaded via generated bridge (stubs in OSS, real in premium)
 const AiProviderSettings = dynamic(() => import("~/generated/premium/components/ai-provider-settings"), {
@@ -42,7 +42,9 @@ const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
 
 export function UserSettings() {
   const identity = useConnectedIdentity();
-  const statusQuery = trpc.account.operatorStatus.useQuery(undefined, { enabled: identity.isSignedIn });
+  const statusQuery = trpc.account.operatorStatus.useQuery(undefined, {
+    enabled: identity.isSignedIn,
+  });
   const currentWallet = statusQuery.data?.currentWallet ?? identity.currentWallet;
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
@@ -121,7 +123,11 @@ export function UserSettings() {
                     <motion.span
                       layoutId="settings-tab"
                       className="absolute bottom-1 left-0 top-1 w-px bg-[var(--accent)]"
-                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 35,
+                      }}
                     />
                   )}
                 </button>
@@ -291,10 +297,26 @@ function PdfSection() {
             value={themePreset}
             onChange={setThemePreset}
             options={[
-              { value: "classic", label: "Classic", description: "Clean Proofmark default" },
-              { value: "modern", label: "Modern", description: "Blue accent, fuller chrome" },
-              { value: "legal", label: "Legal", description: "Navy tone, denser legal styling" },
-              { value: "minimal", label: "Minimal", description: "Reduced chrome, lighter framing" },
+              {
+                value: "classic",
+                label: "Classic",
+                description: "Clean Proofmark default",
+              },
+              {
+                value: "modern",
+                label: "Modern",
+                description: "Blue accent, fuller chrome",
+              },
+              {
+                value: "legal",
+                label: "Legal",
+                description: "Navy tone, denser legal styling",
+              },
+              {
+                value: "minimal",
+                label: "Minimal",
+                description: "Reduced chrome, lighter framing",
+              },
             ]}
           />
           <Select
@@ -302,9 +324,21 @@ function PdfSection() {
             value={fieldSummaryStyle}
             onChange={(value) => setFieldSummaryStyle(value as FieldSummaryStyle)}
             options={[
-              { value: "hybrid", label: "Hybrid", description: "Cards with indexed context (Default)" },
-              { value: "cards", label: "Cards", description: "Visual completed-field blocks" },
-              { value: "table", label: "Table", description: "Compact index-style table" },
+              {
+                value: "hybrid",
+                label: "Hybrid",
+                description: "Cards with indexed context (Default)",
+              },
+              {
+                value: "cards",
+                label: "Cards",
+                description: "Visual completed-field blocks",
+              },
+              {
+                value: "table",
+                label: "Table",
+                description: "Compact index-style table",
+              },
             ]}
           />
         </div>
@@ -358,7 +392,12 @@ function FeaturesSection({ address, chain }: { address: string; chain: string })
     setOverrides.mutate({
       address,
       chain: chain as "ETH" | "SOL" | "BTC",
-      overrides: [{ featureId: featureId as never, enabled: currentlyEnabled ? false : null }],
+      overrides: [
+        {
+          featureId: featureId as never,
+          enabled: currentlyEnabled ? false : null,
+        },
+      ],
     });
   };
 
@@ -405,37 +444,13 @@ function FeaturesSection({ address, chain }: { address: string; chain: string })
           ) : (
             <div className="space-y-1.5">
               {premiumFeatures.map((f) => (
-                <div
+                <FeatureToggleRow
                   key={f.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--bg-inset)] p-2.5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-[12px] font-medium">{f.label}</p>
-                      <StatusPill
-                        tone={f.effectiveEnabled ? "success" : "danger"}
-                        label={f.effectiveEnabled ? "On" : "Off"}
-                      />
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-muted">{f.summary}</p>
-                  </div>
-                  {canManage && (
-                    <button
-                      type="button"
-                      onClick={() => toggleFeature(f.id, f.effectiveEnabled)}
-                      disabled={setOverrides.isPending || (!f.deploymentEnabled && !f.oss)}
-                      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                        f.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
-                      } ${setOverrides.isPending ? "opacity-50" : ""}`}
-                    >
-                      <span
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                          f.effectiveEnabled ? "translate-x-[18px]" : "translate-x-0.5"
-                        }`}
-                      />
-                    </button>
-                  )}
-                </div>
+                  feature={f}
+                  canManage={!!canManage}
+                  isPending={setOverrides.isPending}
+                  onToggle={toggleFeature}
+                />
               ))}
             </div>
           )}
@@ -455,6 +470,53 @@ function InfoCard({ label, value, detail, mono }: { label: string; value: string
         {value}
       </p>
       <p className="mt-0.5 text-[10px] text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function FeatureToggleRow({
+  feature: f,
+  canManage,
+  isPending,
+  onToggle,
+}: {
+  feature: {
+    id: string;
+    label: string;
+    summary: string;
+    effectiveEnabled: boolean;
+    deploymentEnabled: boolean;
+    oss: boolean;
+  };
+  canManage: boolean;
+  isPending: boolean;
+  onToggle: (featureId: string, currentlyEnabled: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--bg-inset)] p-2.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[12px] font-medium">{f.label}</p>
+          <StatusPill tone={f.effectiveEnabled ? "success" : "danger"} label={f.effectiveEnabled ? "On" : "Off"} />
+        </div>
+        <p className="mt-0.5 text-[10px] text-muted">{f.summary}</p>
+      </div>
+      {canManage && (
+        <button
+          type="button"
+          onClick={() => onToggle(f.id, f.effectiveEnabled)}
+          disabled={isPending || (!f.deploymentEnabled && !f.oss)}
+          className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+            f.effectiveEnabled ? "bg-accent" : "bg-[var(--border)]"
+          } ${isPending ? "opacity-50" : ""}`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+              f.effectiveEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+      )}
     </div>
   );
 }

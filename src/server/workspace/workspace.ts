@@ -2,17 +2,17 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "~/server/db";
 import { isSchemaDriftError } from "~/server/db/compat";
 import {
-  brandingProfiles,
-  documentTemplates,
-  integrationConfigs,
-  webhookEndpoints,
   type BrandingProfile,
   type BrandingSettings,
+  brandingProfiles,
   type DeliveryMethod,
+  documentTemplates,
   type IntegrationConfig,
   type IntegrationRecord,
+  integrationConfigs,
   type ReminderCadence,
   type ReminderConfig,
+  webhookEndpoints,
 } from "~/server/db/schema";
 
 export const DEFAULT_BRANDING_SETTINGS: BrandingSettings = {

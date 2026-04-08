@@ -76,7 +76,10 @@ export async function getWebGLHash(): Promise<string> {
 
 /* ── GPU vendor/renderer (raw strings) ──────────────────────── */
 
-export function getGpuInfo(): { vendor: string | null; renderer: string | null } {
+export function getGpuInfo(): {
+  vendor: string | null;
+  renderer: string | null;
+} {
   const info = getWebGLDebugInfo();
   return { vendor: info?.vendor ?? null, renderer: info?.renderer ?? null };
 }
@@ -173,7 +176,10 @@ export async function getPluginsHash(): Promise<string> {
 
 /* ── Battery ────────────────────────────────────────────────── */
 
-export async function getBatteryInfo(): Promise<{ level: number | null; charging: boolean | null }> {
+export async function getBatteryInfo(): Promise<{
+  level: number | null;
+  charging: boolean | null;
+}> {
   try {
     const getBattery = nav().getBattery as (() => Promise<unknown>) | undefined;
     if (typeof getBattery !== "function") return { level: null, charging: null };
@@ -189,7 +195,10 @@ export async function getBatteryInfo(): Promise<{ level: number | null; charging
 
 /* ── Network connection ─────────────────────────────────────── */
 
-export function getConnectionInfo(): { type: string | null; downlink: number | null } {
+export function getConnectionInfo(): {
+  type: string | null;
+  downlink: number | null;
+} {
   try {
     const conn = nav().connection as Record<string, unknown> | undefined;
     if (!conn) return { type: null, downlink: null };

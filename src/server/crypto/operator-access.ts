@@ -1,18 +1,18 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { env } from "~/env";
+import { detectChain, normalizeAddress, type WalletChain } from "~/lib/crypto/chains";
 import {
   FEATURE_IDS,
-  getFeatureCatalog,
-  getFeatureDescriptor,
   type FeatureDescriptor,
   type FeatureId,
+  getFeatureCatalog,
+  getFeatureDescriptor,
 } from "~/lib/platform/feature-access";
-import { type WalletChain, detectChain, normalizeAddress } from "~/lib/crypto/chains";
 import { isPremiumAvailable } from "~/lib/platform/premium";
+import { db as defaultDb } from "~/server/db";
 import { isSchemaDriftError } from "~/server/db/compat";
 import { documents, featureOverrides, platformConfig, signers, users, walletSessions } from "~/server/db/schema";
-import { db as defaultDb } from "~/server/db";
 
 type Db = typeof defaultDb;
 
@@ -284,12 +284,20 @@ export async function saveFeatureOverrides(
 export async function listKnownWallets(db: Db) {
   const [recentSessions, linkedUsers, recentCreators, signerWallets] = await Promise.all([
     db
-      .select({ address: walletSessions.address, chain: walletSessions.chain, seenAt: walletSessions.createdAt })
+      .select({
+        address: walletSessions.address,
+        chain: walletSessions.chain,
+        seenAt: walletSessions.createdAt,
+      })
       .from(walletSessions)
       .orderBy(desc(walletSessions.createdAt))
       .limit(30),
     db
-      .select({ address: users.walletAddress, chain: users.walletChain, seenAt: users.updatedAt })
+      .select({
+        address: users.walletAddress,
+        chain: users.walletChain,
+        seenAt: users.updatedAt,
+      })
       .from(users)
       .where(isNotNull(users.walletAddress))
       .orderBy(desc(users.updatedAt))

@@ -1,11 +1,21 @@
+import { type CapturedGeometry, canonicalize, fnv1a64, snapshotGeometry } from "./capture-geometry";
 import type { ForensicReplayEncodedEvent } from "./replay-codec";
-import { quantizePressure, encodeReplayEventsSync } from "./replay-codec";
+import { encodeReplayEventsSync, quantizePressure } from "./replay-codec";
+import { resolveForensicReplayCore } from "./replay-core";
 import {
-  REPLAY_FORMAT_LIMITS,
   type REPLAY_CLIPBOARD_ACTION_CODES,
+  REPLAY_FORMAT_LIMITS,
   type REPLAY_NAV_DIRECTION_CODES,
 } from "./replay-format";
-import { resolveForensicReplayCore } from "./replay-core";
+
+export type {
+  CapturedField,
+  CapturedGeometry,
+  CapturedPage,
+  CapturedSignaturePad,
+  CapturedViewport,
+} from "./capture-geometry";
+export { snapshotGeometry } from "./capture-geometry";
 
 const TIME_QUANTUM_MS = REPLAY_FORMAT_LIMITS.timeQuantumMs;
 const MAX_CLIPBOARD_PREVIEW = REPLAY_FORMAT_LIMITS.maxClipboardPreview;
@@ -14,43 +24,6 @@ const MAX_FIELD_SNAPSHOT = REPLAY_FORMAT_LIMITS.maxFieldSnapshotLength;
 
 type NAV = keyof typeof REPLAY_NAV_DIRECTION_CODES;
 type CLIP = keyof typeof REPLAY_CLIPBOARD_ACTION_CODES;
-
-export interface CapturedGeometry {
-  viewport: CapturedViewport;
-  pages: CapturedPage[];
-  fields: CapturedField[];
-  signaturePads: CapturedSignaturePad[];
-}
-
-export interface CapturedViewport {
-  width: number;
-  height: number;
-  devicePixelRatio: number;
-  scrollWidth: number;
-  scrollHeight: number;
-}
-
-export interface CapturedPage {
-  pageIndex: number;
-  width: number;
-  height: number;
-  offsetY: number;
-}
-
-export interface CapturedField {
-  targetId: number;
-  pageIndex: number;
-  rect: { x: number; y: number; w: number; h: number };
-  fieldType: "text" | "signature" | "initials" | "checkbox" | "radio" | "date" | "dropdown";
-}
-
-export interface CapturedSignaturePad {
-  targetId: number;
-  pageIndex: number;
-  rect: { x: number; y: number; w: number; h: number };
-  canvasWidth: number;
-  canvasHeight: number;
-}
 
 export interface CaptureTarget {
   id: number;
@@ -75,152 +48,7 @@ export interface CaptureResult {
   durationMs: number;
 }
 
-function fnv1a64(input: string): string {
-  let hash = 0xcbf29ce484222325n;
-  const prime = 0x100000001b3n;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= BigInt(input.charCodeAt(i));
-    hash = BigInt.asUintN(64, hash * prime);
-  }
-  return hash.toString(16).padStart(16, "0");
-}
-
-function normalizeText(v: string) {
-  return v.trim().replace(/\s+/g, " ").slice(0, MAX_STORED_STRING);
-}
-
-function readDescriptor(el: Element): string {
-  const tag = el.tagName.toLowerCase();
-  const fid =
-    el.getAttribute("data-forensic-id") ??
-    el.getAttribute("data-field-id") ??
-    el.getAttribute("data-testid") ??
-    el.getAttribute("aria-label") ??
-    el.getAttribute("name") ??
-    el.id ??
-    "";
-  const role = el.getAttribute("role") ?? "";
-  const type = el.getAttribute("type") ?? "";
-  const parts = [`tag:${tag}`];
-  if (fid) parts.push(`id:${normalizeText(fid).slice(0, 64)}`);
-  if (role) parts.push(`role:${normalizeText(role).slice(0, 32)}`);
-  if (type) parts.push(`type:${normalizeText(type).slice(0, 32)}`);
-  return parts.join("|");
-}
-
-function canonicalize(target: EventTarget | Element | string | null | undefined): string | null {
-  if (target == null) return null;
-  if (typeof target === "string") return `synthetic|${normalizeText(target).slice(0, 96)}`;
-  const el =
-    target instanceof Element
-      ? target
-      : (target as Node).nodeType === Node.ELEMENT_NODE
-        ? (target as Element)
-        : (target as Node).parentElement;
-  if (!el) return "synthetic|unknown";
-  const parts: string[] = [];
-  let cur: Element | null = el;
-  for (let d = 0; cur && d < 4; d++) {
-    parts.push(readDescriptor(cur));
-    cur = cur.parentElement;
-  }
-  return parts.join(">");
-}
-
-function snapshotViewport(): CapturedViewport {
-  if (typeof window === "undefined")
-    return { width: 0, height: 0, devicePixelRatio: 1, scrollWidth: 0, scrollHeight: 0 };
-  const root = document.documentElement;
-  return {
-    width: Math.round(window.innerWidth),
-    height: Math.round(window.innerHeight),
-    devicePixelRatio: window.devicePixelRatio || 1,
-    scrollWidth: Math.round(root.scrollWidth),
-    scrollHeight: Math.round(root.scrollHeight),
-  };
-}
-
-function snapshotPages(container?: Element | null): CapturedPage[] {
-  if (!container || typeof document === "undefined") return [];
-  const pages = container.querySelectorAll("[data-page-index]");
-  const result: CapturedPage[] = [];
-  for (const page of pages) {
-    const idx = parseInt(page.getAttribute("data-page-index") ?? "0", 10);
-    const rect = page.getBoundingClientRect();
-    const parentRect = container.getBoundingClientRect();
-    result.push({
-      pageIndex: idx,
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
-      offsetY: Math.round(rect.top - parentRect.top + container.scrollTop),
-    });
-  }
-  return result;
-}
-
-function snapshotFields(container?: Element | null): CapturedField[] {
-  if (!container || typeof document === "undefined") return [];
-  const fields = container.querySelectorAll("[data-field-id]");
-  const result: CapturedField[] = [];
-  for (const field of fields) {
-    const parentRect = container.getBoundingClientRect();
-    const rect = field.getBoundingClientRect();
-    const fieldType = (field.getAttribute("data-field-type") ?? "text") as CapturedField["fieldType"];
-    const pageIndex = parseInt(field.closest("[data-page-index]")?.getAttribute("data-page-index") ?? "0", 10);
-    result.push({
-      targetId: 0, // filled by adapter during finalization
-      pageIndex,
-      rect: {
-        x: Math.round(rect.left - parentRect.left),
-        y: Math.round(rect.top - parentRect.top + container.scrollTop),
-        w: Math.round(rect.width),
-        h: Math.round(rect.height),
-      },
-      fieldType,
-    });
-  }
-  return result;
-}
-
-function snapshotSignaturePads(container?: Element | null): CapturedSignaturePad[] {
-  if (!container || typeof document === "undefined") return [];
-  const pads = container.querySelectorAll("canvas[data-forensic-id]");
-  const result: CapturedSignaturePad[] = [];
-  for (const pad of pads) {
-    const canvas = pad as HTMLCanvasElement;
-    const parentRect = container.getBoundingClientRect();
-    const rect = canvas.getBoundingClientRect();
-    const pageIndex = parseInt(canvas.closest("[data-page-index]")?.getAttribute("data-page-index") ?? "0", 10);
-    result.push({
-      targetId: 0,
-      pageIndex,
-      rect: {
-        x: Math.round(rect.left - parentRect.left),
-        y: Math.round(rect.top - parentRect.top + container.scrollTop),
-        w: Math.round(rect.width),
-        h: Math.round(rect.height),
-      },
-      canvasWidth: canvas.width,
-      canvasHeight: canvas.height,
-    });
-  }
-  return result;
-}
-
-export function snapshotGeometry(container?: Element | null): CapturedGeometry {
-  return {
-    viewport: snapshotViewport(),
-    pages: snapshotPages(container),
-    fields: snapshotFields(container),
-    signaturePads: snapshotSignaturePads(container),
-  };
-}
-
-/**
- * Thin capture adapter: listens for DOM events, resolves stable targets,
- * batches semantic events, and hands off to Rust/WASM encoder.
- * Keeps this layer minimal — all encode/decode logic lives in Rust.
- */
+/** Thin capture adapter: DOM event listener + Rust/WASM encoder bridge. */
 export class ForensicCaptureAdapter {
   private readonly startedAt = Date.now();
   private readonly targetIndex = new Map<string, number>();
@@ -275,16 +103,19 @@ export class ForensicCaptureAdapter {
     const existing = this.stringIndex.get(key);
     if (existing != null) return existing;
     const id = this.strings.length + 1;
-    this.strings.push({ id, kind, hash: fnv1a64(normalized), value: normalized });
+    this.strings.push({
+      id,
+      kind,
+      hash: fnv1a64(normalized),
+      value: normalized,
+    });
     this.stringIndex.set(key, id);
     return id;
   }
 
   private target(src: EventTarget | Element | string | null | undefined): number {
-    return this.registerTarget(canonicalize(src));
+    return this.registerTarget(canonicalize(src, MAX_STORED_STRING));
   }
-
-  // ── Public recording methods ──────────────────────────────
 
   recordScroll(scrollY: number, scrollMax: number) {
     const now = this.elapsed();
@@ -334,11 +165,19 @@ export class ForensicCaptureAdapter {
   }
 
   recordFocus(target: EventTarget | Element | string | null) {
-    this.events.push({ type: "focus", delta: this.delta(), targetId: this.target(target) });
+    this.events.push({
+      type: "focus",
+      delta: this.delta(),
+      targetId: this.target(target),
+    });
   }
 
   recordBlur(target: EventTarget | Element | string | null) {
-    this.events.push({ type: "blur", delta: this.delta(), targetId: this.target(target) });
+    this.events.push({
+      type: "blur",
+      delta: this.delta(),
+      targetId: this.target(target),
+    });
   }
 
   recordVisibility(hidden: boolean) {
@@ -374,7 +213,12 @@ export class ForensicCaptureAdapter {
   }
 
   recordModal(name: string, open: boolean) {
-    this.events.push({ type: "modal", delta: this.delta(), nameId: this.registerString("label", name), open });
+    this.events.push({
+      type: "modal",
+      delta: this.delta(),
+      nameId: this.registerString("label", name),
+      open,
+    });
   }
 
   recordSignatureStart(
@@ -430,7 +274,11 @@ export class ForensicCaptureAdapter {
   }
 
   recordSignatureClear(target: EventTarget | Element | string | null) {
-    this.events.push({ type: "signatureClear", delta: this.delta(), targetId: this.target(target) });
+    this.events.push({
+      type: "signatureClear",
+      delta: this.delta(),
+      targetId: this.target(target),
+    });
   }
 
   recordFieldValue(fieldId: string, value: string) {
@@ -450,7 +298,6 @@ export class ForensicCaptureAdapter {
     if (dx === 0 && dy === 0) return;
     this.events.push({ type: "mouseMove", delta: this.delta(), dx, dy });
   }
-
   recordHoverDwell(target: EventTarget | Element | string | null, durationMs: number) {
     this.events.push({
       type: "hoverDwell",
@@ -529,13 +376,7 @@ export class ForensicCaptureAdapter {
     });
   }
 
-  // ── Attach DOM listeners ──────────────────────────────────
-
-  attach(root?: Element | Document | null) {
-    const el = root ?? (typeof document !== "undefined" ? document : null);
-    if (!el) return;
-    const opts: AddEventListenerOptions = { passive: true, signal: this.abortController.signal };
-
+  private attachInputListeners(el: Element | Document, opts: AddEventListenerOptions) {
     el.addEventListener(
       "scroll",
       () => {
@@ -548,14 +389,14 @@ export class ForensicCaptureAdapter {
       },
       opts,
     );
-
     el.addEventListener("click", (e) => this.recordClick(e as MouseEvent), opts);
     el.addEventListener("contextmenu", (e) => this.recordContextMenu(e as MouseEvent), opts);
     el.addEventListener("keydown", (e) => this.recordKey(e as KeyboardEvent), opts);
     el.addEventListener("focusin", (e) => this.recordFocus((e as FocusEvent).target), opts);
     el.addEventListener("focusout", (e) => this.recordBlur((e as FocusEvent).target), opts);
+  }
 
-    // Mouse trajectory — sample every ~50ms to keep size down
+  private attachPointerListeners(el: Element | Document, opts: AddEventListenerOptions) {
     el.addEventListener(
       "mousemove",
       (e) => {
@@ -567,8 +408,6 @@ export class ForensicCaptureAdapter {
       },
       opts,
     );
-
-    // Hover dwell — track time spent hovering over targets
     el.addEventListener(
       "mouseover",
       (e) => {
@@ -582,8 +421,6 @@ export class ForensicCaptureAdapter {
       },
       opts,
     );
-
-    // Touch events
     el.addEventListener(
       "touchstart",
       (e) => {
@@ -607,19 +444,21 @@ export class ForensicCaptureAdapter {
       opts,
     );
     el.addEventListener("touchend", () => this.recordTouchEnd(), opts);
+  }
 
-    // Viewport resize
+  private attachGlobalListeners(opts: AddEventListenerOptions) {
     if (typeof window !== "undefined") {
-      window.addEventListener(
-        "resize",
-        () => {
-          this.recordViewportResize(window.innerWidth, window.innerHeight);
-        },
-        opts,
-      );
+      window.addEventListener("resize", () => this.recordViewportResize(window.innerWidth, window.innerHeight), opts);
     }
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => this.recordVisibility(document.hidden), opts);
+      document.addEventListener("copy", (e) => this.recordClipboard("copy", e.target, null), opts);
+      document.addEventListener("cut", (e) => this.recordClipboard("cut", e.target, null), opts);
+      document.addEventListener("paste", (e) => this.recordClipboard("paste", e.target, null), opts);
+    }
+  }
 
-    // Field corrections — listen for backspace/delete in inputs
+  private attachFieldCorrectionListener(el: Element | Document, opts: AddEventListenerOptions) {
     el.addEventListener(
       "keydown",
       (e) => {
@@ -633,13 +472,19 @@ export class ForensicCaptureAdapter {
       },
       opts,
     );
+  }
 
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", () => this.recordVisibility(document.hidden), opts);
-      document.addEventListener("copy", (e) => this.recordClipboard("copy", e.target, null), opts);
-      document.addEventListener("cut", (e) => this.recordClipboard("cut", e.target, null), opts);
-      document.addEventListener("paste", (e) => this.recordClipboard("paste", e.target, null), opts);
-    }
+  attach(root?: Element | Document | null) {
+    const el = root ?? (typeof document !== "undefined" ? document : null);
+    if (!el) return;
+    const opts: AddEventListenerOptions = {
+      passive: true,
+      signal: this.abortController.signal,
+    };
+    this.attachInputListeners(el, opts);
+    this.attachPointerListeners(el, opts);
+    this.attachFieldCorrectionListener(el, opts);
+    this.attachGlobalListeners(opts);
   }
 
   detach() {
@@ -649,8 +494,6 @@ export class ForensicCaptureAdapter {
   refreshGeometry() {
     this.geometry = snapshotGeometry(this.container);
   }
-
-  // ── Finalize ──────────────────────────────────────────────
 
   private flushField(fieldId: string) {
     const pending = this.pendingFields.get(fieldId);

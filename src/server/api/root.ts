@@ -1,15 +1,15 @@
-import { createTRPCRouter } from "~/server/api/trpc";
-import { authRouter } from "~/server/api/routers/auth";
 import { accountRouter } from "~/server/api/routers/account";
-import { documentRouter } from "~/server/api/routers/document";
-import { anchorRouter } from "~/server/api/routers/anchor";
-import { vaultRouter } from "~/server/api/routers/vault";
-import { searchRouter } from "~/server/api/routers/search";
-import { connectorRouter } from "~/server/api/routers/connector";
 import { aiRouter } from "~/server/api/routers/ai";
+import { anchorRouter } from "~/server/api/routers/anchor";
+import { authRouter } from "~/server/api/routers/auth";
 import { collabRouter } from "~/server/api/routers/collab";
+import { connectorRouter } from "~/server/api/routers/connector";
+import { documentRouter } from "~/server/api/routers/document";
 import { escrowRouter } from "~/server/api/routers/escrow";
 import { runtimeRouter } from "~/server/api/routers/runtime";
+import { searchRouter } from "~/server/api/routers/search";
+import { vaultRouter } from "~/server/api/routers/vault";
+import { createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,

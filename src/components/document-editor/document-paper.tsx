@@ -87,7 +87,9 @@ export function DocumentPaper({
       >
         <div
           className="h-px"
-          style={{ background: "linear-gradient(90deg, transparent, var(--accent), transparent)" }}
+          style={{
+            background: "linear-gradient(90deg, transparent, var(--accent), transparent)",
+          }}
         />
         <div
           className="space-y-1 px-8 py-10 sm:px-14 sm:py-14"
@@ -140,7 +142,11 @@ export function DocumentPaper({
               case "field":
                 return (
                   <Fragment key={token.field.id}>
-                    {renderField({ field: token.field, tokenIndex: index, forensicId })}
+                    {renderField({
+                      field: token.field,
+                      tokenIndex: index,
+                      forensicId,
+                    })}
                   </Fragment>
                 );
               case "signatureBlock":
