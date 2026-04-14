@@ -1,0 +1,96 @@
+[package]
+name = "proofmark-engine"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance Rust microservice for Proofmark — PDF processing, cryptography, signature verification"
+
+[dependencies]
+# ── HTTP / Async ──────────────────────────────────────────────────
+actix-web = "4"
+actix-rt = "2"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ── PDF Processing ────────────────────────────────────────────────
+lopdf = "0.34"
+printpdf = { version = "0.7", features = ["embedded_images"] }
+pdf-extract = "0.8"
+
+# ── Cryptography ──────────────────────────────────────────────────
+sha2 = "0.10"
+hmac = "0.12"
+hkdf = "0.12"
+aes-gcm = "0.10"
+rand = "0.8"
+hex = "0.4"
+base64 = "0.22"
+bs58 = "0.5"
+
+# ── Signature Verification ────────────────────────────────────────
+k256 = { version = "0.13", features = ["ecdsa", "ecdsa-core", "sha256", "schnorr"] }
+ed25519-dalek = "2"
+sha3 = "0.10"
+ripemd = "0.1"
+
+# ── QR Code ───────────────────────────────────────────────────────
+qrcode = "0.14"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+# ── Regex / Text Processing ───────────────────────────────────────
+regex = "1"
+unicode-normalization = "0.1"
+
+# ── Parallelism ───────────────────────────────────────────────────
+rayon = "1"
+crossbeam = "0.8"
+
+# ── Logging / Tracing ────────────────────────────────────────────
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# ── Error Handling ────────────────────────────────────────────────
+thiserror = "2"
+anyhow = "1"
+
+# ── Index / Storage ───────────────────────────────────────────────
+rocksdb = { version = "0.22", features = ["multi-threaded-cf"] }
+dashmap = "6"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+parking_lot = "0.12"
+flume = "0.11"
+reqwest = { version = "0.12", features = ["json"] }
+
+# ── WebSocket / Collaboration ─────────────────────────────────────
+actix-ws = "0.3"
+actix-web-actors = "4"
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
+yrs = "0.21"
+
+# ── Post-Quantum Cryptography ─────────────────────────────────────
+ml-kem = "0.2"
+kem = "0.2"
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+chacha20poly1305 = "0.10"
+typenum = "1"
+
+# ── Misc ──────────────────────────────────────────────────────────
+bytes = "1"
+once_cell = "1"
+forensic-core = { path = "crates/forensic-core" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[[bench]]
+name = "pdf_bench"
+harness = false
+
+[profile.dev]
+opt-level = 1

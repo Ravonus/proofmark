@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build
+.next/
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Premium (OSS repo excludes this; private repo overrides)
+premium/
+
+# Generated premium bridge (materialized at build time)
+src/generated/premium/
+
+# Private/secrets
+private/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Claude Code
+.claude/
+
+# Temp / test data
+tmp/
+data/
+scripts/pentest/
+
+# Rust build artifacts
+**/target/
+
+# Hardhat / Solidity build artifacts
+contracts/artifacts/
+contracts/cache/
+contracts/node_modules/
+contracts/dist/
+
+# Anchor / Solana build artifacts
+contracts/solana/target/
+contracts/solana/.anchor/
+contracts/solana/node_modules/
+
+# OpenNext build output
+.open-next/

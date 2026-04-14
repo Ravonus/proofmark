@@ -1,0 +1,5 @@
+#!/bin/bash
+# Proofmark CLI wrapper
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$DIR"
+NODE_NO_WARNINGS=1 exec npx tsx cli/index.ts "$@"

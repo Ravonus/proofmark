@@ -1,0 +1,97 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.next",
+      "!.open-next",
+      "!coverage",
+      "!data",
+      "!drizzle",
+      "!rust-service",
+      "!tmp",
+      "!src/generated",
+      "!src/lib/forensic/generated"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "includes": [
+      "src/**",
+      "scripts/**",
+      "cli/**",
+      "config/**",
+      "premium/**",
+      "eslint.config.mjs",
+      "next.config.js",
+      "postcss.config.js",
+      "tailwind.config.ts",
+      "drizzle.config.ts",
+      "vitest.config.ts"
+    ],
+    "rules": {
+      "recommended": false,
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": {
+            "maxAllowedComplexity": 20
+          }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "warn",
+          "options": {
+            "maxLines": 120,
+            "skipBlankLines": true
+          }
+        },
+        "useMaxParams": {
+          "level": "warn",
+          "options": {
+            "max": 5
+          }
+        }
+      },
+      "nursery": {
+        "noExcessiveLinesPerFile": {
+          "level": "warn",
+          "options": {
+            "maxLines": 650,
+            "skipBlankLines": true
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "**/__tests__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.js",
+        "**/*.test.jsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.spec.js",
+        "**/*.spec.jsx"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off",
+            "noExcessiveLinesPerFunction": "off",
+            "useMaxParams": "off"
+          }
+        }
+      }
+    }
+  ]
+}
