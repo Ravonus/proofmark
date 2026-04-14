@@ -11,21 +11,48 @@ import type { AuditEventType, AuditLogParams } from "~/server/audit/audit";
 import type { Document, PdfStyleSettings, Signer } from "~/server/db/schema";
 import type { AssembleForensicInput } from "~/server/forensic/forensic";
 
-const ENGINE_URL = process.env.RUST_ENGINE_URL ?? "http://127.0.0.1:9090";
+const LOCAL_ENGINE_URL = "http://127.0.0.1:9090";
 const TIMEOUT_MS = 30_000;
+
+export function resolveRustEngineUrl(): string {
+  const configuredUrl = process.env.RUST_ENGINE_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/+$/, "");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "RUST_ENGINE_URL is not configured in production. Wallet auth requires the rust-engine microservice URL.",
+    );
+  }
+  return LOCAL_ENGINE_URL;
+}
+
+function buildEngineUrl(path: string): string {
+  return `${resolveRustEngineUrl()}${path}`;
+}
+
+async function engineFetch(path: string, init: RequestInit, timeoutMs = TIMEOUT_MS): Promise<Response> {
+  const url = buildEngineUrl(path);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: init.signal ?? AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Rust engine request failed (${url}): ${message}`);
+  }
+}
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────────
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${ENGINE_URL}${path}`, {
+  const res = await engineFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Rust engine ${res.status}: ${err}`);
+    throw new Error(`Rust engine ${res.status} (${buildEngineUrl(path)}): ${err}`);
   }
   return res.json() as T;
 }
@@ -35,29 +62,27 @@ async function postBytes<T>(
   body: Uint8Array | Buffer,
   contentType = "application/octet-stream",
 ): Promise<T> {
-  const res = await fetch(`${ENGINE_URL}${path}`, {
+  const res = await engineFetch(path, {
     method: "POST",
     headers: { "Content-Type": contentType },
     body: body as BodyInit,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Rust engine ${res.status}: ${err}`);
+    throw new Error(`Rust engine ${res.status} (${buildEngineUrl(path)}): ${err}`);
   }
   return res.json() as T;
 }
 
 async function postForBytes(path: string, body: unknown): Promise<Uint8Array> {
-  const res = await fetch(`${ENGINE_URL}${path}`, {
+  const res = await engineFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Rust engine ${res.status}: ${err}`);
+    throw new Error(`Rust engine ${res.status} (${buildEngineUrl(path)}): ${err}`);
   }
   return new Uint8Array(await res.arrayBuffer());
 }
@@ -143,14 +168,19 @@ function normalizePdfAnalysisResult(input: unknown): PdfAnalysisResult {
     suggestedSignerCount: readNumber(source.suggestedSignerCount ?? source.suggested_signer_count, 2),
     acroformFields: readRecordArray(source.acroformFields ?? source.acroform_fields).map((f) => ({
       name: readString(f.name),
-      fieldType: readString(f.fieldType ?? f.field_type, "text") as PdfAnalysisResult["acroformFields"][number]["fieldType"],
+      fieldType: readString(
+        f.fieldType ?? f.field_type,
+        "text",
+      ) as PdfAnalysisResult["acroformFields"][number]["fieldType"],
       value: readNullableString(f.value),
       filled: readBoolean(f.filled),
       readOnly: readBoolean(f.readOnly ?? f.read_only),
       options: Array.isArray(f.options) ? (f.options as unknown[]).map((o) => String(o)) : [],
       page: typeof f.page === "number" ? f.page : null,
     })),
-    sections: readRecordArray(source.sections).map(function mapSection(s: Record<string, unknown>): PdfAnalysisResult["sections"][number] {
+    sections: readRecordArray(source.sections).map(function mapSection(
+      s: Record<string, unknown>,
+    ): PdfAnalysisResult["sections"][number] {
       return {
         kind: readString(s.kind, "clause") as PdfAnalysisResult["sections"][number]["kind"],
         title: readString(s.title),
@@ -459,13 +489,12 @@ export type { AuditEventType, AuditLogParams };
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function generateQrSvg(text: string, size?: number): Promise<string> {
-  const res = await fetch(`${ENGINE_URL}/api/v1/qr/svg`, {
+  const res = await engineFetch("/api/v1/qr/svg", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, size }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`Rust engine ${res.status}`);
+  if (!res.ok) throw new Error(`Rust engine ${res.status} (${buildEngineUrl("/api/v1/qr/svg")})`);
   return res.text();
 }
 
@@ -668,9 +697,7 @@ export async function getEngineStatus(): Promise<{
   version?: string;
 }> {
   try {
-    const res = await fetch(`${ENGINE_URL}/api/v1/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
+    const res = await engineFetch("/api/v1/health", {}, 2000);
     if (res.ok) {
       const data = (await res.json()) as { version?: string };
       return { available: true, version: data.version };

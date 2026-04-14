@@ -22,6 +22,7 @@ import { trpc } from "~/lib/platform/trpc";
 import { isActionableRecipientRole, isApprovalRecipientRole } from "~/lib/signing/recipient-roles";
 import { useSigningStore } from "~/stores/signing";
 import { useWalletStore } from "~/stores/wallet";
+import { resolveSigningAccess } from "../signing/signing-access";
 import { useFieldManagement, useFieldNavigation } from "./use-signing-fields";
 import { useSigningMutations } from "./use-signing-mutations";
 import { useSigningTokenGates } from "./use-signing-token-gates";
@@ -89,6 +90,7 @@ type SignerRow = {
   status: string;
   role: string;
   label: string;
+  signMethod?: string | null;
   groupRole?: string | null;
   finalizationSignature?: string | null;
 };
@@ -196,14 +198,13 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     tokenGates.resetTokenGates();
   }, [documentId, claimToken, currentSignerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const canSign =
-    !!derivedState.currentSigner &&
-    derivedState.currentSigner.status === "PENDING" &&
-    (derivedState.currentSigner as { canSign?: boolean }).canSign !== false &&
-    derivedState.isActionable &&
-    walletReady &&
-    !!claimToken &&
-    tokenGates.tokenGateEligible;
+  const access = resolveSigningAccess({
+    currentSigner: derivedState.currentSigner as Parameters<typeof resolveSigningAccess>[0]["currentSigner"],
+    claimToken,
+    isActionable: derivedState.isActionable,
+    tokenGateEligible: tokenGates.tokenGateEligible,
+    walletReady,
+  });
 
   // Tokenize + fields
   const { tokens, fields: inlineFields } = useMemo(
@@ -273,7 +274,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     claimToken,
     needsDrawnSig: derivedState.needsDrawnSig,
     needsFinalization: derivedState.needsFinalization,
-    currentSigner: derivedState.currentSigner,
+    currentSigner: derivedState.currentSigner as
+      | (typeof derivedState.currentSigner & { signMethod?: string | null })
+      | null,
     tokenGateEligible: tokenGates.tokenGateEligible,
     tokenGateProofs: tokenGates.tokenGateProofs,
     myFieldsList: fields.myFieldsList,
@@ -349,7 +352,10 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     inlineFields,
     ...derivedState,
     ...tokenGates,
-    canSign,
+    canSign: access.canInteract,
+    canSubmit: access.canSubmit,
+    isEmailOtpSigner: access.isEmailOtpSigner,
+    requiresWalletConnection: access.requiresWalletConnection,
     ...fields,
     ...fields.validationState,
     fieldsByTypeLabel: fields.fieldsByTypeLabel,
@@ -379,6 +385,9 @@ export function useSigningFlow(documentId: string, claimToken: string | null) {
     setActiveField: store.setActiveField,
     ...nav,
     handleSign: mutations.handleSign,
+    requestEmailOtp: mutations.requestEmailOtp,
+    requestSigningOtpMut: mutations.requestSigningOtpMut,
+    handleEmailSign: mutations.handleEmailSign,
     handleFinalize: mutations.handleFinalize,
     handleBulkFinalize,
     needsFinalization: derivedState.needsFinalization,

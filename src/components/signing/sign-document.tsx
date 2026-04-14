@@ -223,17 +223,19 @@ function SignDocumentMainView({
 
       {flow.canSign && (
         <>
-          <FloatingToolbar
-            chain={chain!}
-            address={address!}
-            currentSigner={currentSigner!}
-            myFieldIds={flow.myFieldIds}
-            fieldsFilled={fieldsFilled}
-            totalMyFields={totalMyFields}
-            requiredFieldsRemaining={requiredFieldsRemaining}
-            allFieldsComplete={allFieldsComplete}
-            goToNextField={flow.goToNextField}
-          />
+          {connected && address && chain && currentSigner && (
+            <FloatingToolbar
+              chain={chain}
+              address={address}
+              currentSigner={currentSigner}
+              myFieldIds={flow.myFieldIds}
+              fieldsFilled={fieldsFilled}
+              totalMyFields={totalMyFields}
+              requiredFieldsRemaining={requiredFieldsRemaining}
+              allFieldsComplete={allFieldsComplete}
+              goToNextField={flow.goToNextField}
+            />
+          )}
           <WalkthroughStepper
             totalMyFields={totalMyFields}
             fieldsFilled={fieldsFilled}
@@ -265,6 +267,9 @@ function SignDocumentMainView({
         chain={chain}
         claimToken={claimToken}
         canSign={flow.canSign}
+        canSubmit={flow.canSubmit}
+        isEmailOtpSigner={flow.isEmailOtpSigner}
+        requiresWalletConnection={flow.requiresWalletConnection}
         currentSigner={currentSigner}
         isCreator={flow.isCreator}
         tokenGateSummary={tokenGateSummary}
@@ -289,6 +294,9 @@ function SignDocumentMainView({
         setEmail={flow.setEmail}
         declined={flow.declined}
         declineMut={flow.declineMut}
+        requestEmailOtp={flow.requestEmailOtp}
+        requestEmailOtpPending={flow.requestSigningOtpMut.isPending}
+        submitEmailSign={flow.handleEmailSign}
         openSignaturePad={openSignaturePad}
         openConfirmModal={() => flow.setShowConfirmModal(true)}
         goToNextField={flow.goToNextField}
@@ -423,6 +431,9 @@ function SignDocumentBottomCards(props: {
   chain: WalletChain | null;
   claimToken: string | null;
   canSign: boolean;
+  canSubmit: boolean;
+  isEmailOtpSigner: boolean;
+  requiresWalletConnection: boolean;
   currentSigner: ReturnType<typeof useSigningFlow>["currentSigner"];
   isCreator: boolean;
   tokenGateSummary: string | null;
@@ -447,6 +458,9 @@ function SignDocumentBottomCards(props: {
   setEmail: (e: string) => void;
   declined: boolean;
   declineMut: ReturnType<typeof useSigningFlow>["declineMut"];
+  requestEmailOtp: () => Promise<void>;
+  requestEmailOtpPending: boolean;
+  submitEmailSign: (otpCode: string) => Promise<void>;
   openSignaturePad: (mode?: "signature" | "initials", fieldId?: string) => void;
   openConfirmModal: () => void;
   goToNextField: () => void;
@@ -492,12 +506,17 @@ function SignDocumentBottomCards(props: {
           address={p.address}
           chain={p.chain}
           claimToken={p.claimToken}
+          canSubmit={p.canSubmit}
+          isEmailOtpSigner={p.isEmailOtpSigner}
           currentSigner={p.currentSigner}
           currentRole={p.currentRole}
           email={p.email}
           setEmail={p.setEmail}
           declined={p.declined}
           declineMut={p.declineMut}
+          requestEmailOtp={p.requestEmailOtp}
+          requestEmailOtpPending={p.requestEmailOtpPending}
+          submitEmailSign={p.submitEmailSign}
           documentId={p.documentId}
           openSignaturePad={p.openSignaturePad}
           openConfirmModal={p.openConfirmModal}
@@ -505,12 +524,12 @@ function SignDocumentBottomCards(props: {
         />
       )}
 
-      {!p.connected && p.claimToken && !p.requiresTokenGateWalletProofs && (
+      {!p.connected && p.claimToken && p.requiresWalletConnection && !p.requiresTokenGateWalletProofs && (
         <div className="glass-card space-y-4 rounded-2xl p-6 text-center">
           <p className="text-sm text-secondary">
             {p.tokenGateSummary
-              ? `Connect an eligible wallet to sign. Required: ${p.tokenGateSummary}`
-              : "Connect your wallet to sign this document"}
+              ? `You can fill fields now. Connect an eligible wallet when you're ready to sign. Required: ${p.tokenGateSummary}`
+              : "You can fill fields now. Connect your wallet when you're ready to sign this document."}
           </p>
           <ChainButtons />
         </div>
@@ -531,7 +550,7 @@ function SignDocumentBottomCards(props: {
         <CreatorClaimSlot documentId={p.documentId} signers={p.doc.signers as SignerInfo[]} />
       )}
 
-      {p.canSign && p.totalMyFields > 0 && (
+      {p.canSign && p.totalMyFields > 0 && p.connected && !p.isEmailOtpSigner && (
         <FieldNavigationBar
           currentFieldIdx={p.currentFieldIdx}
           totalMyFields={p.totalMyFields}

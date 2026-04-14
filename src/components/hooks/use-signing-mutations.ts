@@ -76,7 +76,7 @@ export type SigningMutationDeps = {
   claimToken: string | null;
   needsDrawnSig: boolean;
   needsFinalization: boolean;
-  currentSigner: { label: string; status: string } | null;
+  currentSigner: { label: string; status: string; signMethod?: string | null } | null;
   tokenGateEligible: boolean;
   tokenGateProofs: Record<string, TokenGateWalletProof>;
   myFieldsList: InlineField[];
@@ -89,11 +89,73 @@ export type SigningMutationDeps = {
   onFinalizeSuccess: () => void;
 };
 
+const EMAIL_SIGN_CONSENT = "I consent to use an electronic signature for this document.";
+
+function focusFirstInvalidField(
+  myFieldsList: InlineField[],
+  fieldValues: Record<string, string>,
+  validationOpts: {
+    signatureReady: boolean;
+    allValues: Record<string, string>;
+  },
+) {
+  for (const field of myFieldsList) {
+    if (validateField(field, fieldValues[field.id] ?? "", validationOpts)) {
+      document.getElementById(field.id)?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function collectSigningForensics(tracker: React.MutableRefObject<BehavioralTracker | null>): Promise<{
+  fingerprint: Record<string, unknown>;
+  behavioral: Record<string, unknown>;
+  session:
+    | {
+        sessionId: string;
+        visitIndex: number;
+        startedAt: string;
+        endedAt: string;
+        durationMs: number;
+      }
+    | undefined;
+}> {
+  const fingerprint = await collectFingerprintBestEffort();
+  tracker.current?.logAction("sign_submitted");
+
+  let behavioral: BehavioralSignals;
+  try {
+    behavioral = (await tracker.current?.collect()) ?? { ...EMPTY_BEHAVIORAL };
+  } catch {
+    behavioral = { ...EMPTY_BEHAVIORAL };
+  }
+
+  return {
+    fingerprint: fingerprint as unknown as Record<string, unknown>,
+    behavioral: behavioral as unknown as Record<string, unknown>,
+    session: tracker.current
+      ? {
+          sessionId: tracker.current.sessionId,
+          visitIndex: tracker.current.visitIndex,
+          startedAt: tracker.current.startedAt,
+          endedAt: new Date().toISOString(),
+          durationMs: behavioral.timeOnPage,
+        }
+      : undefined,
+  };
+}
+
 export function useSigningMutations(deps: SigningMutationDeps) {
   const wallet = useWalletStore();
   const store = useSigningStore();
 
   const signMutation = trpc.document.sign.useMutation({
+    onSuccess: deps.onSignSuccess,
+  });
+  const requestSigningOtpMut = trpc.document.requestSigningOtp.useMutation();
+  const signWithEmailMut = trpc.document.signWithEmail.useMutation({
     onSuccess: deps.onSignSuccess,
   });
   const declineMut = trpc.document.declineSign.useMutation({
@@ -110,15 +172,10 @@ export function useSigningMutations(deps: SigningMutationDeps) {
   });
 
   const handleSign = useCallback(async () => {
+    if (deps.currentSigner?.signMethod === "EMAIL_OTP") return;
     if (!wallet.address || !wallet.chain || !deps.claimToken || !deps.currentSigner) return;
     if (!deps.tokenGateEligible || (deps.needsDrawnSig && !store.handSignature)) return;
-
-    for (const f of deps.myFieldsList) {
-      if (validateField(f, store.fieldValues[f.id] ?? "", deps.validationOpts)) {
-        document.getElementById(f.id)?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
-        return;
-      }
-    }
+    if (focusFirstInvalidField(deps.myFieldsList, store.fieldValues, deps.validationOpts)) return;
 
     const proofsList = Object.values(deps.tokenGateProofs);
     const fieldVals = Object.keys(store.fieldValues).length > 0 ? store.fieldValues : undefined;
@@ -136,16 +193,7 @@ export function useSigningMutations(deps: SigningMutationDeps) {
           fieldValues: fieldVals,
         });
         const signature = await getWalletActions().signMessage(message);
-        const fingerprint = await collectFingerprintBestEffort();
-        deps.behavioralTracker.current?.logAction("sign_submitted");
-        let behavioral: BehavioralSignals;
-        try {
-          behavioral = (await deps.behavioralTracker.current?.collect()) ?? {
-            ...EMPTY_BEHAVIORAL,
-          };
-        } catch {
-          behavioral = { ...EMPTY_BEHAVIORAL };
-        }
+        const forensic = await collectSigningForensics(deps.behavioralTracker);
 
         await signMutation.mutateAsync({
           documentId: deps.documentId,
@@ -158,23 +206,79 @@ export function useSigningMutations(deps: SigningMutationDeps) {
           handSignatureData: store.handSignature || undefined,
           fieldValues: fieldVals,
           forensic: {
-            fingerprint: fingerprint as unknown as Record<string, unknown>,
-            behavioral: behavioral as unknown as Record<string, unknown>,
-            session: deps.behavioralTracker.current
-              ? {
-                  sessionId: deps.behavioralTracker.current.sessionId,
-                  visitIndex: deps.behavioralTracker.current.visitIndex,
-                  startedAt: deps.behavioralTracker.current.startedAt,
-                  endedAt: new Date().toISOString(),
-                  durationMs: behavioral.timeOnPage,
-                }
-              : undefined,
+            fingerprint: forensic.fingerprint,
+            behavioral: forensic.behavioral,
+            session: forensic.session,
           },
         });
       },
       "Signing",
     );
   }, [wallet, deps, store, signMutation, getSigningMessageMut]);
+
+  const requestEmailOtp = useCallback(async () => {
+    if (deps.currentSigner?.signMethod !== "EMAIL_OTP" || !deps.claimToken) return;
+
+    const email = store.email.trim();
+    if (!email) {
+      store.setSigningError("Enter your email to receive a verification code.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    store.setSigningError(null);
+    await requestSigningOtpMut.mutateAsync({
+      documentId: deps.documentId,
+      claimToken: deps.claimToken,
+      email,
+    });
+  }, [deps.claimToken, deps.currentSigner?.signMethod, deps.documentId, requestSigningOtpMut, store]);
+
+  const handleEmailSign = useCallback(
+    async (otpCode: string) => {
+      if (deps.currentSigner?.signMethod !== "EMAIL_OTP" || !deps.claimToken || !deps.currentSigner) return;
+      if (!deps.tokenGateEligible || (deps.needsDrawnSig && !store.handSignature)) return;
+      if (focusFirstInvalidField(deps.myFieldsList, store.fieldValues, deps.validationOpts)) return;
+
+      const email = store.email.trim();
+      const otp = otpCode.trim();
+      if (!email) {
+        store.setSigningError("Enter your email before submitting this signature.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (otp.length !== 6) {
+        store.setSigningError("Enter the 6-digit verification code from your email.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      const fieldVals = Object.keys(store.fieldValues).length > 0 ? store.fieldValues : undefined;
+
+      await runSigningAction(
+        store,
+        async () => {
+          const forensic = await collectSigningForensics(deps.behavioralTracker);
+          await signWithEmailMut.mutateAsync({
+            documentId: deps.documentId,
+            claimToken: deps.claimToken!,
+            email,
+            otpCode: otp,
+            fieldValues: fieldVals,
+            handSignatureData: store.handSignature || undefined,
+            consentText: EMAIL_SIGN_CONSENT,
+            forensic: {
+              fingerprint: forensic.fingerprint,
+              behavioral: forensic.behavioral,
+              session: forensic.session,
+            },
+          });
+        },
+        "Email signing",
+      );
+    },
+    [deps, store, signWithEmailMut],
+  );
 
   const handleFinalize = useCallback(async () => {
     if (!wallet.address || !wallet.chain || !deps.claimToken || !deps.needsFinalization) return;
@@ -236,8 +340,12 @@ export function useSigningMutations(deps: SigningMutationDeps) {
 
   return {
     signMutation,
+    requestSigningOtpMut,
+    signWithEmailMut,
     declineMut,
     handleSign,
+    requestEmailOtp,
+    handleEmailSign,
     handleFinalize,
     handleBulkFinalize,
   };

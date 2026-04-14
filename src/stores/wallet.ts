@@ -39,6 +39,8 @@ export function getWalletAuthErrorMessage(error: unknown): string {
     return "Wallet signature was cancelled.";
   if (/challenge expired or invalid/i.test(msg)) return "The wallet challenge expired. Try again.";
   if (/signature verification failed/i.test(msg)) return "The wallet signature could not be verified.";
+  if (/fetch failed|failed to fetch|networkerror|network error/i.test(msg))
+    return "Wallet verification is temporarily unavailable. Please try again in a moment.";
   return msg || "Wallet verification failed.";
 }
 

@@ -58,22 +58,23 @@ forwarded into the `app` service. Keep new runtime env vars wired through
 
 ## Environment Variables
 
-| Variable                | Required | Default                   | Description                                                  |
-| ----------------------- | -------- | ------------------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`          | Yes      | —                         | PostgreSQL connection string                                 |
-| `SMTP_HOST`             | No       | `""`                      | SMTP server for email delivery                               |
-| `SMTP_PORT`             | No       | `465`                     | SMTP port                                                    |
-| `SMTP_USER`             | No       | `""`                      | SMTP username                                                |
-| `SMTP_PASS`             | No       | `""`                      | SMTP password                                                |
-| `SMTP_FROM`             | No       | `noreply@proofmark.local` | Sender email address                                         |
-| `ADMIN_EMAIL`           | No       | `""`                      | Admin notification email                                     |
-| `OWNER_ADDRESS`         | No       | `""`                      | Default wallet address for the instance owner                |
-| `OWNER_CHAIN`           | No       | `ETH`                     | Default chain for the instance owner                         |
-| `ENCRYPTION_MASTER_KEY` | No       | —                         | 32+ char key for at-rest encryption (enables vault features) |
-| `AUTOMATION_SECRET`     | No       | `""`                      | Secret for cron-triggered automation endpoints               |
-| `NEXTAUTH_URL`          | No       | `http://localhost:3100`   | Base URL for auth callbacks                                  |
-| `BETTER_AUTH_URL`       | No       | `""`                      | Optional Better Auth base URL override                       |
-| `BETTER_AUTH_SECRET`    | No       | `""`                      | Better Auth signing secret                                   |
+| Variable                | Required | Default                            | Description                                                                                                                                    |
+| ----------------------- | -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Yes      | —                                  | PostgreSQL connection string                                                                                                                   |
+| `SMTP_HOST`             | No       | `""`                               | SMTP server for email delivery                                                                                                                 |
+| `SMTP_PORT`             | No       | `465`                              | SMTP port                                                                                                                                      |
+| `SMTP_USER`             | No       | `""`                               | SMTP username                                                                                                                                  |
+| `SMTP_PASS`             | No       | `""`                               | SMTP password                                                                                                                                  |
+| `SMTP_FROM`             | No       | `noreply@proofmark.local`          | Sender email address                                                                                                                           |
+| `ADMIN_EMAIL`           | No       | `""`                               | Admin notification email                                                                                                                       |
+| `OWNER_ADDRESS`         | No       | `""`                               | Default wallet address for the instance owner                                                                                                  |
+| `OWNER_CHAIN`           | No       | `ETH`                              | Default chain for the instance owner                                                                                                           |
+| `RUST_ENGINE_URL`       | Prod     | `http://127.0.0.1:9090` (dev only) | Internal Rust engine URL for signing, verification, and PDF work. Platform deploys wire this automatically via the `rust-engine` microservice. |
+| `ENCRYPTION_MASTER_KEY` | No       | —                                  | 32+ char key for at-rest encryption (enables vault features)                                                                                   |
+| `AUTOMATION_SECRET`     | No       | `""`                               | Secret for cron-triggered automation endpoints                                                                                                 |
+| `NEXTAUTH_URL`          | No       | `http://localhost:3100`            | Base URL for auth callbacks                                                                                                                    |
+| `BETTER_AUTH_URL`       | No       | `""`                               | Optional Better Auth base URL override                                                                                                         |
+| `BETTER_AUTH_SECRET`    | No       | `""`                               | Better Auth signing secret                                                                                                                     |
 
 ### BYO Integration Keys (optional)
 

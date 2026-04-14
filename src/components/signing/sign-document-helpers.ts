@@ -32,6 +32,7 @@ export type SignerInfo = {
   tokenGates?: SignerTokenGate | null;
   tokenGateEvaluation?: TokenGateEvaluation | null;
   role?: "SIGNER" | "APPROVER" | "CC" | "WITNESS" | "OBSERVER";
+  signMethod?: "WALLET" | "EMAIL_OTP" | null;
   canSign?: boolean;
   groupRole?: string | null;
   finalizationSignature?: string | null;
