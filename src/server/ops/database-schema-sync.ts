@@ -1,4 +1,7 @@
 import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import path from "node:path";
 import { env } from "~/env";
 
 type SchemaStatement = {
@@ -7,6 +10,36 @@ type SchemaStatement = {
 };
 
 const schemaStatements: SchemaStatement[] = [
+  {
+    label: "wallet_chain enum",
+    sql: `
+      DO $$ BEGIN
+        CREATE TYPE "wallet_chain" AS ENUM ('ETH', 'SOL', 'BTC', 'BASE');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `,
+  },
+  {
+    label: "auth_challenges table",
+    sql: `
+      CREATE TABLE IF NOT EXISTS "auth_challenges" (
+        "id" text PRIMARY KEY,
+        "nonce" text NOT NULL,
+        "address" text NOT NULL,
+        "chain" "wallet_chain" NOT NULL,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "expires_at" timestamp NOT NULL,
+        "consumed" timestamp,
+        CONSTRAINT "auth_challenges_nonce_unique" UNIQUE("nonce")
+      );
+    `,
+  },
+  {
+    label: "auth_challenges indexes",
+    sql: `
+      CREATE INDEX IF NOT EXISTS "auth_challenges_nonce_idx" ON "auth_challenges" USING btree ("nonce");
+    `,
+  },
   {
     label: "users.two_factor_enabled",
     sql: `
@@ -326,7 +359,23 @@ export async function syncProofmarkSchemaBaseline() {
     prepare: false,
   });
 
+  let migrationsApplied = false;
+  let migrationError: string | null = null;
+
   try {
+    // Step 1: Run drizzle migrations (creates tables from drizzle/*.sql files)
+    try {
+      const migrationClient = drizzle(sql);
+      const migrationsFolder = path.resolve(process.cwd(), "drizzle");
+      await migrate(migrationClient, { migrationsFolder });
+      migrationsApplied = true;
+    } catch (err) {
+      // Migrations may fail on already-provisioned DBs missing __drizzle_migrations;
+      // fall through to idempotent patches below.
+      migrationError = err instanceof Error ? err.message : String(err);
+    }
+
+    // Step 2: Apply idempotent patches (safety net for drifted DBs)
     for (const statement of schemaStatements) {
       await sql.unsafe(statement.sql);
     }
@@ -349,6 +398,8 @@ export async function syncProofmarkSchemaBaseline() {
     `;
 
     return {
+      migrationsApplied,
+      migrationError,
       appliedStatements: schemaStatements.map((statement) => statement.label),
       health,
     };

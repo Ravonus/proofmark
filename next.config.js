@@ -2,6 +2,12 @@
 const nextConfig = {
 	output: "standalone",
 	serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+	outputFileTracingIncludes: {
+		// Ship drizzle migrations with the standalone bundle so runtime schema-sync
+		// can call drizzle-kit migrate against prod DB on boot / via /api/ops/run.
+		"/api/ops/run": ["./drizzle/**/*"],
+		"/api/automation/run": ["./drizzle/**/*"],
+	},
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
