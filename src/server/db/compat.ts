@@ -5,7 +5,7 @@ import { documents, type ReminderConfig, signers } from "~/server/db/schema";
 type Db = typeof _dbRef;
 type LegacyDocumentRow = Omit<
   typeof documents.$inferSelect,
-  "templateId" | "brandingProfileId" | "pdfStyleTemplateId" | "reminderConfig" | "groupId"
+  "templateId" | "brandingProfileId" | "pdfStyleTemplateId" | "reminderConfig" | "groupId" | "blankPdfHash"
 >;
 type LegacySignerRow = Omit<
   typeof signers.$inferSelect,
@@ -25,6 +25,11 @@ type LegacySignerRow = Omit<
   | "finalizationStateHash"
   | "finalizationSignedAt"
   | "finalizationMessage"
+  | "signatureSource"
+  | "importedPdfUrl"
+  | "importedPdfHash"
+  | "importedPdfSize"
+  | "importedAt"
 >;
 
 type CompatDocument = typeof documents.$inferSelect & {
@@ -33,6 +38,7 @@ type CompatDocument = typeof documents.$inferSelect & {
   pdfStyleTemplateId: string | null;
   reminderConfig: ReminderConfig | null;
   groupId: string | null;
+  blankPdfHash: string | null;
 };
 
 type CompatSigner = typeof signers.$inferSelect & {
@@ -51,6 +57,11 @@ type CompatSigner = typeof signers.$inferSelect & {
   finalizationStateHash: string | null;
   finalizationSignedAt: Date | null;
   finalizationMessage: string | null;
+  signatureSource: "DIGITAL" | "MANUAL_PDF";
+  importedPdfUrl: string | null;
+  importedPdfHash: string | null;
+  importedPdfSize: number | null;
+  importedAt: Date | null;
 };
 
 const stableDocumentSelect = {
@@ -112,6 +123,7 @@ function withDocumentDefaults(row: typeof documents.$inferSelect | LegacyDocumen
     pdfStyleTemplateId: (row as { pdfStyleTemplateId?: string | null }).pdfStyleTemplateId ?? null,
     reminderConfig: (row as { reminderConfig?: ReminderConfig | null }).reminderConfig ?? null,
     groupId: (row as { groupId?: string | null }).groupId ?? null,
+    blankPdfHash: (row as { blankPdfHash?: string | null }).blankPdfHash ?? null,
   };
 }
 
@@ -141,6 +153,12 @@ function withSignerDefaults(row: typeof signers.$inferSelect | LegacySignerRow):
     finalizationStateHash: (row as { finalizationStateHash?: string | null }).finalizationStateHash ?? null,
     finalizationSignedAt: (row as { finalizationSignedAt?: Date | null }).finalizationSignedAt ?? null,
     finalizationMessage: (row as { finalizationMessage?: string | null }).finalizationMessage ?? null,
+    // Hybrid signing defaults — DBs not yet migrated read these as legacy nulls.
+    signatureSource: ((row as { signatureSource?: "DIGITAL" | "MANUAL_PDF" }).signatureSource ?? "DIGITAL"),
+    importedPdfUrl: (row as { importedPdfUrl?: string | null }).importedPdfUrl ?? null,
+    importedPdfHash: (row as { importedPdfHash?: string | null }).importedPdfHash ?? null,
+    importedPdfSize: (row as { importedPdfSize?: number | null }).importedPdfSize ?? null,
+    importedAt: (row as { importedAt?: Date | null }).importedAt ?? null,
   };
 }
 

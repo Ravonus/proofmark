@@ -32,6 +32,7 @@ import { db } from "~/server/db";
 import { findDocumentById, findSignersByDocumentId } from "~/server/db/compat";
 import { signers } from "~/server/db/schema";
 import { saveSignerAttachment } from "~/server/documents/attachments";
+import { saveImportedPdf } from "~/server/storage/imported-pdfs";
 import { normalizeOwnerAddress } from "~/server/workspace/workspace";
 import { ProgrammaticApiError } from "./errors";
 
@@ -508,6 +509,181 @@ export async function signProgrammaticEmail(params: {
   });
 
   return { ok: true, allSigned };
+}
+
+// ── Hybrid signing: import a physically-signed PDF as a signer's signature ──
+//
+// Caller provides:
+//  - documentId + claimToken              identifies which signer this is
+//  - signatureImage (data URL)            cropped from the scan, used as the
+//                                          rendered signature in the digital view
+//  - fieldValues                          form values transcribed from the scan
+//                                          (same shape as digital signing)
+//  - originalPdf (base64)                 the full scanned PDF, kept as proof
+//
+// Result: the signer is marked SIGNED with signMethod=MANUAL_IMPORT and
+// signatureSource=MANUAL_PDF. NO forensic evidence is captured (the signing
+// happened offline, on paper). The original scan + its hash are stored for
+// later verification/download.
+const importSignatureSchema = z.object({
+  documentId: z.string().min(1),
+  claimToken: z.string().min(1),
+  /** Cropped signature image as a data URL (e.g. "data:image/png;base64,...") */
+  signatureImage: z
+    .string()
+    .min(20)
+    .refine((s) => s.startsWith("data:image/"), "signatureImage must be a data: image URL"),
+  /** Form field values transcribed from the scan (same shape as digital signing) */
+  fieldValues: z.record(z.string()).optional(),
+  /** Full scanned PDF as base64 — stored as the integrity record for this import */
+  originalPdfBase64: z
+    .string()
+    .min(100)
+    .refine((s) => /^[A-Za-z0-9+/=\s]+$/.test(s), "originalPdfBase64 must be base64-encoded"),
+  /** Optional: signer's email captured during the offline flow (for receipts) */
+  signerEmail: z.string().email().optional().or(z.literal("")),
+  /** Optional: explicit consent text the signer agreed to (ESIGN/UETA hygiene) */
+  consentText: z.string().max(2000).optional(),
+});
+
+const MAX_IMPORTED_PDF_BYTES = 25 * 1024 * 1024; // 25MB
+
+export async function importProgrammaticSignature(params: {
+  ownerAddress: string;
+  clientIp: string | null;
+  input: unknown;
+}) {
+  const input = importSignatureSchema.parse(params.input);
+  const { doc, docSigners, signer } = await loadOwnedSigningContext(
+    params.ownerAddress,
+    input.documentId,
+    input.claimToken,
+  );
+
+  if (doc.status !== "PENDING") {
+    throw new ProgrammaticApiError(409, "Document is no longer pending");
+  }
+  if (signer.status !== "PENDING") {
+    throw new ProgrammaticApiError(409, "Signer already responded");
+  }
+
+  // Decode the PDF and bound its size before persisting.
+  const pdfBytes = Buffer.from(input.originalPdfBase64, "base64");
+  if (pdfBytes.byteLength === 0) {
+    throw new ProgrammaticApiError(400, "originalPdfBase64 decoded to zero bytes");
+  }
+  if (pdfBytes.byteLength > MAX_IMPORTED_PDF_BYTES) {
+    throw new ProgrammaticApiError(413, `Imported PDF exceeds the ${MAX_IMPORTED_PDF_BYTES / (1024 * 1024)}MB limit`);
+  }
+  // Crude PDF magic-byte check ("%PDF-")
+  if (!pdfBytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+    throw new ProgrammaticApiError(400, "originalPdfBase64 does not contain a valid PDF");
+  }
+
+  // Persist the scan and get the storage record.
+  const persisted = await saveImportedPdf({
+    documentId: doc.id,
+    signerId: signer.id,
+    bytes: new Uint8Array(pdfBytes),
+  });
+
+  // Sanitize field values to the signer's declared fields (mirrors digital flow).
+  const content =
+    doc.encryptedAtRest && doc.encryptionKeyWrapped
+      ? await decryptContent(doc.content, doc.encryptionKeyWrapped)
+      : doc.content;
+  const { fields: docFields } = tokenizeDocument(content, docSigners.length);
+  const signerIdx = signer.signerOrder ?? docSigners.findIndex((entry) => entry.id === signer.id);
+  const allowedFieldIds = new Set(
+    docFields
+      .filter((f) => f.signerIdx === -1 || f.signerIdx === signerIdx)
+      .map((f) => f.id)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const sanitizedFieldValues: Record<string, string> = {};
+  for (const [k, v] of Object.entries(input.fieldValues ?? {})) {
+    if (allowedFieldIds.has(k) && typeof v === "string") sanitizedFieldValues[k] = v;
+  }
+
+  const signedAt = new Date();
+  const documentStateHash = await computeDocumentStateHash({
+    contentHash: doc.contentHash,
+    docSigners,
+    currentSignerFieldValues: sanitizedFieldValues,
+    currentSignerIndex: signerIdx,
+  });
+  const inkHash = await hashHandSignature(input.signatureImage);
+
+  await db
+    .update(signers)
+    .set({
+      status: "SIGNED",
+      signedAt,
+      signMethod: "MANUAL_IMPORT",
+      signatureSource: "MANUAL_PDF",
+      // The cropped signature image is the digital render — same column the
+      // existing token renderer reads, so the contract view "just works".
+      handSignatureData: input.signatureImage,
+      handSignatureHash: inkHash ?? null,
+      fieldValues: Object.keys(sanitizedFieldValues).length ? sanitizedFieldValues : null,
+      documentStateHash,
+      // Imported scan provenance.
+      importedPdfUrl: persisted.url,
+      importedPdfHash: persisted.hash,
+      importedPdfSize: persisted.size,
+      importedAt: signedAt,
+      // ESIGN/UETA: store optional explicit consent the operator captured offline.
+      consentText: input.consentText ?? null,
+      consentAt: input.consentText ? signedAt : null,
+      // Record the email if provided so post-sign confirmation can fire.
+      email: input.signerEmail || signer.email,
+      // Forensics: explicitly NULL — physical signing has no telemetry.
+      forensicEvidence: null,
+      forensicHash: null,
+      lastIp: params.clientIp,
+      ipUpdatedAt: params.clientIp ? signedAt : undefined,
+      // Identity remains at signer's declared level (typically L1_EMAIL or L0_WALLET).
+      // We do NOT upgrade — physical signing doesn't prove identity stronger than
+      // however the operator collected the original signed page.
+    })
+    .where(eq(signers.id, signer.id));
+
+  void safeLogAudit({
+    documentId: doc.id,
+    eventType: "SIGNER_SIGNED",
+    actor: input.signerEmail || signer.label,
+    actorType: "system",
+    ipAddress: params.clientIp,
+    metadata: {
+      signMethod: "MANUAL_IMPORT",
+      signatureSource: "MANUAL_PDF",
+      signerLabel: signer.label,
+      importedPdfHash: persisted.hash,
+      importedPdfSize: persisted.size,
+      via: "programmatic-api",
+    },
+  });
+
+  const { allSigned } = await handlePostSignCompletion({
+    db,
+    doc,
+    docSigners,
+    justSignedId: signer.id,
+    justSignedOrder: signer.signerOrder ?? 0,
+  });
+
+  return {
+    ok: true,
+    allSigned,
+    signer: {
+      id: signer.id,
+      status: "SIGNED" as const,
+      signMethod: "MANUAL_IMPORT" as const,
+      signatureSource: "MANUAL_PDF" as const,
+      importedPdfHash: persisted.hash,
+      importedPdfSize: persisted.size,
+    },
+  };
 }
 
 export async function uploadProgrammaticSignerAttachment(params: {

@@ -168,6 +168,10 @@ export const documentFinalizeRouter = createTRPCRouter({
         handSignatureHash: s.handSignatureHash,
         identityLevel: s.identityLevel,
         signMethod: s.signMethod,
+        // Hybrid signing: tells the verifier UI to render an "Imported (manual)"
+        // badge instead of "Verified" for signatures that came from a scanned PDF.
+        signatureSource: (s as { signatureSource?: string }).signatureSource ?? "DIGITAL",
+        importedPdfHash: (s as { importedPdfHash?: string | null }).importedPdfHash ?? null,
       })),
       auditTrail: auditEvents,
       auditChainValid,

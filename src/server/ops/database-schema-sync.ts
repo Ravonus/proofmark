@@ -10,6 +10,36 @@ type SchemaStatement = {
 };
 
 const schemaStatements: SchemaStatement[] = [
+  // ── Hybrid signing (PR: import physically-signed PDFs) ──
+  {
+    label: "sign_method MANUAL_IMPORT enum value",
+    sql: `
+      DO $$ BEGIN
+        ALTER TYPE "sign_method" ADD VALUE IF NOT EXISTS 'MANUAL_IMPORT';
+      EXCEPTION WHEN others THEN NULL;
+      END $$;
+    `,
+  },
+  {
+    label: "signers hybrid signing columns",
+    sql: `
+      ALTER TABLE "signers"
+        ADD COLUMN IF NOT EXISTS "signature_source" text DEFAULT 'DIGITAL' NOT NULL,
+        ADD COLUMN IF NOT EXISTS "imported_pdf_url" text,
+        ADD COLUMN IF NOT EXISTS "imported_pdf_hash" text,
+        ADD COLUMN IF NOT EXISTS "imported_pdf_size" integer,
+        ADD COLUMN IF NOT EXISTS "imported_at" timestamp;
+      CREATE INDEX IF NOT EXISTS "signers_signature_source_idx"
+        ON "signers" USING btree ("signature_source");
+    `,
+  },
+  {
+    label: "documents.blank_pdf_hash",
+    sql: `
+      ALTER TABLE "documents"
+        ADD COLUMN IF NOT EXISTS "blank_pdf_hash" text;
+    `,
+  },
   {
     label: "wallet_chain enum",
     sql: `

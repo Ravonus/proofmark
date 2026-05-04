@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle, Clock, ShieldCheck, ShieldX } from "lucide-react";
+import { CheckCircle, Clock, FileSignature, ShieldCheck, ShieldX } from "lucide-react";
 import { addressPreview, CHAIN_META, type WalletChain } from "~/lib/crypto/chains";
 import { trpc } from "~/lib/platform/trpc";
 import { FadeIn, GlassCard, ScaleIn, StaggerContainer, StaggerItem } from "../ui/motion";
@@ -98,17 +98,35 @@ export function VerifyDocument({ hash }: { hash: string }) {
                         </div>
                       </div>
                       {signer.status === "SIGNED" ? (
-                        <span className="flex items-center gap-1 text-sm text-success">
-                          <motion.span
-                            className="flex items-center"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 300 }}
+                        (signer as { signatureSource?: string }).signatureSource === "MANUAL_PDF" ? (
+                          <span
+                            className="flex items-center gap-1 text-sm"
+                            style={{ color: "var(--color-info, #60a5fa)" }}
+                            title="Imported from a physically-signed PDF — no forensic evidence (device, behavior, geo) is recorded for offline signatures."
                           >
-                            <CheckCircle className="h-4 w-4" />
-                          </motion.span>{" "}
-                          Verified
-                        </span>
+                            <motion.span
+                              className="flex items-center"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: "spring", stiffness: 300 }}
+                            >
+                              <FileSignature className="h-4 w-4" />
+                            </motion.span>{" "}
+                            Imported (manual)
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-sm text-success">
+                            <motion.span
+                              className="flex items-center"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: "spring", stiffness: 300 }}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </motion.span>{" "}
+                            Verified
+                          </span>
+                        )
                       ) : (
                         <span className="flex items-center gap-1 text-xs text-warning">
                           <Clock className="h-3.5 w-3.5" />

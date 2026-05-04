@@ -64,6 +64,13 @@
       "when": 1775885200000,
       "tag": "0008_proofmark_two_factor_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778280000000,
+      "tag": "0009_hybrid_signing_imports",
+      "breakpoints": true
     }
   ]
 }

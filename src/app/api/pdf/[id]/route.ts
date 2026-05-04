@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { resolveDocumentContent } from "~/server/api/routers/document-helpers";
@@ -16,6 +17,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const address = request.nextUrl.searchParams.get("address");
     const claimToken = request.nextUrl.searchParams.get("claim");
+    // ── Hybrid signing: blank-for-printing mode ──
+    // ?unsigned=true returns the contract with NO embedded signatures and all
+    // signature blocks rendered as empty lines, suitable for printing and
+    // physically signing offline. The blank PDF's hash is stored on the
+    // document so an imported scan can be verified as a return of THIS print.
+    const unsigned = request.nextUrl.searchParams.get("unsigned") === "true";
 
     const doc = await db.query.documents.findFirst({
       where: eq(documents.id, id),
@@ -32,16 +39,30 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       identity,
     });
 
-    // Access check: must be creator, a signed signer, or have a valid claim token
-    let authorized = viewerAccess.isCreator || viewerAccess.matchingSigner?.status === "SIGNED";
+    // Access check:
+    //  - signed PDF: must be creator, a signed signer, or have a valid claim token
+    //  - unsigned PDF (for printing): creator OR any signer with valid claim token
+    //    (a pending signer should be able to print and sign offline)
+    let authorized = viewerAccess.isCreator;
+    if (!unsigned) {
+      authorized = authorized || viewerAccess.matchingSigner?.status === "SIGNED";
+    }
     if (address) {
       const addr = address.toLowerCase();
       if (doc.createdBy.toLowerCase() === addr) authorized = true;
-      if (docSigners.some((s) => s.address?.toLowerCase() === addr && s.status === "SIGNED")) authorized = true;
+      if (!unsigned && docSigners.some((s) => s.address?.toLowerCase() === addr && s.status === "SIGNED")) {
+        authorized = true;
+      }
     }
     if (claimToken) {
       const claimSigner = docSigners.find((s) => s.claimToken === claimToken);
-      if (claimSigner?.status === "SIGNED") authorized = true;
+      if (claimSigner) {
+        if (unsigned) {
+          authorized = true; // any claim-token-bearing signer can print
+        } else if (claimSigner.status === "SIGNED") {
+          authorized = true;
+        }
+      }
     }
 
     if (!authorized) {
@@ -69,22 +90,51 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const baseUrl = process.env.NEXTAUTH_URL ?? "https://docu.technomancy.it";
+
+    // For blank export, strip every signer's signature data so the PDF renders
+    // empty signature lines and field placeholders (printable form).
+    const signersForPdf = unsigned
+      ? docSigners.map((s) => ({
+          ...s,
+          status: "PENDING" as const,
+          signature: null,
+          signedAt: null,
+          handSignatureData: null,
+          handSignatureHash: null,
+          fieldValues: null,
+          forensicEvidence: null,
+          forensicHash: null,
+          finalizationSignature: null,
+          finalizationStateHash: null,
+          finalizationSignedAt: null,
+          finalizationMessage: null,
+        }))
+      : docSigners;
+
     const pdfBytes = await generateSignedPDF({
       doc: { ...doc, content: resolvedContent },
-      signers: docSigners,
+      signers: signersForPdf,
       verifyUrl: `${baseUrl}/verify/${doc.contentHash}`,
       styleSettings,
     });
+
+    // Persist the blank PDF hash (idempotent — only on first export) so a
+    // returned scan can be tied to this exact print.
+    if (unsigned && !doc.blankPdfHash) {
+      const blankHash = createHash("sha256").update(pdfBytes).digest("hex");
+      await db.update(documents).set({ blankPdfHash: blankHash }).where(eq(documents.id, doc.id));
+    }
 
     const filename = doc.title
       .replace(/[^a-zA-Z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .toLowerCase();
+    const suffix = unsigned ? "-blank" : "-signed";
 
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}-signed.pdf"`,
+        "Content-Disposition": `attachment; filename="${filename}${suffix}.pdf"`,
         "Cache-Control": "private, no-store",
       },
     });
