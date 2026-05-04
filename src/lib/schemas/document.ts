@@ -98,6 +98,13 @@ export const createDocumentSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1),
   createdByEmail: z.string().email().optional().or(z.literal("")),
+  /**
+   * Send invitation emails/SMS to signers immediately on creation.
+   * Default false: contracts don't bind to an email address until the signer
+   * provides one (typically via a field during the signing flow). Creators
+   * share the sign URLs themselves, or flip this to true to auto-invite.
+   */
+  sendInvites: z.boolean().default(false),
   signers: z.array(documentSignerSchema).min(1).max(20),
   proofMode: proofModeSchema.default("HYBRID"),
   securityMode: securityModeSchema.default("HASH_ONLY"),

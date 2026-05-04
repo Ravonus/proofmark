@@ -4,6 +4,17 @@ import { logger } from "~/lib/utils/logger";
 import { generateSignedPDF } from "~/server/crypto/rust-engine";
 import type { BrandingSettings, Document, Signer } from "~/server/db/schema";
 
+/**
+ * Wrap any email-sending promise so SMTP/transport failures are logged
+ * but cannot become unhandled rejections that crash the Lambda runtime.
+ * Use this for every fire-and-forget `void send...()` call.
+ */
+export function safeFireEmail<T>(promise: Promise<T>, label: string): void {
+  void promise.catch((err: unknown) => {
+    console.error(`[email] ${label} failed (suppressed):`, err);
+  });
+}
+
 const transporter = env.SMTP_HOST
   ? nodemailer.createTransport({
       host: env.SMTP_HOST,

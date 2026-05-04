@@ -11,7 +11,8 @@ import { hashHandSignature } from "~/server/crypto/rust-engine";
 import { findDocumentById, findSignersByDocumentId } from "~/server/db/compat";
 import { mobileSignSessions, signers } from "~/server/db/schema";
 import { resolveDocumentBranding } from "~/server/messaging/delivery";
-import { sendSignerConfirmation } from "~/server/messaging/email";
+import { safeFireEmail, sendSignerConfirmation } from "~/server/messaging/email";
+import { onDocumentSigned } from "~/server/hooks/affiliate-hooks";
 import {
   assertPaidPaymentFields,
   computeDocumentStateHash,
@@ -100,16 +101,19 @@ export async function runEmailPostSignSideEffects(params: {
 
   if (email) {
     const branding = await resolveDocumentBranding(doc.createdBy, doc.brandingProfileId);
-    void sendSignerConfirmation({
-      to: email,
-      signerLabel: signer.label,
-      documentTitle: doc.title,
-      contentHash: doc.contentHash,
-      chain: "ETH",
-      scheme: "EMAIL_OTP_CONSENT",
-      branding,
-      replyTo: branding.emailReplyTo,
-    });
+    safeFireEmail(
+      sendSignerConfirmation({
+        to: email,
+        signerLabel: signer.label,
+        documentTitle: doc.title,
+        contentHash: doc.contentHash,
+        chain: "ETH",
+        scheme: "EMAIL_OTP_CONSENT",
+        branding,
+        replyTo: branding.emailReplyTo,
+      }),
+      "sendSignerConfirmation (email)",
+    );
   }
 
   await propagateGroupSignature({
@@ -435,6 +439,8 @@ export const documentSignEmailRouter = createTRPCRouter({
           automationAction: prepared.forensic.outcome?.action ?? "ALLOW",
         },
       });
+
+      void onDocumentSigned(doc.id, signer!.id);
 
       await runEmailPostSignSideEffects({
         ctx,

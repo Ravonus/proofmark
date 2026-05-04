@@ -17,7 +17,7 @@ import {
 import { evaluateSignerTokenGate, evaluateSignerTokenGateWithProofs } from "~/server/crypto/token-gates";
 import { mobileSignSessions, signers } from "~/server/db/schema";
 import { resolveDocumentBranding } from "~/server/messaging/delivery";
-import { sendSignerConfirmation } from "~/server/messaging/email";
+import { safeFireEmail, sendSignerConfirmation } from "~/server/messaging/email";
 import { addProxyIp } from "~/server/workspace/proxy";
 import {
   assertPaidPaymentFields,
@@ -144,16 +144,19 @@ export async function runPostSignSideEffects(params: {
 
   if (signerEmail) {
     const branding = await resolveDocumentBranding(doc.createdBy, doc.brandingProfileId);
-    void sendSignerConfirmation({
-      to: signerEmail,
-      signerLabel: signer.label,
-      documentTitle: doc.title,
-      contentHash: doc.contentHash,
-      chain: signData.chain,
-      scheme: signData.scheme ?? "EMAIL_OTP_CONSENT",
-      branding,
-      replyTo: branding.emailReplyTo,
-    });
+    safeFireEmail(
+      sendSignerConfirmation({
+        to: signerEmail,
+        signerLabel: signer.label,
+        documentTitle: doc.title,
+        contentHash: doc.contentHash,
+        chain: signData.chain,
+        scheme: signData.scheme ?? "EMAIL_OTP_CONSENT",
+        branding,
+        replyTo: branding.emailReplyTo,
+      }),
+      "sendSignerConfirmation (wallet)",
+    );
   }
 
   await propagateGroupSignature({ db: ctx.db, doc, signer, signData });

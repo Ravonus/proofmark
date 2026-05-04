@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { computeIpfsCid } from "~/lib/ipfs";
 import {
-  createDocumentSchema,
+  type createDocumentSchema,
   documentReminderSchema,
   documentSignerSchema,
   documentStatusSchema,
@@ -34,6 +34,7 @@ import {
 import { documents, signers } from "~/server/db/schema";
 import { generateProofPacket } from "~/server/documents/proof-packet";
 import { sendSignerInvite } from "~/server/messaging/delivery";
+import { safeFireEmail } from "~/server/messaging/email";
 import { createReminderConfig, getDefaultReminderChannels, normalizeOwnerAddress } from "~/server/workspace/workspace";
 import { ProgrammaticApiError } from "./errors";
 
@@ -288,13 +289,16 @@ async function sendInvitesForDocument(
       continue;
     }
 
-    void sendSignerInvite({
-      ownerAddress: doc.createdBy,
-      brandingProfileId: doc.brandingProfileId,
-      document: doc,
-      signer,
-      signUrl: `${baseUrl}/sign/${doc.id}?claim=${signer.claimToken}`,
-    });
+    safeFireEmail(
+      sendSignerInvite({
+        ownerAddress: doc.createdBy,
+        brandingProfileId: doc.brandingProfileId,
+        document: doc,
+        signer,
+        signUrl: `${baseUrl}/sign/${doc.id}?claim=${signer.claimToken}`,
+      }),
+      "sendSignerInvite (programmatic)",
+    );
   }
 }
 

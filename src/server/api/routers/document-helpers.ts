@@ -24,7 +24,7 @@ import type { db as _dbInstance } from "~/server/db";
 import { findDocumentsByGroupId, findSignersByDocumentId } from "~/server/db/compat";
 import type { BrandingSettings } from "~/server/db/schema";
 import { resolveDocumentBranding, sendSignerInvite } from "~/server/messaging/delivery";
-import { sendCompletionEmail, sendFinalizationEmail } from "~/server/messaging/email";
+import { safeFireEmail, sendCompletionEmail, sendFinalizationEmail } from "~/server/messaging/email";
 
 /** Type alias for the Drizzle database client used throughout document helpers. */
 type Db = typeof _dbInstance;
@@ -187,19 +187,22 @@ async function advanceSequentialOrder(
   );
   if (nextSigner && (nextSigner.email || nextSigner.phone)) {
     const baseUrl = getBaseUrl();
-    void sendSignerInvite({
-      ownerAddress: doc.createdBy,
-      brandingProfileId: (doc as { brandingProfileId?: string | null }).brandingProfileId ?? undefined,
-      document: { title: doc.title },
-      signer: {
-        label: nextSigner.label,
-        email: nextSigner.email,
-        phone: nextSigner.phone,
-        deliveryMethods:
-          (nextSigner as { deliveryMethods?: Array<"EMAIL" | "SMS"> | null }).deliveryMethods ?? undefined,
-      },
-      signUrl: `${baseUrl}/sign/${doc.id}?claim=${nextSigner.claimToken}`,
-    });
+    safeFireEmail(
+      sendSignerInvite({
+        ownerAddress: doc.createdBy,
+        brandingProfileId: (doc as { brandingProfileId?: string | null }).brandingProfileId ?? undefined,
+        document: { title: doc.title },
+        signer: {
+          label: nextSigner.label,
+          email: nextSigner.email,
+          phone: nextSigner.phone,
+          deliveryMethods:
+            (nextSigner as { deliveryMethods?: Array<"EMAIL" | "SMS"> | null }).deliveryMethods ?? undefined,
+        },
+        signUrl: `${baseUrl}/sign/${doc.id}?claim=${nextSigner.claimToken}`,
+      }),
+      "sendSignerInvite (advanceSequentialOrder)",
+    );
   }
 }
 
@@ -229,14 +232,17 @@ async function notifyDisclosersIfReady(
   );
   for (const discloser of disclosersNeedingFinalization) {
     if (discloser.email) {
-      void sendFinalizationEmail({
-        to: discloser.email,
-        documentTitle: doc.title,
-        signerLabel: discloser.label,
-        signUrl: `${baseUrl}/sign/${doc.id}?claim=${discloser.claimToken}`,
-        branding,
-        replyTo: branding.emailReplyTo,
-      });
+      safeFireEmail(
+        sendFinalizationEmail({
+          to: discloser.email,
+          documentTitle: doc.title,
+          signerLabel: discloser.label,
+          signUrl: `${baseUrl}/sign/${doc.id}?claim=${discloser.claimToken}`,
+          branding,
+          replyTo: branding.emailReplyTo,
+        }),
+        "sendFinalizationEmail",
+      );
     }
   }
 }
@@ -289,13 +295,16 @@ export async function handlePostSignCompletion(params: {
     const updatedSigners = await findSignersByDocumentId(db, doc.id);
     const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3100";
     const branding = await resolveDocumentBranding(doc.createdBy, doc.brandingProfileId);
-    void sendCompletionEmail({
-      doc,
-      allSigners: updatedSigners,
-      verifyUrl: `${baseUrl}/verify/${doc.contentHash}`,
-      branding,
-      replyTo: branding.emailReplyTo,
-    });
+    safeFireEmail(
+      sendCompletionEmail({
+        doc,
+        allSigners: updatedSigners,
+        verifyUrl: `${baseUrl}/verify/${doc.contentHash}`,
+        branding,
+        replyTo: branding.emailReplyTo,
+      }),
+      "sendCompletionEmail",
+    );
   }
 
   return { allSigned };
