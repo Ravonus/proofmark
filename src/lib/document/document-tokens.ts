@@ -146,7 +146,7 @@ const FIELD_TYPE_RULES: FieldTypeRule[] = [
   // 4. Phone
   {
     test: (_l, _c, both) => /\bphone\b|\btelephone\b|\btel\b|\bfax\b|\bmobile\b|\bcell\b/i.test(both),
-    type: "email",
+    type: "phone",
   },
   // 5. Address
   { test: (label) => /\baddress\b/i.test(label), type: "address" },
@@ -438,6 +438,9 @@ export function tokenizeDocument(
     const line = raw.trim();
     if (!line) {
       tokens.push({ kind: "break" });
+      // Reset prev-line context on a blank line so downstream fields don't
+      // inherit "signature" / "email" / etc. from a now-disconnected paragraph.
+      prevLineText = "";
       continue;
     }
     if (/^--\s*\d+\s*of\s*\d+\s*--$/.test(line)) continue;
