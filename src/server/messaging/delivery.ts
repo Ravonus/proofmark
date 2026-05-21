@@ -99,6 +99,7 @@ export async function sendSignerInvite(params: {
   document: Pick<Document, "title">;
   signer: Pick<Signer, "label" | "email" | "phone"> & {
     deliveryMethods?: ("EMAIL" | "SMS")[] | null;
+    signMethod?: string | null;
   };
   signUrl: string;
   reason?: InviteReason;
@@ -118,6 +119,7 @@ export async function sendSignerInvite(params: {
       branding,
       replyTo: branding.emailReplyTo,
       isReminder: reason === "reminder",
+      signMethod: params.signer.signMethod ?? null,
     });
   }
 

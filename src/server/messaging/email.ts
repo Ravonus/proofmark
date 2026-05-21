@@ -35,6 +35,27 @@ const BASE_BRAND = {
   border: "#2a2a3a",
 };
 
+// Inline Agorix mark as a base64 PNG. Used as the email logo when a
+// branding profile doesn't ship a logoUrl, since external image fetches
+// in transactional mail get blocked by client privacy filters
+// (Gmail/Outlook/Apple Mail default to "ask before loading"). A data
+// URL renders immediately and survives outages of our static host.
+// File is co-located so editor tooling doesn't choke on a 6 KB string
+// literal, and it's loaded once at module init.
+import { readFileSync } from "fs";
+import { join } from "path";
+let _logoDataUrl: string | null = null;
+function getDefaultLogoDataUrl(): string | null {
+  if (_logoDataUrl !== null) return _logoDataUrl || null;
+  try {
+    const b64 = readFileSync(join(__dirname, "agorix-logo.b64.txt"), "utf8").trim();
+    _logoDataUrl = `data:image/png;base64,${b64}`;
+  } catch {
+    _logoDataUrl = "";
+  }
+  return _logoDataUrl || null;
+}
+
 function getBrand(branding?: BrandingSettings) {
   return {
     name: branding?.brandName || BASE_BRAND.name,
@@ -54,8 +75,22 @@ function getBrand(branding?: BrandingSettings) {
 
 function layout(content: string, branding?: BrandingSettings): string {
   const brand = getBrand(branding);
-  const headerLogoHtml = brand.logoUrl
-    ? `<img src="${brand.logoUrl}" alt="${brand.name}" style="height:32px;max-width:160px;object-fit:contain;" />`
+  // Resolve a logo source. Prefer a `data:` URL from branding (already
+  // inlined), fall back to the embedded Agorix mark, and only honor an
+  // http(s) URL when nothing inline is available — most mail clients
+  // block remote images until the user opts in, so external URLs are
+  // last-resort.
+  const inlineLogo = getDefaultLogoDataUrl();
+  let logoSrc: string | null = null;
+  if (brand.logoUrl?.startsWith("data:")) {
+    logoSrc = brand.logoUrl;
+  } else if (inlineLogo) {
+    logoSrc = inlineLogo;
+  } else if (brand.logoUrl?.startsWith("http")) {
+    logoSrc = brand.logoUrl;
+  }
+  const headerLogoHtml = logoSrc
+    ? `<img src="${logoSrc}" alt="${brand.name}" style="height:32px;max-width:160px;object-fit:contain;" />`
     : `<span style="font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;font-family:Arial,Helvetica,sans-serif;">${brand.name}</span>`;
 
   return `<!DOCTYPE html>
@@ -191,6 +226,12 @@ export async function sendSignatureRequest(params: {
   branding?: BrandingSettings;
   replyTo?: string;
   isReminder?: boolean;
+  /**
+   * Optional — used to tailor the closing instruction. WALLET signers
+   * are told to connect a wallet; EMAIL_OTP signers get the OTP flow
+   * description. Anything else falls back to a neutral copy.
+   */
+  signMethod?: string | null;
 }) {
   if (!transporter) {
     logger.info("email", "SMTP not configured, skipping:", params.to);
@@ -209,6 +250,20 @@ export async function sendSignatureRequest(params: {
     : `You've been invited to sign "${params.documentTitle}"`;
 
   const buttonLabel = params.isReminder ? "Sign Now" : "Sign Document";
+
+  const closingHtml =
+    params.signMethod === "EMAIL_OTP"
+      ? `We'll email you a one-time code on the signing page to confirm it's you.<br>Your signature is cryptographically anchored and verifiable by any party.`
+      : params.signMethod === "WALLET"
+        ? `You'll connect your wallet (BTC, ETH, or SOL) and sign a cryptographic message.<br>Your signature serves as verifiable proof of acknowledgment.`
+        : `Follow the link to complete the signature — the signing page will guide you through verification.<br>Your signature is cryptographically anchored and verifiable by any party.`;
+
+  const closingText =
+    params.signMethod === "EMAIL_OTP"
+      ? "We'll email you a one-time code on the signing page to confirm it's you. Your signature is cryptographically anchored and verifiable by any party."
+      : params.signMethod === "WALLET"
+        ? "You'll connect your wallet (BTC, ETH, or SOL) and sign a cryptographic message. Your signature serves as verifiable proof of acknowledgment."
+        : "Follow the link to complete the signature — the signing page will guide you through verification.";
 
   const html = layout(
     `
@@ -230,8 +285,7 @@ export async function sendSignatureRequest(params: {
     ${ctaButton(params.signUrl, buttonLabel)}
 
     <p style="margin:28px 0 0 0;font-size:12px;color:#9ca3af;line-height:1.6;text-align:center;font-family:Arial,Helvetica,sans-serif;">
-      You'll connect your wallet (BTC, ETH, or SOL) and sign a cryptographic message.<br>
-      Your signature serves as verifiable proof of acknowledgment.
+      ${closingHtml}
     </p>
   `,
     params.branding,
@@ -243,7 +297,7 @@ export async function sendSignatureRequest(params: {
     replyTo: params.replyTo,
     subject: `${params.isReminder ? "Reminder: " : ""}Signature requested: ${params.documentTitle}`,
     html,
-    text: `${heading}\n\nHi ${params.signerLabel}, ${intro}\n\nDocument: ${params.documentTitle}\n\nSign here: ${params.signUrl}\n\nPowered by ${brand.name} - Secured with blockchain verification`,
+    text: `${heading}\n\nHi ${params.signerLabel}, ${intro}\n\nDocument: ${params.documentTitle}\n\nSign here: ${params.signUrl}\n\n${closingText}\n\nPowered by ${brand.name} - Secured with blockchain verification`,
   });
 }
 
