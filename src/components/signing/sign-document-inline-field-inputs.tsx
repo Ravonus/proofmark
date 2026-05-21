@@ -8,6 +8,7 @@ import {
   resolveFieldAutocomplete,
   resolveFieldInputType,
   resolveFieldOptions,
+  resolveFieldPrefix,
 } from "~/lib/document/field-runtime";
 import {
   type AttachmentFieldValue,
@@ -361,7 +362,13 @@ function AddressFieldInput({ field, value, handleValueChange, handleBlur, callba
 
 function DefaultInput({ field, value, handleValueChange, handleBlur, callbacks }: InputProps & { inputType: string }) {
   const runtimeSettings = getRuntimeFieldSettings(field);
-  const placeholder = field.placeholder ?? field.label;
+  const rawPlaceholder = field.placeholder ?? field.label;
+  const prefix = resolveFieldPrefix(field);
+  // Parent renders the field prefix as its own span next to the input;
+  // strip a matching leading prefix from the placeholder so users
+  // don't see "@  @username" / "$  $1000".
+  const placeholder =
+    prefix && rawPlaceholder?.startsWith(prefix) ? rawPlaceholder.slice(prefix.length) : rawPlaceholder;
   const autocomplete = resolveFieldAutocomplete(field);
   const inputType = resolveFieldInputType(field);
   const htmlInputType =
