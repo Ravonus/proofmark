@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { computeIpfsCid } from "~/lib/ipfs";
@@ -604,8 +605,6 @@ export async function resendOwnedSignerInvite(params: {
  * discloser.
  * ════════════════════════════════════════════════════════════════════ */
 
-import { randomBytes } from "crypto";
-
 export const createDocumentGroupSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1),
@@ -650,7 +649,7 @@ export async function createOwnedDocumentGroup(params: {
 }) {
   const normalizedOwner = normalizeOwnerAddress(params.ownerAddress);
   const groupId = randomBytes(12).toString("base64url");
-  const inviteHost = resolveSigningBaseUrl(params.signingHostOverride);
+  const inviteHost = (params.signingHostOverride?.trim() || baseUrl).replace(/\/$/, "");
   const results: Array<{
     documentId: string;
     contentHash: string;
@@ -742,7 +741,7 @@ export async function addOwnedRecipientToGroup(params: {
   input: z.infer<typeof addToGroupSchema>;
 }) {
   const normalizedOwner = normalizeOwnerAddress(params.ownerAddress);
-  const inviteHost = resolveSigningBaseUrl(params.signingHostOverride);
+  const inviteHost = (params.signingHostOverride?.trim() || baseUrl).replace(/\/$/, "");
 
   // Find any sibling in the group owned by this caller so we can inherit
   // its content + branding + discloser shape.
