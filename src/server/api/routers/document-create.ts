@@ -1,15 +1,23 @@
 // @ts-nocheck -- tRPC context types break type inference across router files
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /**
- * Document creation procedures: create, createGroup, bulkCreate, evaluateTokenGateWallets.
+ * Document creation procedures: create, createGroup, addRecipientToGroup,
+ * bulkCreate, evaluateTokenGateWallets.
  */
 import { randomBytes } from "crypto";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { GROUP_ROLE, getBaseUrl } from "~/lib/signing/signing-constants";
 import { normalizeSignerTokenGate, tokenGateWalletProofListSchema } from "~/lib/token-gates";
 import { authedProcedure, createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { evaluateSignerTokenGateWithProofs } from "~/server/crypto/token-gates";
-import { findDocumentById, findSignersByDocumentId } from "~/server/db/compat";
+import {
+  findDocumentById,
+  findDocumentsByCreator,
+  findDocumentsByGroupId,
+  findSignersByDocumentId,
+} from "~/server/db/compat";
+import { signers as signersTable } from "~/server/db/schema";
 import { createDocumentInput, generateToken, safeIndexDocument, safeLogAudit } from "./document-helpers";
 import { createDocumentPacket, requiresTokenGateWalletProofs } from "./document-packets";
 
@@ -155,6 +163,142 @@ export const documentCreateRouter = createTRPCRouter({
       return {
         count: created.length,
         created,
+      };
+    }),
+
+  /**
+   * Add a single new recipient to an existing document group from the
+   * dashboard. The discloser's already-collected signature, field values
+   * and forensic evidence are copied from any signed sibling onto the
+   * new sibling so the host doesn't have to sign a third time — matches
+   * the agorix admin "+ Add recipient" series UX.
+   */
+  addRecipientToGroup: authedProcedure
+    .input(
+      z.object({
+        groupId: z.string().min(1),
+        recipient: createDocumentInput.shape.signers.element,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const baseUrl = getBaseUrl();
+
+      // Confirm caller owns at least one sibling in the group, and use
+      // it as the template for content/branding/discloser shape.
+      const callerDocs = await findDocumentsByCreator(ctx.db, ctx.session.address);
+      const sibling = callerDocs.find((d) => d.groupId === input.groupId);
+      if (!sibling) {
+        throw new Error("Group not found or not owned by caller");
+      }
+
+      const siblingSigners = await findSignersByDocumentId(ctx.db, sibling.id);
+      const existingDiscloser = siblingSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
+      if (!existingDiscloser) {
+        throw new Error("Group's first document has no discloser signer");
+      }
+
+      const securityMode = sibling.encryptedAtRest
+        ? sibling.ipfsCid
+          ? "ENCRYPTED_IPFS"
+          : "ENCRYPTED_PRIVATE"
+        : "HASH_ONLY";
+
+      const createInput = {
+        title: sibling.title,
+        content: sibling.content,
+        createdByEmail: sibling.createdByEmail || undefined,
+        proofMode: sibling.proofMode,
+        securityMode,
+        signingOrder: "parallel",
+        gazeTracking: sibling.gazeTracking ?? "off",
+        brandingProfileId: sibling.brandingProfileId ?? undefined,
+        templateId: sibling.templateId ?? undefined,
+        pdfStyleTemplateId: sibling.pdfStyleTemplateId ?? undefined,
+        postSignReveal: sibling.postSignReveal ?? undefined,
+        signers: [
+          input.recipient,
+          {
+            label: existingDiscloser.label,
+            email: existingDiscloser.email ?? undefined,
+            fields: existingDiscloser.fields ?? [],
+            signMethod: existingDiscloser.signMethod ?? "WALLET",
+            role: "SIGNER",
+          },
+        ],
+        sendInvites: false,
+      };
+
+      const { doc, contentHash, insertedSigners } = await createDocumentPacket(ctx, createInput, {
+        groupId: input.groupId,
+        signerGroupRoles: [GROUP_ROLE.RECIPIENT, GROUP_ROLE.DISCLOSER],
+      });
+
+      // Backfill the new sibling's discloser from any already-signed
+      // sibling so the host doesn't have to sign again. Matches what
+      // propagateGroupSignature would do if the host signed *after*
+      // adding this recipient.
+      const allSiblings = await findDocumentsByGroupId(ctx.db, input.groupId);
+      let backfilled = false;
+      for (const sib of allSiblings) {
+        if (sib.id === doc.id) continue;
+        if (sib.contentHash !== contentHash) continue;
+        const sibSigners = await findSignersByDocumentId(ctx.db, sib.id);
+        const signedDiscloser = sibSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER && s.status === "SIGNED");
+        if (!signedDiscloser) continue;
+
+        const newSigners = await findSignersByDocumentId(ctx.db, doc.id);
+        const newDiscloser = newSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
+        if (!newDiscloser) break;
+
+        await ctx.db
+          .update(signersTable)
+          .set({
+            address: signedDiscloser.address,
+            chain: signedDiscloser.chain,
+            status: "SIGNED",
+            signature: signedDiscloser.signature,
+            signedAt: signedDiscloser.signedAt,
+            scheme: signedDiscloser.scheme,
+            email: signedDiscloser.email,
+            handSignatureData: signedDiscloser.handSignatureData,
+            handSignatureHash: signedDiscloser.handSignatureHash,
+            fieldValues: signedDiscloser.fieldValues,
+            identityLevel: signedDiscloser.identityLevel,
+            forensicEvidence: signedDiscloser.forensicEvidence,
+            forensicHash: signedDiscloser.forensicHash,
+            documentStateHash: signedDiscloser.documentStateHash,
+            consentText: signedDiscloser.consentText,
+            consentAt: signedDiscloser.consentAt,
+          })
+          .where(eq(signersTable.id, newDiscloser.id));
+        backfilled = true;
+
+        void safeLogAudit({
+          documentId: doc.id,
+          eventType: "SIGNER_SIGNED",
+          actor: signedDiscloser.address ?? signedDiscloser.email ?? "system",
+          actorType: signedDiscloser.address ? "wallet" : "email",
+          metadata: {
+            propagatedFrom: sib.id,
+            groupId: input.groupId,
+            signerLabel: signedDiscloser.label,
+            reason: "add-recipient-backfill",
+          },
+        });
+        break;
+      }
+
+      return {
+        documentId: doc.id,
+        contentHash,
+        backfilled,
+        signerLinks: insertedSigners.map((s) => ({
+          label: s.label,
+          claimToken: s.claimToken,
+          signUrl: `${baseUrl}/sign/${doc.id}?claim=${s.claimToken}`,
+          signMethod: s.signMethod,
+          groupRole: s.groupRole ?? null,
+        })),
       };
     }),
 

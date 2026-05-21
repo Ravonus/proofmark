@@ -1,7 +1,20 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Ban, Check, CheckCircle, Download, ExternalLink, Eye, Link2, PackageOpen, PenLine, Send } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Ban,
+  Check,
+  CheckCircle,
+  Download,
+  ExternalLink,
+  Eye,
+  Link2,
+  PackageOpen,
+  PenLine,
+  Send,
+  UserPlus,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { CHAIN_META, type WalletChain } from "~/lib/crypto/chains";
@@ -449,6 +462,7 @@ export function GroupCard({ group, isLast }: { group: GroupedDoc; isLast: boolea
   const [expanded, setExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showDownloadsManager, setShowDownloadsManager] = useState(false);
+  const [showAddSigner, setShowAddSigner] = useState(false);
   const utils = trpc.useUtils();
   const voidMut = trpc.document.voidDocument.useMutation({
     onSuccess: () => utils.document.listByAddress.invalidate(),
@@ -538,6 +552,16 @@ export function GroupCard({ group, isLast }: { group: GroupedDoc; isLast: boolea
 
             {group.status === "PENDING" && (
               <button
+                onClick={() => setShowAddSigner(true)}
+                className="inline-flex items-center gap-1 rounded-xs bg-[var(--accent-subtle)] px-2 py-1 text-[9px] font-medium text-accent transition-colors hover:bg-[var(--accent-muted)]"
+              >
+                <UserPlus className="h-2.5 w-2.5" />
+                Add signer
+              </button>
+            )}
+
+            {group.status === "PENDING" && (
+              <button
                 onClick={() => {
                   if (confirm("Void ALL contracts in this group? All pending signatures will be cancelled.")) {
                     for (const d of group.docs) {
@@ -565,6 +589,164 @@ export function GroupCard({ group, isLast }: { group: GroupedDoc; isLast: boolea
           />
         </div>
       )}
+
+      <AddSignerModal
+        show={showAddSigner}
+        onClose={() => setShowAddSigner(false)}
+        groupId={group.groupId}
+        groupTitle={group.title}
+      />
     </div>
+  );
+}
+
+/* ── Add Signer Modal ────────────────────────────────────────── */
+
+function AddSignerModal({
+  show,
+  onClose,
+  groupId,
+  groupTitle,
+}: {
+  show: boolean;
+  onClose: () => void;
+  groupId: string;
+  groupTitle: string;
+}) {
+  const [label, setLabel] = useState("");
+  const [email, setEmail] = useState("");
+  const [signMethod, setSignMethod] = useState<"WALLET" | "EMAIL_OTP">("WALLET");
+  const utils = trpc.useUtils();
+  const mut = trpc.document.addRecipientToGroup.useMutation({
+    onSuccess: () => {
+      void utils.document.listByAddress.invalidate();
+      setLabel("");
+      setEmail("");
+      setSignMethod("WALLET");
+      onClose();
+    },
+  });
+
+  const submit = () => {
+    if (!label.trim()) return;
+    mut.mutate({
+      groupId,
+      recipient: {
+        label: label.trim(),
+        email: email.trim() || undefined,
+        signMethod,
+        role: "SIGNER",
+        fields: [],
+      },
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="glass-card w-full max-w-md space-y-4 rounded-2xl p-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <UserPlus className="h-4 w-4 text-accent" /> Add signer
+              </h3>
+              <button onClick={onClose} className="rounded-lg p-1 transition-colors hover:bg-surface-elevated">
+                <X className="h-4 w-4 text-muted" />
+              </button>
+            </div>
+            <p className="text-xs text-muted">
+              Adds a new sibling contract under <strong>{groupTitle}</strong>. Your discloser signature carries over
+              automatically &mdash; the new signer only fills in their part.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label
+                  htmlFor="add-signer-label"
+                  className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted"
+                >
+                  Signer label
+                </label>
+                <input
+                  id="add-signer-label"
+                  type="text"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="e.g. CryptoKage"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] px-3 py-2 text-sm text-primary outline-none focus:border-[var(--accent)]"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="add-signer-email"
+                  className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted"
+                >
+                  Email (optional &mdash; used for invite)
+                </label>
+                <input
+                  id="add-signer-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="signer@example.com"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] px-3 py-2 text-sm text-primary outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="add-signer-method"
+                  className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted"
+                >
+                  Sign method
+                </label>
+                <select
+                  id="add-signer-method"
+                  value={signMethod}
+                  onChange={(e) => setSignMethod(e.target.value as "WALLET" | "EMAIL_OTP")}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-inset)] px-3 py-2 text-sm text-primary outline-none focus:border-[var(--accent)]"
+                >
+                  <option value="WALLET">Wallet signature</option>
+                  <option value="EMAIL_OTP">Email OTP</option>
+                </select>
+              </div>
+            </div>
+
+            {mut.error && <p className="text-xs text-[var(--danger)]">{mut.error.message}</p>}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={onClose}
+                className="flex-1 rounded-lg bg-surface-hover py-2 text-sm text-secondary transition-colors hover:text-primary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submit}
+                disabled={!label.trim() || mut.isPending}
+                className="flex-1 rounded-lg bg-[var(--accent)] py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-strong)] disabled:opacity-40"
+              >
+                {mut.isPending ? "Adding…" : "Add signer"}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
