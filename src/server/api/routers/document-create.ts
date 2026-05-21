@@ -225,7 +225,10 @@ export const documentCreateRouter = createTRPCRouter({
             role: "SIGNER",
           },
         ],
-        sendInvites: false,
+        // Fire invite email to the new recipient when they have an
+        // address. The existing discloser slot is already SIGNED on
+        // sibling docs (backfilled below) so no invite goes out for it.
+        sendInvites: true,
       };
 
       const { doc, contentHash, insertedSigners } = await createDocumentPacket(ctx, createInput, {
