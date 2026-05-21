@@ -586,3 +586,240 @@ export async function resendOwnedSignerInvite(params: {
     signer: serializeSigner(signer, doc.id),
   };
 }
+
+/* ════════════════════════════════════════════════════════════════════
+ * Document groups — "one logical contract, N independent recipients".
+ *
+ *   - createOwnedDocumentGroup: spin up N sibling docs, all sharing a
+ *     `groupId`. Each has the same discloser + its own recipient slot.
+ *     When the discloser signs ONE sibling, `propagateToSibling`
+ *     auto-copies the signature to every other sibling.
+ *   - addOwnedRecipientToGroup: append another sibling to an existing
+ *     group. Inherits content, branding, and discloser config from the
+ *     first sibling so the caller only supplies the new recipient.
+ *
+ * Programmatic surface lets external workflows (e.g. the agorix
+ * contracts admin's multi-recipient series) build a Mutual NDA once and
+ * keep adding recipients over time without each one re-signing the
+ * discloser.
+ * ════════════════════════════════════════════════════════════════════ */
+
+import { randomBytes } from "crypto";
+
+export const createDocumentGroupSchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(1),
+  createdByEmail: z.string().email().optional().or(z.literal("")),
+  proofMode: proofModeSchema.default("HYBRID"),
+  securityMode: securityModeSchema.default("HASH_ONLY"),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+  brandingProfileId: z.string().optional(),
+  templateId: z.string().optional(),
+  pdfStyleTemplateId: z.string().optional(),
+  gazeTracking: gazeTrackingSchema.default("off"),
+  postSignReveal: postSignRevealSchema.optional(),
+  discloser: z.object({
+    label: z.string().min(1).max(100),
+    email: z.string().email().optional().or(z.literal("")),
+    fields: documentSignerSchema.shape.fields,
+    signMethod: z.enum(["WALLET", "EMAIL_OTP"]).default("WALLET"),
+  }),
+  recipients: z.array(documentSignerSchema).min(1).max(50),
+});
+
+export const addToGroupSchema = z.object({
+  groupId: z.string().min(1),
+  recipient: documentSignerSchema,
+  title: z.string().min(1).max(200).optional(),
+  content: z.string().min(1).optional(),
+  discloserLabel: z.string().min(1).max(100).optional(),
+  discloserEmail: z.string().email().optional().or(z.literal("")),
+});
+
+/**
+ * Create a document group: one sibling doc per recipient, all sharing a
+ * fresh `groupId`. The discloser signs ONE sibling and proofmark's
+ * propagateToSibling fans the signature out to the rest.
+ */
+export async function createOwnedDocumentGroup(params: {
+  ownerAddress: string;
+  userId?: string | null;
+  clientIp?: string | null;
+  signingHostOverride?: string | null;
+  input: z.infer<typeof createDocumentGroupSchema>;
+}) {
+  const normalizedOwner = normalizeOwnerAddress(params.ownerAddress);
+  const groupId = randomBytes(12).toString("base64url");
+  const inviteHost = resolveSigningBaseUrl(params.signingHostOverride);
+  const results: Array<{
+    documentId: string;
+    contentHash: string;
+    recipientLabel: string;
+    signerLinks: Array<{
+      label: string;
+      claimToken: string;
+      signUrl: string;
+      embedUrl: string;
+      signMethod: string;
+      groupRole: string | null;
+    }>;
+  }> = [];
+
+  for (const recipient of params.input.recipients) {
+    const createInput: z.infer<typeof createDocumentSchema> = {
+      title: params.input.title,
+      content: params.input.content,
+      createdByEmail: params.input.createdByEmail,
+      proofMode: params.input.proofMode,
+      securityMode: params.input.securityMode,
+      signingOrder: "parallel",
+      expiresInDays: params.input.expiresInDays,
+      brandingProfileId: params.input.brandingProfileId,
+      templateId: params.input.templateId,
+      pdfStyleTemplateId: params.input.pdfStyleTemplateId,
+      gazeTracking: params.input.gazeTracking,
+      postSignReveal: params.input.postSignReveal,
+      signers: [
+        recipient,
+        {
+          label: params.input.discloser.label,
+          email: params.input.discloser.email,
+          fields: params.input.discloser.fields,
+          signMethod: params.input.discloser.signMethod,
+          role: "SIGNER",
+        },
+      ],
+      sendInvites: false,
+    } as z.infer<typeof createDocumentSchema>;
+
+    const { doc, contentHash, insertedSigners } = await createDocumentPacket(
+      {
+        db,
+        clientIp: params.clientIp ?? null,
+        req: undefined,
+        session: {
+          address: normalizedOwner,
+          chain: "ETH",
+          userId: params.userId ?? null,
+        },
+        sessionToken: null,
+        apiKeyAuth: null,
+      } as Parameters<typeof createDocumentPacket>[0],
+      createInput,
+      {
+        groupId,
+        signerGroupRoles: ["recipient", "discloser"],
+      },
+    );
+
+    results.push({
+      documentId: doc.id,
+      contentHash,
+      recipientLabel: recipient.label,
+      signerLinks: insertedSigners.map((s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
+        label: s.label,
+        claimToken: s.claimToken,
+        signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
+        embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
+        signMethod: s.signMethod,
+        groupRole: s.groupRole ?? null,
+      })),
+    });
+  }
+
+  return { groupId, documents: results };
+}
+
+/**
+ * Add a single new recipient to an existing group. The agorix admin
+ * series UI hits this whenever the host clicks "+ Add recipient".
+ */
+export async function addOwnedRecipientToGroup(params: {
+  ownerAddress: string;
+  userId?: string | null;
+  clientIp?: string | null;
+  signingHostOverride?: string | null;
+  input: z.infer<typeof addToGroupSchema>;
+}) {
+  const normalizedOwner = normalizeOwnerAddress(params.ownerAddress);
+  const inviteHost = resolveSigningBaseUrl(params.signingHostOverride);
+
+  // Find any sibling in the group owned by this caller so we can inherit
+  // its content + branding + discloser shape.
+  const siblings = await findDocumentsByCreator(db, normalizedOwner);
+  const sibling = siblings.find((d) => d.groupId === params.input.groupId);
+  if (!sibling) {
+    throw new ProgrammaticApiError(404, "Group not found or not owned by caller");
+  }
+  const siblingSigners = await findSignersByDocumentId(db, sibling.id);
+  const existingDiscloser = siblingSigners.find((s) => (s as { groupRole?: string | null }).groupRole === "discloser");
+  if (!existingDiscloser) {
+    throw new ProgrammaticApiError(400, "Group's first document has no discloser signer");
+  }
+
+  const securityMode: z.infer<typeof securityModeSchema> = sibling.encryptedAtRest
+    ? sibling.ipfsCid
+      ? "ENCRYPTED_IPFS"
+      : "ENCRYPTED_PRIVATE"
+    : "HASH_ONLY";
+
+  const createInput: z.infer<typeof createDocumentSchema> = {
+    title: params.input.title ?? sibling.title,
+    content: params.input.content ?? sibling.content,
+    createdByEmail: sibling.createdByEmail || undefined,
+    proofMode: sibling.proofMode as z.infer<typeof proofModeSchema>,
+    securityMode,
+    signingOrder: "parallel",
+    gazeTracking: (sibling.gazeTracking ?? "off") as z.infer<typeof gazeTrackingSchema>,
+    brandingProfileId: sibling.brandingProfileId ?? undefined,
+    templateId: sibling.templateId ?? undefined,
+    pdfStyleTemplateId: sibling.pdfStyleTemplateId ?? undefined,
+    postSignReveal: sibling.postSignReveal ?? undefined,
+    signers: [
+      params.input.recipient,
+      {
+        label: params.input.discloserLabel ?? existingDiscloser.label,
+        email: params.input.discloserEmail ?? existingDiscloser.email ?? undefined,
+        fields: (existingDiscloser as { fields?: unknown }).fields ?? [],
+        signMethod: (existingDiscloser.signMethod ?? "WALLET") as "WALLET" | "EMAIL_OTP",
+        role: "SIGNER",
+      } as z.infer<typeof documentSignerSchema>,
+    ],
+    sendInvites: false,
+  } as z.infer<typeof createDocumentSchema>;
+
+  const { doc, contentHash, insertedSigners } = await createDocumentPacket(
+    {
+      db,
+      clientIp: params.clientIp ?? null,
+      req: undefined,
+      session: {
+        address: normalizedOwner,
+        chain: "ETH",
+        userId: params.userId ?? null,
+      },
+      sessionToken: null,
+      apiKeyAuth: null,
+    } as Parameters<typeof createDocumentPacket>[0],
+    createInput,
+    {
+      groupId: params.input.groupId,
+      signerGroupRoles: ["recipient", "discloser"],
+    },
+  );
+
+  return {
+    groupId: params.input.groupId,
+    documentId: doc.id,
+    contentHash,
+    recipientLabel: params.input.recipient.label,
+    signerLinks: insertedSigners.map((s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
+      label: s.label,
+      claimToken: s.claimToken,
+      signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
+      embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
+      signMethod: s.signMethod,
+      groupRole: s.groupRole ?? null,
+    })),
+  };
+}
