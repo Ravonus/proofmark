@@ -311,7 +311,13 @@ function InputField({
             type={type === "number" ? "text" : type}
             inputMode={type === "number" ? "decimal" : type === "tel" ? "tel" : undefined}
             defaultValue={value ?? ""}
-            placeholder={config.placeholder}
+            // Strip a leading prefix that's already rendered as its own
+            // span — otherwise users see "@  @username" / "$  $1000".
+            placeholder={
+              prefix && config.placeholder?.startsWith(prefix)
+                ? config.placeholder.slice(prefix.length)
+                : config.placeholder
+            }
             onChange={(e) => onChange?.(e.target.value)}
             onFocus={onFocus}
             onBlur={onBlur}
