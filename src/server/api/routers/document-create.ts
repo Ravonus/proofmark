@@ -237,14 +237,22 @@ export const documentCreateRouter = createTRPCRouter({
       });
 
       // Backfill the new sibling's discloser from any already-signed
-      // sibling so the host doesn't have to sign again. Matches what
-      // propagateGroupSignature would do if the host signed *after*
-      // adding this recipient.
+      // sibling. The wallet signature is content-bound (contentHash
+      // includes the creation timestamp — see document-packets.ts
+      // line 56) so identical content still produces distinct hashes
+      // across siblings. Mirror what propagateGroupSignature does:
+      //   - same hash: full copy including signature → status SIGNED
+      //   - different hash: partial prefill (label/address/fields/email)
+      //     so the recipient can SEE who the discloser is and what
+      //     they've filled in, but status stays PENDING since the
+      //     wallet sig can't be reused on a different contentHash.
+      // Either way the recipient opens the contract and sees the
+      // host's identity + filled fields, not an empty placeholder.
       const allSiblings = await findDocumentsByGroupId(ctx.db, input.groupId);
       let backfilled = false;
+      let backfillKind = null;
       for (const sib of allSiblings) {
         if (sib.id === doc.id) continue;
-        if (sib.contentHash !== contentHash) continue;
         const sibSigners = await findSignersByDocumentId(ctx.db, sib.id);
         const signedDiscloser = sibSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER && s.status === "SIGNED");
         if (!signedDiscloser) continue;
@@ -253,32 +261,49 @@ export const documentCreateRouter = createTRPCRouter({
         const newDiscloser = newSigners.find((s) => s.groupRole === GROUP_ROLE.DISCLOSER);
         if (!newDiscloser) break;
 
-        await ctx.db
-          .update(signersTable)
-          .set({
-            address: signedDiscloser.address,
-            chain: signedDiscloser.chain,
-            status: "SIGNED",
-            signature: signedDiscloser.signature,
-            signedAt: signedDiscloser.signedAt,
-            scheme: signedDiscloser.scheme,
-            email: signedDiscloser.email,
-            handSignatureData: signedDiscloser.handSignatureData,
-            handSignatureHash: signedDiscloser.handSignatureHash,
-            fieldValues: signedDiscloser.fieldValues,
-            identityLevel: signedDiscloser.identityLevel,
-            forensicEvidence: signedDiscloser.forensicEvidence,
-            forensicHash: signedDiscloser.forensicHash,
-            documentStateHash: signedDiscloser.documentStateHash,
-            consentText: signedDiscloser.consentText,
-            consentAt: signedDiscloser.consentAt,
-          })
-          .where(eq(signersTable.id, newDiscloser.id));
+        const sameContent = sib.contentHash === contentHash;
+        if (sameContent) {
+          await ctx.db
+            .update(signersTable)
+            .set({
+              address: signedDiscloser.address,
+              chain: signedDiscloser.chain,
+              status: "SIGNED",
+              signature: signedDiscloser.signature,
+              signedAt: signedDiscloser.signedAt,
+              scheme: signedDiscloser.scheme,
+              email: signedDiscloser.email,
+              handSignatureData: signedDiscloser.handSignatureData,
+              handSignatureHash: signedDiscloser.handSignatureHash,
+              fieldValues: signedDiscloser.fieldValues,
+              identityLevel: signedDiscloser.identityLevel,
+              forensicEvidence: signedDiscloser.forensicEvidence,
+              forensicHash: signedDiscloser.forensicHash,
+              documentStateHash: signedDiscloser.documentStateHash,
+              consentText: signedDiscloser.consentText,
+              consentAt: signedDiscloser.consentAt,
+            })
+            .where(eq(signersTable.id, newDiscloser.id));
+          backfillKind = "full";
+        } else {
+          await ctx.db
+            .update(signersTable)
+            .set({
+              address: signedDiscloser.address,
+              chain: signedDiscloser.chain,
+              email: signedDiscloser.email,
+              fieldValues: signedDiscloser.fieldValues,
+              handSignatureData: signedDiscloser.handSignatureData,
+              handSignatureHash: signedDiscloser.handSignatureHash,
+            })
+            .where(eq(signersTable.id, newDiscloser.id));
+          backfillKind = "prefill";
+        }
         backfilled = true;
 
         void safeLogAudit({
           documentId: doc.id,
-          eventType: "SIGNER_SIGNED",
+          eventType: sameContent ? "SIGNER_SIGNED" : "SIGNER_VIEWED",
           actor: signedDiscloser.address ?? signedDiscloser.email ?? "system",
           actorType: signedDiscloser.address ? "wallet" : "email",
           metadata: {
@@ -286,6 +311,7 @@ export const documentCreateRouter = createTRPCRouter({
             groupId: input.groupId,
             signerLabel: signedDiscloser.label,
             reason: "add-recipient-backfill",
+            kind: backfillKind,
           },
         });
         break;
@@ -295,6 +321,7 @@ export const documentCreateRouter = createTRPCRouter({
         documentId: doc.id,
         contentHash,
         backfilled,
+        backfillKind,
         signerLinks: insertedSigners.map((s) => ({
           label: s.label,
           claimToken: s.claimToken,
