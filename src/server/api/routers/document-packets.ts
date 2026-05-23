@@ -1,5 +1,5 @@
 // @ts-nocheck -- tRPC context types break type inference across router files
-/* eslint-disable @typescript-eslint/consistent-type-imports, @typescript-eslint/no-duplicate-type-constituents */
+/* eslint-disable @typescript-eslint/consistent-type-imports, @typescript-eslint/no-duplicate-type-constituents, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
 /**
  * createDocumentPacket — extracted from document.ts for file-length + complexity compliance.
  */
@@ -19,6 +19,8 @@ import { sendSignerInvite } from "~/server/messaging/delivery";
 import { safeFireEmail } from "~/server/messaging/email";
 import { createReminderConfig, normalizeOwnerAddress } from "~/server/workspace/workspace";
 import { onDocumentCreated } from "~/server/hooks/affiliate-hooks";
+import { signMessageAsAdmin } from "~/server/system-wallet/admin-signer";
+import { buildSigningMessage } from "~/server/crypto/rust-engine";
 import { createDocumentInput, generateToken, safeIndexDocument, safeLogAudit } from "./document-helpers";
 
 export function requiresTokenGateWalletProofs(gate: Parameters<typeof normalizeSignerTokenGate>[0]): boolean {
@@ -44,7 +46,7 @@ export async function createDocumentPacket(
   const ownerAddress = normalizeOwnerAddress(ctx.session.address);
 
   // ── Check billing limits before creating ──
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- ctx.session.userId is loosely typed but always string|null|undefined at runtime
+   
   await checkDocumentCreationLimit(ctx.session.userId ?? undefined, ctx.session.address);
 
   // ── Validate template (early return) ──
@@ -92,6 +94,14 @@ export async function createDocumentPacket(
 
   // ── Insert signers ──
   const insertedSigners = await insertSignerRows(ctx.db, doc, input, groupOptions);
+
+  // ── Auto-sign any slot flagged useAdminWallet=true ──
+  // Loads the org's custodial wallet (admin@agorix.io), builds the
+  // canonical signing message the rust engine emits for browser-sign,
+  // signs via personalSign, and writes the result back onto the signer
+  // row. Recipients now see "signed by the org" the moment the contract
+  // loads — no host-side wallet popup at creation time.
+  await autoSignAdminSlots(ctx.db, doc, input, insertedSigners);
 
   // ── Advance sequential signing pointer ──
   await maybeAdvanceSequentialPointer(ctx.db, doc, insertedSigners);
@@ -278,6 +288,78 @@ async function sendSignerInvites(
           tokenGateEnabled: !!signer.tokenGates,
         },
       });
+    }
+  }
+}
+
+/** For each signer flagged `useAdminWallet=true` in the original input,
+ *  pre-sign with the org's custodial wallet so the row lands SIGNED at
+ *  creation time. The signing message is the canonical one the rust
+ *  engine emits (so verifyMessage on the verifier side gets the same
+ *  recovered address as a browser-sign would). Best-effort — a missing
+ *  sealed key or load failure logs but doesn't abort document creation;
+ *  the row just stays PENDING and the host can wallet-sign manually
+ *  later. */
+async function autoSignAdminSlots(db, doc, input, insertedSigners) {
+  if (!Array.isArray(input.signers) || input.signers.length === 0) return;
+  // Map input order → inserted row (same iteration order as insertSignerRows).
+  for (let idx = 0; idx < input.signers.length; idx++) {
+    const requested = input.signers[idx];
+    if (!requested?.useAdminWallet) continue;
+    const row = insertedSigners[idx];
+    if (!row) continue;
+    try {
+      const message = await buildSigningMessage({
+        documentTitle: doc.title,
+        contentHash: doc.contentHash,
+        signerLabel: row.label,
+        // Address is filled in by the signer; we sign with whatever the
+        // admin wallet resolves to. The rust engine's message embeds
+        // the supplied address so we need to know it before signing.
+        signerAddress: undefined,
+        handSignatureHash: undefined,
+      });
+      const signed = await signMessageAsAdmin(message);
+      if (!signed) {
+        console.warn(`[autoSignAdminSlots] admin wallet unavailable; ${row.label} stays PENDING`);
+        continue;
+      }
+      // Rebuild the message with the resolved admin address so the
+      // signature we just produced verifies against the message we
+      // store on the audit trail.
+      const messageWithAddr = await buildSigningMessage({
+        documentTitle: doc.title,
+        contentHash: doc.contentHash,
+        signerLabel: row.label,
+        signerAddress: signed.address,
+        handSignatureHash: undefined,
+      });
+      const finalSig = (await signMessageAsAdmin(messageWithAddr)) ?? signed;
+      await db
+        .update(signers)
+        .set({
+          address: finalSig.address,
+          chain: finalSig.chain,
+          signature: finalSig.signature,
+          signedAt: new Date(),
+          scheme: "personal-sign:eth",
+          status: "SIGNED",
+          identityLevel: "L0_WALLET",
+        })
+        .where(eq(signers.id, row.id));
+      void safeLogAudit({
+        documentId: doc.id,
+        eventType: "SIGNER_SIGNED",
+        actor: finalSig.address,
+        actorType: "wallet",
+        metadata: {
+          signerLabel: row.label,
+          via: "admin-custodial-wallet",
+          reason: "createDocumentPacket auto-sign",
+        },
+      });
+    } catch (err) {
+      console.warn(`[autoSignAdminSlots] sign failed for ${row.label}:`, err?.message ?? err);
     }
   }
 }

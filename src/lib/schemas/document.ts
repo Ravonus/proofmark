@@ -32,6 +32,13 @@ export const documentSignerSchema = z.object({
   signMethod: signMethodSchema.default("WALLET"),
   role: signerRoleSchema.default("SIGNER"),
   deliveryMethods: z.array(deliveryMethodSchema).optional(),
+  // When true, the backend pre-signs this signer slot at contract
+  // creation using the org's admin custodial wallet (see
+  // src/server/system-wallet/admin-signer.ts). The signer row lands
+  // status=SIGNED immediately, so recipients viewing the contract see
+  // "signed by the org" without any browser-side wallet interaction
+  // from the host. Skip for any signer the actual human will fill in.
+  useAdminWallet: z.boolean().optional(),
 });
 export type DocumentSignerInput = z.infer<typeof documentSignerSchema>;
 
