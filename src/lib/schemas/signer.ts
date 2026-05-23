@@ -31,6 +31,10 @@ export const signerDefSchema = z.object({
   role: signerRoleSchema.optional(),
   signMethod: signMethodSchema.optional(),
   tokenGates: z.custom<SignerTokenGate | null>().optional().nullable(),
+  // Editor-side opt-in: when true, the backend pre-signs this slot at
+  // contract creation using the org's admin custodial wallet. Maps
+  // straight onto documentSignerSchema.useAdminWallet downstream.
+  useAdminWallet: z.boolean().optional(),
 });
 
 export type SignerDef = z.infer<typeof signerDefSchema>;

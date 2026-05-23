@@ -155,6 +155,20 @@ function SignerRow({
               ]}
             />
           </div>
+          <label className="flex items-center gap-2 text-[11px] text-secondary">
+            <input
+              type="checkbox"
+              checked={signer.useAdminWallet ?? false}
+              onChange={(e) => onChange(idx, "useAdminWallet", e.target.checked)}
+              className="h-3 w-3 rounded border-[var(--border)] bg-[var(--bg-inset)] accent-accent"
+            />
+            <span>
+              Sign with org admin wallet
+              <span className="ml-1 text-[10px] text-muted">
+                (backend pre-signs this slot at creation; no browser popup)
+              </span>
+            </span>
+          </label>
           <TokenGateEditor
             value={signer.tokenGates ?? null}
             onChange={(nextValue) => onChange(idx, "tokenGates", nextValue)}

@@ -44,6 +44,7 @@ export type EditorResult = {
     signMethod?: "WALLET" | "EMAIL_OTP";
     tokenGates?: SignerTokenGate | null;
     fields: EditorSignerField[];
+    useAdminWallet?: boolean;
   }>;
 };
 
