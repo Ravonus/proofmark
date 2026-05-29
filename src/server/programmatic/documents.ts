@@ -622,6 +622,12 @@ export const createDocumentGroupSchema = z.object({
     email: z.string().email().optional().or(z.literal("")),
     fields: documentSignerSchema.shape.fields,
     signMethod: z.enum(["WALLET", "EMAIL_OTP"]).default("WALLET"),
+    // When true, the backend pre-signs the discloser slot of EVERY
+    // sibling at creation using the org's admin custodial wallet
+    // (admin-signer.ts). This is the "sign once for the whole series"
+    // model: the host never signs per recipient — the org wallet does
+    // it automatically on each generated doc.
+    useAdminWallet: z.boolean().optional(),
   }),
   recipients: z.array(documentSignerSchema).min(1).max(50),
 });
@@ -633,6 +639,9 @@ export const addToGroupSchema = z.object({
   content: z.string().min(1).optional(),
   discloserLabel: z.string().min(1).max(100).optional(),
   discloserEmail: z.string().email().optional().or(z.literal("")),
+  // Auto-sign the new sibling's discloser with the org admin custodial
+  // wallet at creation (see createDocumentGroupSchema.discloser).
+  discloserUseAdminWallet: z.boolean().optional(),
 });
 
 /**
@@ -686,6 +695,7 @@ export async function createOwnedDocumentGroup(params: {
           fields: params.input.discloser.fields,
           signMethod: params.input.discloser.signMethod,
           role: "SIGNER",
+          useAdminWallet: params.input.discloser.useAdminWallet,
         },
       ],
       sendInvites: false,
@@ -715,14 +725,16 @@ export async function createOwnedDocumentGroup(params: {
       documentId: doc.id,
       contentHash,
       recipientLabel: recipient.label,
-      signerLinks: insertedSigners.map((s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
-        label: s.label,
-        claimToken: s.claimToken,
-        signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
-        embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
-        signMethod: s.signMethod,
-        groupRole: s.groupRole ?? null,
-      })),
+      signerLinks: insertedSigners.map(
+        (s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
+          label: s.label,
+          claimToken: s.claimToken,
+          signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
+          embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
+          signMethod: s.signMethod,
+          groupRole: s.groupRole ?? null,
+        }),
+      ),
     });
   }
 
@@ -766,7 +778,7 @@ export async function addOwnedRecipientToGroup(params: {
     title: params.input.title ?? sibling.title,
     content: params.input.content ?? sibling.content,
     createdByEmail: sibling.createdByEmail || undefined,
-    proofMode: sibling.proofMode as z.infer<typeof proofModeSchema>,
+    proofMode: sibling.proofMode,
     securityMode,
     signingOrder: "parallel",
     gazeTracking: (sibling.gazeTracking ?? "off") as z.infer<typeof gazeTrackingSchema>,
@@ -782,6 +794,11 @@ export async function addOwnedRecipientToGroup(params: {
         fields: (existingDiscloser as { fields?: unknown }).fields ?? [],
         signMethod: (existingDiscloser.signMethod ?? "WALLET") as "WALLET" | "EMAIL_OTP",
         role: "SIGNER",
+        // Auto-sign this new sibling's discloser if requested, OR if the
+        // group's existing discloser was already SIGNED (the series is in
+        // "host signs once" mode — keep new recipients consistent so the
+        // host never has to re-sign for a late addition).
+        useAdminWallet: params.input.discloserUseAdminWallet ?? existingDiscloser.status === "SIGNED",
       } as z.infer<typeof documentSignerSchema>,
     ],
     sendInvites: false,
@@ -812,13 +829,15 @@ export async function addOwnedRecipientToGroup(params: {
     documentId: doc.id,
     contentHash,
     recipientLabel: params.input.recipient.label,
-    signerLinks: insertedSigners.map((s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
-      label: s.label,
-      claimToken: s.claimToken,
-      signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
-      embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
-      signMethod: s.signMethod,
-      groupRole: s.groupRole ?? null,
-    })),
+    signerLinks: insertedSigners.map(
+      (s: { label: string; claimToken: string; signMethod: string; groupRole?: string | null }) => ({
+        label: s.label,
+        claimToken: s.claimToken,
+        signUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}`,
+        embedUrl: `${inviteHost}/sign/${doc.id}?claim=${s.claimToken}&embed=1`,
+        signMethod: s.signMethod,
+        groupRole: s.groupRole ?? null,
+      }),
+    ),
   };
 }

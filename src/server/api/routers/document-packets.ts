@@ -46,7 +46,7 @@ export async function createDocumentPacket(
   const ownerAddress = normalizeOwnerAddress(ctx.session.address);
 
   // ── Check billing limits before creating ──
-   
+
   await checkDocumentCreationLimit(ctx.session.userId ?? undefined, ctx.session.address);
 
   // ── Validate template (early return) ──
@@ -55,7 +55,19 @@ export async function createDocumentPacket(
   }
 
   // ── Content hash + encryption ──
-  const contentHash = await hashDocument(input.content + "\n" + Date.now().toString());
+  // Standalone docs salt the hash with the creation time so two docs
+  // with identical text still get distinct hashes. GROUP siblings must
+  // do the OPPOSITE: every sibling of a shared-NDA group needs the SAME
+  // contentHash so the discloser's wallet signature (which is bound to
+  // documentStateHash = hash(contentHash + fieldValues)) verifies on
+  // every sibling and can be cloned to recipients added later — i.e.
+  // the discloser signs ONCE for the whole group. We salt grouped docs
+  // with the stable groupId instead of Date.now() so all siblings
+  // (initial + added via PATCH /groups) share a contentHash. At
+  // discloser-sign time the recipient slots are empty, so field values
+  // don't perturb the hash across siblings.
+  const hashSalt = groupOptions?.groupId ?? Date.now().toString();
+  const contentHash = await hashDocument(input.content + "\n" + hashSalt);
   const accessToken = generateToken();
   const { storedContent, encryptedAtRest, encryptionKeyWrapped } = await prepareContent(
     input.content,
