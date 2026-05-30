@@ -621,7 +621,7 @@ export const createDocumentGroupSchema = z.object({
     label: z.string().min(1).max(100),
     email: z.string().email().optional().or(z.literal("")),
     fields: documentSignerSchema.shape.fields,
-    signMethod: z.enum(["WALLET", "EMAIL_OTP"]).default("WALLET"),
+    signMethod: z.enum(["WALLET", "EMAIL_OTP", "MANUAL_IMPORT"]).default("WALLET"),
     // When true, the backend pre-signs the discloser slot of EVERY
     // sibling at creation using the org's admin custodial wallet
     // (admin-signer.ts). This is the "sign once for the whole series"
