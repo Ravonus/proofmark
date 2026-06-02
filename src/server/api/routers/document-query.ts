@@ -119,8 +119,18 @@ function buildSanitizedSigners(
     tokenGateEvaluation: unknown;
   },
 ) {
+  // The claim token in the URL is an explicit per-signer credential — when it
+  // resolves to a signer it is AUTHORITATIVE for "this is you" (mirrors
+  // resolveTokenGateForViewer's `byClaimToken ?? byAddress ?? byMatchedSignerId`
+  // precedence). Identity-based matching (matchingSignerId) only applies when
+  // no claim token pinned a specific signer. Without this, a viewer whose
+  // wallet/email also matches a *different* signer — e.g. the disclosing party
+  // opening the discloser slot of an NDA whose recipient carries the same
+  // identity — gets isYou=true on BOTH slots, and the client's
+  // `docSigners.find(s => s.isYou)` picks the first one, signing the wrong slot.
+  const claimMatchedSigner = opts.claimToken ? docSigners.find((e) => e.claimToken === opts.claimToken) : undefined;
   return docSigners.map((s) => {
-    const isMatchingSigner = opts.matchingSignerId === s.id || opts.claimToken === s.claimToken;
+    const isMatchingSigner = claimMatchedSigner ? claimMatchedSigner.id === s.id : opts.matchingSignerId === s.id;
     const creator = creatorOnlyFields(s, doc.id, {
       isCreator: opts.isCreator,
       isMatchingSigner,
